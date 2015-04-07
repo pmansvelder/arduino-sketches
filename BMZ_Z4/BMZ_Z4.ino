@@ -17,12 +17,12 @@
 // switch on + startup/reset is used to move display freely
 #define SETUP_PIN2 10
 // SETUP_PIN2 must be connected to a optocoupler and ground, to a sense voltage that is high when contact is made
-#define MAX_STEPS 50
+#define MAX_STEPS 12
 // This is the number of steps from 'down' to 'up' position
 
 int min_open = 0;
 int max_open = MAX_STEPS;
-int current_pos = 0;
+int current_pos = -1;
 boolean limits = true;
 boolean action = true;
 
@@ -53,13 +53,13 @@ void loop(void)
 {
   int switchValue;
   switchValue = digitalRead(SETUP_PIN2);
-  // SETUP_PIN2 must be connected to a optocoupler
-  if (switchValue==LOW && action)
+  // SETUP_PIN2 must be connected to a optocoupler and ground, to a sense voltage that is high when contact is made
+  if ((switchValue==LOW) && action)
   {
     screenUp();
     action = false;
   }
-  if (switchValue==HIGH && !action)
+  if ((switchValue==HIGH) && !action)
   { 
     screenDown();
     action = true;
@@ -67,22 +67,26 @@ void loop(void)
   switchValue = digitalRead(OPEN_BUTTON);
   if (switchValue==LOW)
   {
-    screenUp();
+    if (digitalRead(OPEN_BUTTON)==LOW)
+      screenUp();
   }
   switchValue = digitalRead(CLOSE_BUTTON);
   if (switchValue==LOW)
   {
-    screenDown();
+    if (digitalRead(CLOSE_BUTTON)==LOW)
+      screenDown();
   }
   switchValue = digitalRead(STEP_OPEN);
   if (switchValue==LOW)
   {
-    stepOpen();
+    if (digitalRead(STEP_OPEN)==LOW)
+      stepOpen();
   }
   switchValue = digitalRead(STEP_CLOSE);
   if (switchValue==LOW)
   {
-    stepClose();
+    if (digitalRead(STEP_CLOSE)==LOW)
+      stepClose();
   }
 }
 
@@ -94,8 +98,7 @@ void channel_off(void)
 
 void screenUp(void)
 {
-  if (digitalRead(OPEN_BUTTON)==LOW)
-    while (current_pos<max_open)
+    while (current_pos<=max_open)
     {
       digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
       digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
@@ -124,8 +127,7 @@ void screenUp(void)
 
 void screenDown(void)
 {
-  if (digitalRead(CLOSE_BUTTON)==LOW)
-    while (current_pos>min_open)
+    while (current_pos>=min_open)
     {
       digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
       digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
@@ -154,61 +156,59 @@ void screenDown(void)
 
 void stepOpen(void)
 {
-  if (digitalRead(STEP_OPEN)==LOW)
-    if (current_pos<max_open && limits)
-    {
-      digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
-      digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
-      digitalWrite(MOTOR_DIR1, HIGH);   //Sets direction of CH A
-      analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
-      digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
-      digitalWrite(MOTOR_DIR2, LOW);   //Sets direction of CH B
-      analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
-      digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
-      digitalWrite(MOTOR_DIR1, LOW);   //Sets direction of CH A
-      analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
-      digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
-      digitalWrite(MOTOR_DIR2, HIGH);   //Sets direction of CH B
-      analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
-      delay(50);
-      current_pos+=1;
-    }
+  if ((current_pos<=max_open) || !limits)
+  {
+    digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
+    digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
+    digitalWrite(MOTOR_DIR1, HIGH);   //Sets direction of CH A
+    analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
+    digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
+    digitalWrite(MOTOR_DIR2, LOW);   //Sets direction of CH B
+    analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
+    digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
+    digitalWrite(MOTOR_DIR1, LOW);   //Sets direction of CH A
+    analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
+    digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
+    digitalWrite(MOTOR_DIR2, HIGH);   //Sets direction of CH B
+    analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
+    delay(50);
+    current_pos+=1;
+  }
   channel_off();
 }
 
 void stepClose(void)
 {
-  if (digitalRead(STEP_CLOSE)==LOW)
-    if (current_pos>min_open && limits)
-    {
-      digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
-      digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
-      digitalWrite(MOTOR_DIR1, HIGH);   //Sets direction of CH A
-      analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
-      digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
-      digitalWrite(MOTOR_DIR2, HIGH);   //Sets direction of CH B
-      analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
-      digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
-      digitalWrite(MOTOR_DIR1, LOW);   //Sets direction of CH A
-      analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
-      delay(50);
-      digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
-      digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
-      digitalWrite(MOTOR_DIR2, LOW);   //Sets direction of CH B
-      analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
-      delay(50);
-      current_pos-=1;
-    }
+  if ((current_pos>=min_open) || !limits)
+  {
+    digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
+    digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
+    digitalWrite(MOTOR_DIR1, HIGH);   //Sets direction of CH A
+    analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
+    digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
+    digitalWrite(MOTOR_DIR2, HIGH);   //Sets direction of CH B
+    analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, LOW);  //ENABLE CH A
+    digitalWrite(MOTOR_BRAKE2, HIGH); //DISABLE CH B
+    digitalWrite(MOTOR_DIR1, LOW);   //Sets direction of CH A
+    analogWrite(CHANNEL_A, PWM_SPEED);   //Moves CH A
+    delay(50);
+    digitalWrite(MOTOR_BRAKE1, HIGH);  //DISABLE CH A
+    digitalWrite(MOTOR_BRAKE2, LOW); //ENABLE CH B
+    digitalWrite(MOTOR_DIR2, LOW);   //Sets direction of CH B
+    analogWrite(CHANNEL_B, PWM_SPEED);   //Moves CH B
+    delay(50);
+    current_pos-=1;
+  }
   channel_off();
 }
 
