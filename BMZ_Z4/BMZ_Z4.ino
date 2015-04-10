@@ -1,24 +1,31 @@
-// program to move the navigation display 
-// on a BMW Z4 using 4 buttons
+// arduino sketch voor de besturing 
+// van een navigatiedisplay van een BMW Z4 
 
 #define OPEN_BUTTON 6
 #define CLOSE_BUTTON 7
+// knoppen open / dicht (rechts)
 #define STEP_OPEN 2
 #define STEP_CLOSE 4
+// knoppen omhoog / omlaag (links)
 #define MOTOR_DIR1 12
 #define MOTOR_DIR2 13
 #define MOTOR_BRAKE1 9
 #define MOTOR_BRAKE2 8
 #define CHANNEL_A 3
 #define CHANNEL_B 11
+// pinnen gebruikt voor motorsturing
 #define PWM_SPEED 255
+// snelheid stappenmotor (255 = max)
 #define SETUP_PIN1 5
-// SETUP_PIN1 must be connected to a switch and ground, to set the zero position
-// switch on + startup/reset is used to move display freely
+// pin 5 wordt met een schakelaar naar
+// gnd geschakeld voor 'setup mode':
+// display kan nu vrij bewegen
 #define SETUP_PIN2 10
-// SETUP_PIN2 must be connected to a optocoupler and ground, to a sense voltage that is high when contact is made
+// pin 10 wordt met een relais naar 
+// gnd geschakeld voor signalering
+// van 'contact aan / uit'
 #define MAX_STEPS 12
-// This is the number of steps from 'down' to 'up' position
+// Aantal stappen van dicht naar open
 
 int min_open = 0;
 int max_open = MAX_STEPS;
@@ -28,7 +35,7 @@ boolean action = true;
 
 void setup()
 {
-  //initialize position
+  // initialiseer variabelen
   pinMode(SETUP_PIN1, INPUT_PULLUP);
   if (digitalRead(SETUP_PIN1)==LOW)
   {
@@ -36,15 +43,15 @@ void setup()
   }
   current_pos = min_open;
   pinMode(SETUP_PIN2, INPUT_PULLUP);
-  //establish switch pins
+  // stel schakelpinnen in
   pinMode(OPEN_BUTTON, INPUT_PULLUP);
   pinMode(CLOSE_BUTTON, INPUT_PULLUP);
   pinMode(STEP_OPEN, INPUT_PULLUP);
   pinMode(STEP_CLOSE, INPUT_PULLUP);
-  //establish motor direction toggle pins
+  // stel motor richtingspinnen in
   pinMode(MOTOR_DIR1, OUTPUT);
   pinMode(MOTOR_DIR2, OUTPUT);
-  //establish motor brake pins
+  // stel motor rempinnen in
   pinMode(MOTOR_BRAKE1, OUTPUT);
   pinMode(MOTOR_BRAKE2, OUTPUT);
 }
