@@ -14,6 +14,15 @@ typedef struct
     byte data[6];
 } DCCPacket;
 
+typedef struct
+{
+    int address;
+    int locospeed;
+    int functions;
+} locos;
+
+const byte MaxNumberOfLocos = 64;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -24,6 +33,9 @@ int gIdlePacketCount = 0;
 int gLongestPreamble = 0;
 
 DCCPacket gPackets[25];
+
+locos LocoList[MaxNumberOfLocos];
+int LocoIndex = 0;
 
 static unsigned long lastMillis = millis();
     
@@ -159,6 +171,19 @@ void DumpAndResetTable()
             if (Valid) {
               Serial.print ("NMRA DCC Packet: Loc ");
               Serial.print (Address);
+              int wantedpos = -1;
+              for (int i = 0; i < MaxNumberOfLocos; i++) {
+                if (Address == LocoList[i].address) {
+                  wantedpos = i;
+                  break;
+                }
+              }
+              if (wantedpos == -1) 
+              {
+                LocoIndex += 1;
+                LocoList[LocoIndex].address = Address;
+                wantedpos = LocoIndex;
+              }
               int InstructionType = (Instruction & 0xE0) >> 5;
               IntSpeed = ((Instruction & 0x0F) << 1) + ((Instruction & 0x10) >> 4);
               if ( IntSpeed == 1 ) 
@@ -182,7 +207,7 @@ void DumpAndResetTable()
                     IntSpeed -= 3;
                   }
                 }  
-              }  
+              }
               switch (InstructionType) {
                 case B000:
                   Serial.print(" Consist | ");
@@ -193,10 +218,12 @@ void DumpAndResetTable()
                 case B010:
                   Serial.print(" Reverse, Speed: ");
                   Serial.print(IntSpeed);
+                  LocoList[wantedpos].locospeed = -1 * IntSpeed;
                   break;               
                 case B011:
                   Serial.print(" Forward, Speed: ");
                   Serial.print(IntSpeed);
+                  LocoList[wantedpos].locospeed = IntSpeed;
                   break;
                 case B100:
                   Serial.print(" Function FL, F1..F4: light is ");
@@ -243,6 +270,15 @@ void DumpAndResetTable()
     }
     Serial.println("============================================");
     
+    for (int i = 0; i < MaxNumberOfLocos; i = i + 1) {
+      if (LocoList[i].address != 0) {
+        Serial.print(LocoList[i].address);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].locospeed);
+        Serial.print(" / ");
+        Serial.println(LocoList[i].functions);
+      }
+     }
     gPacketCount = 0;
     gIdlePacketCount = 0;
     gLongestPreamble = 0;
