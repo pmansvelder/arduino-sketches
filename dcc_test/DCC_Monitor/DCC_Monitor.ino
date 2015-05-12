@@ -97,7 +97,7 @@ void IdlePacket_Handler(byte byteCount, byte* packetBytes)
 //
 void setup() 
 { 
-   Serial.begin(9600);
+   Serial.begin(115200);
     
    DCC.SetRawPacketHandler(RawPacket_Handler);   
    DCC.SetIdlePacketHandler(IdlePacket_Handler);
@@ -138,7 +138,105 @@ void DumpAndResetTable()
                     Serial.print("      ");
                 }
             }
-            Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+            int IntSpeed;
+            int Address = gPackets[i].data[0];
+            int Valid = 0;
+            byte Instruction;
+            if (Address < 128) 
+            {
+              Instruction = gPackets[i].data[1];
+              Valid = 1;
+            }
+            else
+            {
+              if ( ((Address & 0xC0) == 0xC0) && ((Address & 0x3F) != 0x3F))
+              {
+                Address = (Address & 0x1F) * 256 + gPackets[i].data[1];
+                Instruction = gPackets[i].data[2];
+                Valid = 1;
+              }
+            }
+            if (Valid) {
+              Serial.print ("NMRA DCC Packet: Loc ");
+              Serial.print (Address);
+              int InstructionType = (Instruction & 0xE0) >> 5;
+              IntSpeed = ((Instruction & 0x0F) << 1) + ((Instruction & 0x10) >> 4);
+              if ( IntSpeed == 1 ) 
+              { 
+                IntSpeed = 0; 
+              }
+              else 
+              { 
+                if ( IntSpeed == 2 ) 
+                { 
+                  IntSpeed = 0; 
+                }
+                else
+                {
+                  if ( IntSpeed == 3 ) 
+                  { 
+                    IntSpeed = 0; 
+                  }
+                  else
+                  {
+                    IntSpeed -= 3;
+                  }
+                }  
+              }  
+              switch (InstructionType) {
+                case B000:
+                  Serial.print(" Consist | ");
+                  break;
+                case B001:
+                  Serial.print(" Advanced | ");
+                  break;
+                case B010:
+                  Serial.print(" Reverse, Speed: ");
+                  Serial.print(IntSpeed);
+                  break;               
+                case B011:
+                  Serial.print(" Forward, Speed: ");
+                  Serial.print(IntSpeed);
+                  break;
+                case B100:
+                  Serial.print(" Function FL, F1..F4: light is ");
+                  if ( Instruction & 0x10 ) 
+                  { 
+                    Serial.print("on, ");
+                  }
+                  else
+                  {
+                    Serial.print("off, ");
+                  }
+                  Serial.print( Instruction & 0x0F );
+                  break;
+                case B101:
+                  if ( Instruction & 0x10 )
+                  {
+                    Serial.print(" Function F5..F8: ");
+                  }
+                  else
+                  {
+                    Serial.print(" Function F9..F12: ");
+                  }
+                  Serial.print( Instruction & 0x0F );
+                  break;
+                case B110:
+                  if ( (Instruction & 0x1E) == 0x1E ) 
+                  {
+                    Serial.print(" Function F13..F20: ");
+                    Serial.print( Instruction & 0x0F );
+                  }
+                  break;
+              }
+              Serial.println();
+              // Serial.print(" | ");
+              // Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+            }
+            else {
+              Serial.print("Other data: ");
+              Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+            }
         }
         gPackets[i].validBytes = 0;
         gPackets[i].count = 0;
@@ -151,6 +249,10 @@ void DumpAndResetTable()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Main loop
@@ -159,7 +261,7 @@ void loop()
 {
     DCC.loop();
     
-    if( millis()-lastMillis > 2000 )
+    if( millis()-lastMillis > 1000 )
     {
         DumpAndResetTable();
         lastMillis = millis();
