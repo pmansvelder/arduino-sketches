@@ -235,7 +235,7 @@ void DumpAndResetTable()
                   {
                     Serial.print("off, ");
                   }
-                  Serial.print( Instruction & 0x0F );
+                  Serial.print( Instruction & 0x0F , BIN);
                   break;
                 case B101:
                   if ( Instruction & 0x10 )
@@ -246,13 +246,13 @@ void DumpAndResetTable()
                   {
                     Serial.print(" Function F9..F12: ");
                   }
-                  Serial.print( Instruction & 0x0F );
+                  Serial.print( Instruction & 0x0F , BIN);
                   break;
                 case B110:
                   if ( (Instruction & 0x1E) == 0x1E ) 
                   {
                     Serial.print(" Function F13..F20: ");
-                    Serial.print( Instruction & 0x0F );
+                    Serial.print( gPackets[i].data[3] ,BIN);
                   }
                   break;
               }
@@ -269,16 +269,7 @@ void DumpAndResetTable()
         gPackets[i].count = 0;
     }
     Serial.println("============================================");
-    
-    for (int i = 0; i < MaxNumberOfLocos; i = i + 1) {
-      if (LocoList[i].address != 0) {
-        Serial.print(LocoList[i].address);
-        Serial.print(" / ");
-        Serial.print(LocoList[i].locospeed);
-        Serial.print(" / ");
-        Serial.println(LocoList[i].functions);
-      }
-     }
+
     gPacketCount = 0;
     gIdlePacketCount = 0;
     gLongestPreamble = 0;
