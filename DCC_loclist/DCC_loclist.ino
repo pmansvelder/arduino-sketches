@@ -14,17 +14,27 @@ typedef struct
     byte data[6];
 } DCCPacket;
 
+union {
+  uint8_t BAR;
+  struct {
+    uint8_t  r1 : 4; // bit positions 0..3
+    uint8_t  r2 : 4; // bit positions 4..7
+    // total # of bits just needs to add up to the uint8_t size
+  } bar;
+} foo;
+
 typedef struct
 {
     int address;
     int locospeed;
-    int light;
-    byte functions1;
-    byte functions2;
-    byte functions3;
+    int light;       // function FL
+    byte functions1; // function 1..8
+    byte functions2; // function 9..12
+    byte functions3; // function 13..20
+    byte functions4; // function 21..28
 } locos;
 
-const byte MaxNumberOfLocos = 64;
+const byte MaxNumberOfLocos = 50;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +133,7 @@ void setup()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void DumpAndResetTable()
+void CollectTable()
 {
     char buffer60Bytes[60];
     
@@ -135,9 +145,11 @@ void DumpAndResetTable()
             int Address = gPackets[i].data[0];
             int Valid = 0;
             byte Instruction;
+            byte Databyte;
             if (Address < 128) 
             {
               Instruction = gPackets[i].data[1];
+              Databyte = gPackets[i].data[2];
               Valid = 1;
             }
             else
@@ -146,6 +158,7 @@ void DumpAndResetTable()
               {
                 Address = (Address & 0x1F) * 256 + gPackets[i].data[1];
                 Instruction = gPackets[i].data[2];
+                Databyte = gPackets[i].data[3];
                 Valid = 1;
               }
             }
@@ -163,6 +176,8 @@ void DumpAndResetTable()
               {
                 LocoIndex += 1;
                 LocoList[LocoIndex].address = Address;
+                LocoList[LocoIndex].functions3 = 0x00;
+                LocoList[LocoIndex].functions4 = 0x00;
                 wantedpos = LocoIndex;
                 int locosort = wantedpos;
                 while ((LocoList[locosort].address < LocoList[locosort -1].address) && locosort > 0)
@@ -227,18 +242,21 @@ void DumpAndResetTable()
                       LocoList[wantedpos].light = 0;
                   }
 //                  Serial.print( Instruction & 0x0F );
-                    LocoList[wantedpos].functions1 = LocoList[wantedpos].functions1 | (Instruction & 0x0F);
+                    foo.bar.r2 = (Instruction & 0x0F);
+                    LocoList[wantedpos].functions1 = foo.BAR;
                   break;
                 case B101:
                   if ( Instruction & 0x10 )
                   {
 //                    Serial.print(" Function F5..F8: ");
-                      LocoList[wantedpos].functions1 = LocoList[wantedpos].functions1 | ((Instruction & 0x0F) << 4);
+                      foo.bar.r1 = (Instruction & 0x0F);
+                      LocoList[wantedpos].functions1 = foo.BAR;
                   }
                   else
                   {
 //                    Serial.print(" Function F9..F12: ");
-                      LocoList[wantedpos].functions2 = LocoList[wantedpos].functions2 | (Instruction & 0x0F);
+                      foo.bar.r1 = (Instruction & 0x0F);
+                      LocoList[wantedpos].functions2 = foo.BAR;
                   }
 //                  Serial.print( Instruction & 0x0F );
                   break;
@@ -247,11 +265,17 @@ void DumpAndResetTable()
                   {
 //                    Serial.print(" Function F13..F20: ");
 //                    Serial.print( Instruction & 0x0F );
-                      LocoList[wantedpos].functions3 = gPackets[i].data[3];
+                      LocoList[wantedpos].functions3 = Databyte;
+                  }
+                  if ( (Instruction & 0x1F) == 0x1F ) 
+                  {
+//                    Serial.print(" Function F21..F28: ");
+//                    Serial.print( Instruction & 0x0F );
+                      LocoList[wantedpos].functions4 = Databyte;
                   }
                   break;
               }
-              Serial.println();
+              //Serial.println();
               // Serial.print(" | ");
               // Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
             }
@@ -263,6 +287,14 @@ void DumpAndResetTable()
         gPackets[i].validBytes = 0;
         gPackets[i].count = 0;
     }
+
+    gPacketCount = 0;
+    gIdlePacketCount = 0;
+    gLongestPreamble = 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void DumpTable() {
     Serial.println("============================================");
     Serial.println("Loc listing");
     if (LocoList[1].address == 0)
@@ -271,9 +303,11 @@ void DumpAndResetTable()
     }
     else
     {
-      Serial.println("Address / Speed / Light / F1..8 / F9..16 / F17..20");
+      Serial.println("Address / Speed / Light / F1..8 / F9..12 / F13..F20 / F21..28");
     for (int i = 0; i < MaxNumberOfLocos; i = i + 1) {
       if (LocoList[i].address != 0) {
+        Serial.print(i);
+        Serial.print(":");
         Serial.print(LocoList[i].address);
         Serial.print(" / ");
         Serial.print(LocoList[i].locospeed);
@@ -284,19 +318,13 @@ void DumpAndResetTable()
         Serial.print(" / ");
         Serial.print(LocoList[i].functions2,BIN);
         Serial.print(" / ");
-        Serial.println(LocoList[i].functions3,BIN);      }
+        Serial.print(LocoList[i].functions3,BIN);
+        Serial.print(" / ");
+        Serial.println(LocoList[i].functions4,BIN);      }
      }
     Serial.println("============================================");
     }
-
-    gPacketCount = 0;
-    gIdlePacketCount = 0;
-    gLongestPreamble = 0;
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -306,11 +334,12 @@ void DumpAndResetTable()
 void loop()
 {
     DCC.loop();
-    
-    if( millis()-lastMillis > 1000 )
+   
+    if( millis()-lastMillis > 500 )
     {
-        DumpAndResetTable();
-        lastMillis = millis();
+      CollectTable();  
+      DumpTable();
+      lastMillis = millis();
     }
 }
 

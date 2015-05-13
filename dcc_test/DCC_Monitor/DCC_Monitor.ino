@@ -154,9 +154,11 @@ void DumpAndResetTable()
             int Address = gPackets[i].data[0];
             int Valid = 0;
             byte Instruction;
+            byte Databyte;
             if (Address < 128) 
             {
               Instruction = gPackets[i].data[1];
+              Databyte = gPackets[i].data[2];
               Valid = 1;
             }
             else
@@ -165,6 +167,7 @@ void DumpAndResetTable()
               {
                 Address = (Address & 0x1F) * 256 + gPackets[i].data[1];
                 Instruction = gPackets[i].data[2];
+                Databyte = gPackets[i].data[3];
                 Valid = 1;
               }
             }
@@ -252,13 +255,18 @@ void DumpAndResetTable()
                   if ( (Instruction & 0x1E) == 0x1E ) 
                   {
                     Serial.print(" Function F13..F20: ");
-                    Serial.print( gPackets[i].data[3] ,BIN);
+                    Serial.print( Databyte ,BIN);
                   }
+                  if ( (Instruction & 0x1F) == 0x1F ) 
+                  {
+                    Serial.print(" Function F21..F28: ");
+                    Serial.print( Databyte ,BIN);
+                  }                  
                   break;
               }
-              Serial.println();
-              // Serial.print(" | ");
-              // Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+              // Serial.println();
+              Serial.print(" | ");
+              Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
             }
             else {
               Serial.print("Other data: ");
