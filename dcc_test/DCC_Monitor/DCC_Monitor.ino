@@ -14,14 +14,30 @@ typedef struct
     byte data[6];
 } DCCPacket;
 
+union {
+  uint8_t BAR;
+  struct {
+    uint8_t  r1 : 4; // bit positions 0..3
+    uint8_t  r2 : 4; // bit positions 4..7
+    // total # of bits just needs to add up to the uint8_t size
+  } bar;
+} foo;
+
 typedef struct
 {
     int address;
-    int locospeed;
-    int functions;
+    byte locospeed;
+    byte light;       // function FL
+    byte functions1; // function 1..8
+    byte functions2; // function 9..12
+    byte functions3; // function 13..20
+    byte functions4; // function 21..28
 } locos;
 
 const byte MaxNumberOfLocos = 64;
+char Answer;
+boolean ShowCommands = true;
+boolean ShowLocos = true;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,36 +136,33 @@ void setup()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void DumpAndResetTable()
+void CollectTable()
 {
     char buffer60Bytes[60];
     
-    Serial.print("Total Packet Count: ");
-    Serial.println(gPacketCount, DEC);
+    if (Answer == 's') {
+      DumpStats();
+    }
     
-    Serial.print("Idle Packet Count:  ");
-    Serial.println(gIdlePacketCount, DEC);
-        
-    Serial.print("Longest Preamble:  ");
-    Serial.println(gLongestPreamble, DEC);
-    
-    Serial.println("Aantal    Packet_Data");
     for( int i=0; i<(int)(sizeof(gPackets)/sizeof(gPackets[0])); ++i )
     {
         if( gPackets[i].validBytes > 0 )
         {
-            Serial.print(gPackets[i].count, DEC);
-            if( gPackets[i].count < 10 )
-            {
-                Serial.print("        ");
-            }else{
-                if( gPackets[i].count < 100 )
-                {
-                    Serial.print("       ");
-                }else{
-                    Serial.print("      ");
-                }
+            if (ShowCommands) {
+              Serial.print(gPackets[i].count, DEC);
+              if( gPackets[i].count < 10 )
+              {
+                  Serial.print("        ");
+              }else{
+                  if( gPackets[i].count < 100 )
+                  {
+                      Serial.print("       ");
+                  }else{
+                      Serial.print("      ");
+                  }
+              }
             }
+            
             int IntSpeed;
             int Address = gPackets[i].data[0];
             int Valid = 0;
@@ -172,8 +185,10 @@ void DumpAndResetTable()
               }
             }
             if (Valid) {
-              Serial.print ("NMRA DCC Packet: Loc ");
-              Serial.print (Address);
+              if (ShowCommands) {
+                Serial.print ("NMRA DCC Packet: Loc ");
+                Serial.print (Address);
+              }
               int wantedpos = -1;
               for (int i = 0; i < MaxNumberOfLocos; i++) {
                 if (Address == LocoList[i].address) {
@@ -185,7 +200,17 @@ void DumpAndResetTable()
               {
                 LocoIndex += 1;
                 LocoList[LocoIndex].address = Address;
+                LocoList[LocoIndex].functions3 = 0x00;
+                LocoList[LocoIndex].functions4 = 0x00;
                 wantedpos = LocoIndex;
+                int locosort = wantedpos;
+                while ((LocoList[locosort].address < LocoList[locosort -1].address) && locosort > 0)
+                {
+                  locos tempadress = LocoList[locosort];
+                  LocoList[locosort] = LocoList[locosort-1];
+                  LocoList[locosort-1] = tempadress;
+                  locosort -= 1;
+                }
               }
               int InstructionType = (Instruction & 0xE0) >> 5;
               IntSpeed = ((Instruction & 0x0F) << 1) + ((Instruction & 0x10) >> 4);
@@ -213,74 +238,190 @@ void DumpAndResetTable()
               }
               switch (InstructionType) {
                 case B000:
-                  Serial.print(" Consist | ");
+                  if (ShowCommands) {
+                    Serial.print(F(" Consist | "));
+                  }
                   break;
                 case B001:
-                  Serial.print(" Advanced | ");
+                  if (ShowCommands) {
+                    Serial.print(F(" Advanced | "));
+                  }
                   break;
                 case B010:
-                  Serial.print(" Reverse, Speed: ");
-                  Serial.print(IntSpeed);
+                  if (ShowCommands) {
+                    Serial.print(F(" Reverse, Speed: "));
+                    Serial.print(IntSpeed);
+                  }
                   LocoList[wantedpos].locospeed = -1 * IntSpeed;
                   break;               
                 case B011:
-                  Serial.print(" Forward, Speed: ");
-                  Serial.print(IntSpeed);
+                  if (ShowCommands) {
+                    Serial.print(F(" Forward, Speed: "));
+                    Serial.print(IntSpeed);
+                  }
                   LocoList[wantedpos].locospeed = IntSpeed;
                   break;
                 case B100:
-                  Serial.print(" Function FL, F1..F4: light is ");
+                  if (ShowCommands) {
+                    Serial.print(F(" Function FL, F1..F4: light is "));
+                  }
                   if ( Instruction & 0x10 ) 
                   { 
-                    Serial.print("on, ");
+                    if (ShowCommands) {
+                      Serial.print("on, ");
+                    }
+                    LocoList[wantedpos].light = 1;
                   }
                   else
                   {
-                    Serial.print("off, ");
+                    if (ShowCommands) {
+                      Serial.print("off, ");
+                    }
+                    LocoList[wantedpos].light = 0;
                   }
-                  Serial.print( Instruction & 0x0F , BIN);
+                  if (ShowCommands) {
+                    Serial.print( Instruction & 0x0F , BIN);
+                  }
+                  foo.bar.r2 = (Instruction & 0x0F);
+                  LocoList[wantedpos].functions1 = foo.BAR;
                   break;
                 case B101:
                   if ( Instruction & 0x10 )
                   {
-                    Serial.print(" Function F5..F8: ");
+                    if (ShowCommands) {
+                      Serial.print(F(" Function F5..F8: "));
+                    }
+                    foo.bar.r1 = (Instruction & 0x0F);
+                    LocoList[wantedpos].functions1 = foo.BAR;
                   }
                   else
                   {
-                    Serial.print(" Function F9..F12: ");
+                    if (ShowCommands) {
+                      Serial.print(" Function F9..F12: ");
+                    }
                   }
-                  Serial.print( Instruction & 0x0F , BIN);
+                  if (ShowCommands) {
+                    Serial.print( Instruction & 0x0F , BIN);
+                  }
                   break;
                 case B110:
                   if ( (Instruction & 0x1E) == 0x1E ) 
                   {
-                    Serial.print(" Function F13..F20: ");
-                    Serial.print( Databyte ,BIN);
+                    if (ShowCommands) {
+                      Serial.print(F(" Function F13..F20: "));
+                      Serial.print( Databyte ,BIN);
+                    }
+                    LocoList[wantedpos].functions3 = Databyte;
                   }
                   if ( (Instruction & 0x1F) == 0x1F ) 
                   {
-                    Serial.print(" Function F21..F28: ");
-                    Serial.print( Databyte ,BIN);
+                    if (ShowCommands) {
+                      Serial.print(F(" Function F21..F28: "));
+                      Serial.print( Databyte ,BIN);
+                    }
+                    LocoList[wantedpos].functions4 = Databyte;
                   }                  
                   break;
               }
               // Serial.println();
-              Serial.print(" | ");
-              Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+              if (Answer == 'd')
+              {
+                if (ShowCommands) {
+                  Serial.print(" | ");
+                  Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+                }
+              }
+              else
+              {
+                if (ShowCommands) {
+                  Serial.println();
+                }
+              }
             }
             else {
-              Serial.print("Other data: ");
-              Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+              if (ShowCommands) {
+                Serial.print("Other data: ");
+                Serial.println( DCC.MakePacketString(buffer60Bytes, gPackets[i].validBytes, &gPackets[i].data[0]) );
+              }
             }
         }
         gPackets[i].validBytes = 0;
         gPackets[i].count = 0;
     }
-    Serial.println("============================================");
-
+    if (Serial.available()) 
+    {
+      Answer = Serial.read();
+      switch (Answer) {
+        case 'l':
+          ShowLocos ^= 0x01;
+          if (ShowLocos) {
+            Serial.println(F("List of Locos shown"));
+          }
+          else
+          {
+            Serial.println(F("List of Locos hidden"));
+            Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
+          } 
+        case 'm':
+          ShowCommands ^= 0x01;
+          if (ShowCommands) {
+            Serial.println(F("DCC Commands shown"));
+          }
+          else
+          {
+            Serial.println(F("DCC Commands hidden"));
+            Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
+          } 
+          break;
+        default:    
+          Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
+      }
+    }
     gPacketCount = 0;
     gIdlePacketCount = 0;
     gLongestPreamble = 0;
+}
+
+void DumpStats() {
+    Serial.print(F("Total Packet Count: "));
+    Serial.println(gPacketCount, DEC);
+    Serial.print(F("Idle Packet Count:  "));
+    Serial.println(gIdlePacketCount, DEC);
+    Serial.print(F("Longest Preamble:  "));
+    Serial.println(gLongestPreamble, DEC);
+    Serial.println(F("Aantal    Packet_Data"));
+}
+
+void DumpTable() {
+    Serial.println(F("============================================"));
+    Serial.println("Loc listing");
+    if (LocoList[1].address == 0)
+    {
+      Serial.println(F("No locs found or no DCC signal"));
+    }
+    else
+    {
+      Serial.println(F("Address / Speed / Light / F1..8 / F9..12 / F13..F20 / F21..28"));
+    for (int i = 0; i < MaxNumberOfLocos; i = i + 1) {
+      if (LocoList[i].address != 0) {
+        Serial.print(i);
+        Serial.print(":");
+        Serial.print(LocoList[i].address);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].locospeed);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].light,BIN);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].functions1,BIN);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].functions2,BIN);
+        Serial.print(" / ");
+        Serial.print(LocoList[i].functions3,BIN);
+        Serial.print(" / ");
+        Serial.println(LocoList[i].functions4,BIN);      }
+     }
+    }
+    Answer = ' ';
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,7 +439,11 @@ void loop()
     
     if( millis()-lastMillis > 1000 )
     {
-        DumpAndResetTable();
+        CollectTable();
+        if (ShowLocos)
+        {
+           DumpTable();
+        }
         lastMillis = millis();
     }
 }

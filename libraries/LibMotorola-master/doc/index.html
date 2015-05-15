@@ -1,0 +1,201 @@
+<!Doctype html>
+
+<html>
+	<head>
+		 <meta charset="UTF-8"> 
+		<title> LibMorotola </title>
+	</head>
+	<style>
+		
+	</style>
+<body>
+	<h1>Märklin Digital Decoder mit dem Arduino emulieren</h1>
+	<p>Eines der Signalformate für die digitale Modellbahn ist das alte
+		Märklin-Motorolaformat. Eigentlich sollte man das Format mit einem
+		Arduino ja decodieren können, um beispielsweise selber Busteilehmer zu
+		bauen. Da es aber keine Bibilothek zu geben scheint, die
+		den Empfang und die Decodierung dieses Formats unterstützt, beschloss
+		ich, eine solche Bibliothek als Arduino-Fingerübung zu entwickeln.</p>
+	<h2>LibMotorola145027</h2>
+	<p>Das Ergebnis dieser Arbeit, LibMotorola145027, stelle ich hier zur
+		Verfügung; Die Bibilothek darf unter den Bedingungen der LGPL V3 oder jeder späteren Version
+		der LGPL verwendet werden.</p>
+	<h2> Features </h2>
+	<p>Libmotorola145027 stellt folgende Funktionalität zur Verfügung:</p>
+	<ul>
+		<li> Erkennung und Pufferung von Motorola-Datagrammen aus steigenden
+			und fallenden Taktflanken an einem Digitaleingang</li>
+		<li> Decodierung der Motorola-Datagramme in Adresse und Datenpaket für
+			Motorola I Datagrammen. Übergabe der Daten an &quot;Datahandlers&quot;</li>
+		<li> Beispieldatahandler für einen Weichendecoder mit fester Adresse und 
+			software-seitigem Schutz der Weichenausgänge vor verlorengegangenen Ausschalt-Signalen</li>
+		<li> Beispielhandler für einen Signal-/Lichtdecoder mit fester Adresse </li>
+		<li> Beispielhandler für einen Weichen- oder Signaldecoder, ebenfalls mit Schutzfunktion
+			für Weiche. Dieser Decoder kann durch Ansprechen einer speziellen Weichenadresse
+			in einen Programmiermodus versetzt werden. Im Programmiermodus kann eine neue Adresse
+			eingestellt werden. Außerdem kann zwischen dem &quot;Signaldecodermodus&quot; und dem
+			&quot;Weichendecodermodus&quot; umgestellt werden.</li>
+		<li> Die Bibliothek wurde mit einem Arduino Mega 2560 und einem Atmega328 DIL-IC getestet,
+		     	der mit einem Arduino-UNO Bootloader ausgestattet war.</li>
+		<li> Schaltpläne für den Test mit einem Arduino Mega 2560 und für den Bau eines 
+			eigenen Schaltdecoders auf Basis eines Atmega 328 werden gegeben.</li>
+	</ul>
+
+	<h2>Einschränkungen</h2>
+	<ul>
+		<li> Bibliothek ist nur mit oben genannten Arduinos getestet. Ich bin aber
+			zuversichtlich, dass sie auch mit anderen Arduinos funktionieren
+			wird. Sollten Sie die Bilbiothek mit einem anderen Arduino
+			ausprobieren, dann lassen Sie mich doch bitte wissen, ob es geht oder
+			woran es scheitert...</li>
+
+		<li>Momentan unterstützt die Bibilothek nur Märklin-Motorola in
+			Version&nbsp;1. Ich denke, es sollte kein Problem sein, den Detector
+			auf für Version&nbsp;2 zu verwenden. Der Detector muss aber erweitert
+			werden; Ich denke jedoch, dass das sehr einfach möglich ist. Sollten
+			Sie Interesse an Märklin-Motorola Version&nbsp;2 haben, dann lassen
+			Sie mich das doch bitte wissen.</li>
+			
+		<li>Momentan wird die Notwendigkeit der Paketwiederholung im Märklin
+			Protokoll ignoriert! Solange dieser Fehlercheck nicht implementiert ist,
+			kann eine Verstümmelung der Daten durch Störungen dazu führen, dass
+			falsche Befehle ausgeführt werden. 
+			<span style="color: #ff0000"> Besonders bei dem Beispielsketch, bei der
+			sich der Decodermodus ändern lässt, kann das im Extremfall immernoch zur
+			Zerstörung von Weichen führen (Wenn der Decoder durch ein falsch-empfangenes
+			Programmiersignal unkontrolliert zu einem Signal-Decoder umgeschaltet wird
+			</span>
+			
+
+		<li>Die Bibilothek ist nur mit Uhlenbrocks Intellibox als Signalquelle
+			getestet.</li>
+
+	</ul>
+	<h2> Änderungen</h2>
+	<h3> V 0.2.0 </h3>
+	<ul>
+		<li> Beseitigung eines Fehlers beim Decodieren des Daten-Teils der Datagramme. Auch 
+			der Datenteil ist Least-Significant-Trit-First!</li>
+		<li> Schaffung eines Interfaces für DataHandlers statt bloßer Funktionszeiger</li>
+		<li> Ausbau des Weichendecoders mit Schutzfunktion</li>
+		<li> Beispielcode für Weichendecoder, Lichtdecoder und programmierbarem Decoder </li>
+	</ul>
+
+	<h2>Download der Bibliothek</h2>
+	<p>Die Bibliothek darf zu den Bedingungen der LGPL Version&nbsp;3 oder
+		jeder späteren Version verwendet werden.</p>
+	<ul>
+		<li>Download von<a href="LibMotorola145027_V0.2.0.zip"> LibMotorola145027_V0.2.0.zip</a>,
+			der Märklin-Motorola Arduino Bibilothek.
+		</li>
+	</ul>
+
+	<h2>Entwicklungsumgebung einrichten.</h2>
+	<p>LibMotorola145027.zip muss in das Unterverzeichnis
+		&quot;libraries&quot; des Sketchbook-Verzeichnisses entpackt werden.
+		Das Zip-Archiv enthält bereits alle Dateien in einem passend benannten
+		Unterverzeichnis so dass man durch einfaches Entpacken des Zip-files
+		zur gewünschten Verzeichnisstruktur gelangen sollte:
+	
+	
+	<pre class="cmdp">
+sketchbook
+├── libraries
+│   ├── LibMotorola145027
+│   │   ├── DataHandlerInterface.h
+│   │   ├── Decoder145027.cpp
+│   │   ├── Decoder145027.h
+│   │   ├── Detect145027.cpp
+│   │   ├── Detect145027.h
+│   │   ├── doc
+│   │   ├── examples
+│   │   │   ├── LibMotorolaFullBlownDecoder
+│   │   │   │   └── LibMotorolaFullBlownDecoder.ino
+│   │   │   ├── LibMotorolaSimpleFixedAddressProtectedTurnOutDecoder
+│   │   │   │   └── LibMotorolaSimpleFixedAddressProtectedTurnOutDecoder.ino
+│   │   │   └── LibMotorolaSimpleFixedAddressSignalDecoder
+│   │   │       └── LibMotorolaSimpleFixedAddressSignalDecoder.ino
+│   │   ├── ProgrammableTurnoutDataHandler.cpp
+│   │   ├── ProgrammableTurnoutDataHandler.h
+│   │   ├── ProgrammableTurnoutDataHandlerNormalState.cpp
+│   │   ├── ProgrammableTurnoutDataHandlerNormalState.h
+│   │   ├── ProgrammableTurnoutDataHandlerProgState.cpp
+│   │   ├── ProgrammableTurnoutDataHandlerProgState.h
+│   │   ├── ProgrammableTurnoutDataHandlerStateInterface.h
+│   │   ├── TurnOutDataHandler.cpp
+│   │   └── TurnOutDataHandler.h
+... ...
+</pre>
+
+	<h2>Benutzung der Bibilothek</h2>
+	<a
+		href="<?php $myhtml->eimglink("Mega2560_Prototype/2013-04-17_-_arduino_maerklin_motorola.png");?>">
+		<img style="border: none; padding-right: 20pt; float: left;"
+		src="Mega2560_Prototype/2013-04-17_-_arduino_maerklin_motorola_small.jpg"
+		alt="Screenshot">
+	</a>
+	<ul>
+		<li>Dieser <a
+			href="<?php $myhtml->eimglink("Mega2560_Prototype/2013-04-17_-_arduino_maerklin_motorola.png");?>">
+				Schaltplan</a> zeigt, wie ich den Arduino Mega 2560 mit der Modellbahn
+			verbunden habe.
+		</li>
+		<li>Download des <a href="Mega2560_Prototype/2013-04-17_-_arduino_maerklin_motorola.sch">eagle
+				Schaltplans</a>
+		</li>
+	</ul>
+	
+	<ul style="clear: left">
+
+		<li>Die im Archiv enthaltenen Beispielsketches zeigen, wie die Bibilothek verwendet werden kann:
+			<ul>
+				<li> 
+					<a href="<?php $myhtml->esrclink("sourcen/LibMotorolaSimpleFixedAddressProtectedTurnOutDecoder.ino.html");?>">
+						LibMotorolaSimpleFixedAddressProtectedTurnOutDecoder.ino
+					</a>
+					Zeigt einen einfachen Weichendecoder mit fest einprogrammierter Adresse. Der Decoder hat 
+					einen Software-Schutz gegen verlorene Ausschalt-Befehle, er schützt also die Weichen.
+				</li>
+				<li> 
+					<a href="<?php $myhtml->esrclink("sourcen/LibMotorolaSimpleFixedAddressSignalDecoder.ino.html");?>">
+						LibMotorolaSimpleFixedAddressSignalDecoder.ino
+					</a>
+					Zeigt einen einfachen Signaldecoder mit fest einprogrammierter Adresse.	
+				</li>
+				<li> 
+					<a href="<?php $myhtml->esrclink("sourcen/LibMotorolaFullBlownDecoder.ino.html");?>">
+						LibMotorolaFullBlownDecoder.ino
+					</a>
+					Zeigt einen Decoder, dessen Adresse und Verhaltensweise im Betrieb geändert werden kann.
+					Wird eine spezielle Adresse betätigt, so wertet der Decoder den nächsten Motorola-Weichenbefehl 
+					zur einer Programmierung aus: Sobald ein Schaltbefehl empfangen wird, hört der Decoder fortan
+					auf die zu diesem Schaltbefehl gehörende Adresse. Ferner kann man durch die "Grün" oder "Rot"
+					Taste entscheiden, ob der Decoder sich als Signal- oder Weichendecoder verhalten soll.
+				</li>
+			</ul>
+		</li>
+	</ul>
+	
+	
+	<h2>Programmdesign</h2>
+	
+	<h2>Literatur und Informationsquellen </h2>
+	<ul>
+		<li> 
+			<a href="http://home.mnet-online.de/modelleisenbahn-digital/Dig-tutorial-start.html">
+				http://home.mnet-online.de/modelleisenbahn-digital/Dig-tutorial-start.html
+			</a>
+		</li>
+		<li>
+			<a href="http://home.arcor.de/dr.koenig/digital/motoueb.htm">
+				http://home.arcor.de/dr.koenig/digital/motoueb.htm
+			</a>
+		</li>
+		<li>
+			<a href="http://spazioinwind.libero.it/scorzoni/motorola.htm">
+				http://spazioinwind.libero.it/scorzoni/motorola.htm
+			</a>
+		</li>
+	</ul>
+</body>
+</html>

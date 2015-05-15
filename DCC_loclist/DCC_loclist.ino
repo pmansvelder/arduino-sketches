@@ -62,7 +62,7 @@ static unsigned long lastMillis = millis();
 // next preamble. Returning false and library continue parsing packet and finds another handler to call.
 boolean RawPacket_Handler(byte byteCount, byte* packetBytes)
 {
-        // Bump global packet count
+    // Bump global packet count
     ++gPacketCount;
     
     int thisPreamble = DCC.LastPreambleBitCount();
