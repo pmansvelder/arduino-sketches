@@ -38,6 +38,7 @@ const byte MaxNumberOfLocos = 64;
 char Answer;
 boolean ShowCommands = true;
 boolean ShowLocos = true;
+boolean ShowDebug = true;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,7 +51,7 @@ int gLongestPreamble = 0;
 
 DCCPacket gPackets[25];
 
-locos LocoList[MaxNumberOfLocos];
+locos LocoList[MaxNumberOfLocos] ;
 int LocoIndex = 0;
 
 static unsigned long lastMillis = millis();
@@ -252,7 +253,8 @@ void CollectTable()
                     Serial.print(F(" Reverse, Speed: "));
                     Serial.print(IntSpeed);
                   }
-                  LocoList[wantedpos].locospeed = -1 * IntSpeed;
+                  LocoList[wantedpos].locospeed = IntSpeed;
+                  LocoList[wantedpos].locospeed += 0x80;
                   break;               
                 case B011:
                   if (ShowCommands) {
@@ -324,7 +326,7 @@ void CollectTable()
                   break;
               }
               // Serial.println();
-              if (Answer == 'd')
+              if (ShowDebug)
               {
                 if (ShowCommands) {
                   Serial.print(" | ");
@@ -373,6 +375,16 @@ void CollectTable()
             Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
           } 
           break;
+        case 'd':
+          ShowDebug ^= 0x01;
+          if (ShowDebug) {
+            Serial.println(F("Debug mode on"));
+          }
+          else
+          {
+            Serial.println(F("Debug mode off"));
+            Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
+          }           
         default:    
           Serial.println(F("====================(l for loclist, d for debug, s for statistics, m to toggle monitor)========================"));
       }
@@ -408,7 +420,16 @@ void DumpTable() {
         Serial.print(":");
         Serial.print(LocoList[i].address);
         Serial.print(" / ");
-        Serial.print(LocoList[i].locospeed);
+        if ((LocoList[i].locospeed & 0x80) == 0x80)
+        {
+          Serial.print("Rev ");
+          Serial.print(LocoList[i].locospeed & 0x7F);
+        }
+        else
+        {
+          Serial.print("Fwd ");
+          Serial.print(LocoList[i].locospeed);
+        }
         Serial.print(" / ");
         Serial.print(LocoList[i].light,BIN);
         Serial.print(" / ");
@@ -424,11 +445,6 @@ void DumpTable() {
     Answer = ' ';
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Main loop
