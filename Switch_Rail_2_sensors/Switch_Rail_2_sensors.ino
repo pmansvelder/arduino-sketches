@@ -1,6 +1,3 @@
-#include <avr/interrupt.h>
-//
-
 volatile long TimerCount = 0;
 volatile int val,status;
 volatile int RetryDelay;
@@ -14,7 +11,6 @@ void setup()
   pinMode(3, INPUT);
   digitalWrite(3, HIGH);    // Enable pullup resistor
   digitalWrite(2, HIGH);    // Enable pullup resistor
-  //    attachInterrupt(0, pin2ISR, RISING);
   digitalWrite(13, HIGH);
 
 }
@@ -36,22 +32,12 @@ void loop(void)
     }
     else {
       //      Serial.println("Kortsluiting opgeheven");
-      RetryDelay = 200;
     }
   }
   TimerCount = 0;
   delay(RetryDelay);
 
 }
-//
-// Interrupt Service Routine attached to INT0 vector
-void pin2ISR()
-{
-  val = digitalRead(3);
-  //   digitalWrite(13, !digitalRead(13));    // Toggle LED on pin 13
-  TimerCount += 1;
-}
-
 
 
 
