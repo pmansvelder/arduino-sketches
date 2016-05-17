@@ -38,11 +38,8 @@ int railswitch6 = 8;  // output pin to switch off rail (HIGH = switch off)
 
 void setup()
 {
-  // initialize serial communication at 115200 bits per second:
-  pinMode(DCC_pin, INPUT);      // DCC signal, low = positive flank
 
-
-  digitalWrite(DCC_pin, HIGH);  // Enable pullup resistor
+  pinMode(DCC_pin, INPUT_PULLUP);      // DCC signal, low = positive flank
 
   pinMode(sc_pin1, INPUT_PULLUP);       // Signal on 2nd rail, high = no signal  
   pinMode(railswitch1, OUTPUT);          // Output to opto to switch off signal to 2nd rail
@@ -101,7 +98,6 @@ boolean recursedetect(int pin, int level, int expect) {
 void loop()
 { 
 
-
   // flank detection  
 
   if (recursedetect(DCC_pin, DCC_debounce, LOW)) {
@@ -111,7 +107,7 @@ void loop()
     detectshort(sc_pin2, railswitch2);
     detectshort(sc_pin3, railswitch3);
     detectshort(sc_pin4, railswitch4);
-    detectshort(sc_pin5, railswitch5);
+    detectshort(sc_pin5, railswitch5);  
     detectshort(sc_pin6, railswitch6);
 
     if (DCC_count >= max_flanks) {
