@@ -1,0 +1,34 @@
+# Datatypes (KEYWORD1)
+
+XpressNetClass				KEYWORD1
+
+
+# Methods and Functions (KEYWORD2)
+
+receive					KEYWORD2
+setPower				KEYWORD2
+getPower				KEYWORD2
+setLocoStateFull			KEYWORD2
+getz21BcFlag				KEYWORD2
+
+notifyz21RailPower			KEYWORD2
+notifyz21EthSend			KEYWORD2
+notifyz21S88Data			KEYWORD2
+notifyz21getLocoState			KEYWORD2
+notifyz21LocoFkt			KEYWORD2
+notifyz21LocoSpeed			KEYWORD2
+notifyz21Accessory			KEYWORD2
+notifyz21AccessoryInfo			KEYWORD2
+notifyz21LNdispatch			KEYWORD2
+notifyz21LNSendPacket			KEYWORD2
+notifyz21CVREAD				KEYWORD2
+notifyz21CVWRITE			KEYWORD2
+notifyz21CVPOMWRITEBYTE			KEYWORD2
+
+# Constants (LITERAL1)
+
+csNormal				LITERAL1
+csEmergencyStop				LITERAL1
+csTrackVoltageOff			LITERAL1
+csShortCircuit				LITERAL1
+csServiceMode				LITERAL1
