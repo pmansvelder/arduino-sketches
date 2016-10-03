@@ -517,25 +517,17 @@ void Ethreceive() {
         else {
           //LAN_X_SET_LOCO_DRIVE            Adr_MSB          Adr_LSB      DB0          Dir+Speed
           #if SerialDEBUG 
-            Debug.print("LAN_X_SET_LOCO_DRIVE: "); 
+            Debug.print("LAN_X_SET_LOCO_DRIVE: :(adres): "); 
             Debug.print(word(packetBuffer[6] & 0x3F, packetBuffer[7]));  //mit F1-F12
-            Debug.print(" : ");
+            Debug.print(" :(stappen): ");
             Debug.print(packetBuffer[5]);
-            Debug.print(" : ");
+            Debug.print(" :(snelheid): ");
             Debug.print(packetBuffer[8]);
-            Debug.print(" : ");
+            Debug.print(" :(type): ");
             Debug.println(LocTypeMap.getValueOf(word(packetBuffer[6] & 0x3F, packetBuffer[7])));
           #endif
-          address = word(packetBuffer[6] & 0x3F, packetBuffer[7]);
-          if (LocTypeMap.getValueOf(address) == 1)
-          {
-             speed = (packetBuffer[8] & 0x7F)/2 + (packetBuffer[8] & 0x80) - 1;
-             steps = 3;
-             Debug.println(speed);
-          }
-          else
-             speed = packetBuffer[8];
-             steps = packetBuffer[5] & B11;
+          speed = packetBuffer[8];
+          steps = packetBuffer[5] & B11;
           XpressNet.setLocoDrive(packetBuffer[6] & 0x3F, packetBuffer[7], steps, speed);       
         }
         break;  

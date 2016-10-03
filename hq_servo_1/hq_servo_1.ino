@@ -1,5 +1,8 @@
+// Sketch to control 2 servo's using custom print (HQ/PM/RCU)
+
 #include <EEPROM.h>
-#include <Servo.h>
+// #include <Servo.h>
+#include "VarSpeedServo.h"
 #include "EEPROMAnything.h"
 
 // pinning PM+HQ print
@@ -19,10 +22,12 @@ const int Left2 = A2;
 const int Right1 = A1;
 const int Right2 = A3;
 
+int testspeed = 16;
+
 // Create Servo objects
 
-Servo servo1;  // create servo object to control a servo
-Servo servo2;  // create servo object to control a servo
+VarSpeedServo servo1;  // create servo object to control a servo
+VarSpeedServo servo2;  // create servo object to control a servo
 int value;
 
 // Structure to save values for servos
@@ -34,6 +39,7 @@ struct config_t
 
 void setup()
 {
+  // Debug
 
   // Read in configuration from eeprom
 
@@ -83,6 +89,7 @@ void setupServo1()
     delay(100);
   }
   configuration.min1 = pos;
+  
   pos = configuration.max1;
   dir = -1;
   digitalWrite(LedGreen1, LOW);
@@ -96,6 +103,35 @@ void setupServo1()
     delay(100);
   }
   configuration.max1 = pos;
+
+  testspeed = configuration.speed1;
+  int speed_dir = -1;
+  digitalWrite(LedGreen1, HIGH);
+  digitalWrite(LedRed1, HIGH);
+  servo1.slowmove(configuration.min1, testspeed);
+  pos = configuration.min1;
+  while (digitalRead(Switch1) == LOW) {}
+  while (digitalRead(Switch1) == HIGH) {
+    if (servo1.read() == pos) {
+      if (pos == configuration.max1) 
+      {
+        pos = configuration.min1;
+        digitalWrite(LedGreen1, LOW);
+        digitalWrite(LedRed1, HIGH);
+      }
+      else {
+        pos = configuration.max1;
+        digitalWrite(LedGreen1, HIGH);
+        digitalWrite(LedRed1, LOW);
+      }
+      servo1.slowmove(pos, testspeed);
+      testspeed += speed_dir;
+      if (testspeed > 255) speed_dir = -1;
+      if (testspeed < 1) speed_dir = 1;
+    }
+  }
+  configuration.speed1 = testspeed;  
+  
   EEPROM_writeAnything(0, configuration);
   delay(300);
   digitalWrite(LedOrange1, LOW);
@@ -133,6 +169,35 @@ void setupServo2()
     delay(100);
   }
   configuration.max2 = pos;
+
+  testspeed = configuration.speed2;
+  int speed_dir = -1;
+  digitalWrite(LedGreen2, HIGH);
+  digitalWrite(LedRed2, HIGH);
+  servo2.slowmove(configuration.min2, testspeed);
+  pos = configuration.min2;
+  while (digitalRead(Switch2) == LOW) {}
+  while (digitalRead(Switch2) == HIGH) {
+    if (servo2.read() == pos) {
+      if (pos == configuration.max2) 
+      {
+        pos = configuration.min2;
+        digitalWrite(LedGreen2, LOW);
+        digitalWrite(LedRed2, HIGH);
+      }
+      else {
+        pos = configuration.max2;
+        digitalWrite(LedGreen2, HIGH);
+        digitalWrite(LedRed2, LOW);
+      }
+      servo2.slowmove(pos, testspeed);
+      testspeed += speed_dir;
+      if (testspeed > 255) speed_dir = -1;
+      if (testspeed < 1) speed_dir = 1;
+    }
+  }
+  configuration.speed2 = testspeed;  
+  
   EEPROM_writeAnything(0, configuration);
   delay(300);
   digitalWrite(LedOrange2, LOW);
@@ -152,25 +217,25 @@ void loop()
   if (!digitalRead(Right1)) {
     digitalWrite(LedGreen1, HIGH);
     digitalWrite(LedRed1, LOW);
-    servo1.write(configuration.min1);
+    servo1.slowmove(configuration.min1, testspeed);
   }
 
   if (!digitalRead(Left1)) {
     digitalWrite(LedGreen1, LOW);
     digitalWrite(LedRed1, HIGH);
-    servo1.write(configuration.max1);
+    servo1.slowmove(configuration.max1, testspeed);
   }
 
   if (!digitalRead(Right2)) {
     digitalWrite(LedGreen2, HIGH);
     digitalWrite(LedRed2, LOW);
-    servo2.write(configuration.min2);
+    servo2.slowmove(configuration.min2, testspeed);
   }
 
   if (!digitalRead(Left2)) {
     digitalWrite(LedGreen2, LOW);
     digitalWrite(LedRed2, HIGH);
-    servo2.write(configuration.max2);
+    servo2.slowmove(configuration.max2, testspeed);
   }
 
   delay(100);
