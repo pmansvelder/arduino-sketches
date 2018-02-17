@@ -146,10 +146,8 @@ void processButtonDigital( int buttonId )
         {
           lastActivityTime = millis();
           Serial.println( "Button pressed" );
-        
           String messageString = "Button1";
           messageString.toCharArray(messageBuffer, messageString.length()+1);
-
           mqttClient.publish("/domus_mqtt/up", messageBuffer);
         }
       } 
@@ -172,6 +170,13 @@ void sendData() {
       startsend = LOW;
     }
   }
+}
+
+void report_state(int outputport)
+{
+  String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
+  messageString.toCharArray(messageBuffer, messageString.length()+1);
+  mqttClient.publish("/domus_mqtt/up", messageBuffer);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -210,6 +215,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     } else {
     digitalWrite(RelayPins[RelayPort], RelayValue);
     }
+    report_state(RelayPort);
   } else if (payload[0] == 50)
   {
     mqttClient.publish("/domus_mqtt/up", ip.c_str());// publish IP nr
@@ -218,20 +224,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
   {
     for (int i = 0 ; i < 10; i++) { 
       digitalWrite(RelayPins[i], 1);
+      report_state(i);
     }
   }
   else if (strPayload == "AOF")
   {
     for (int i = 0 ; i < 10; i++) { 
       digitalWrite(RelayPins[i], 0);
+      report_state(i);
     }
   }
   else if (strPayload == "STAT")
   {
     for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      String messageString = "R" + String(thisPin) + String(digitalRead(RelayPins[thisPin]));
-      messageString.toCharArray(messageBuffer, messageString.length()+1);
-      mqttClient.publish("/domus_mqtt/up", messageBuffer);
+      report_state(thisPin);
     }
   }
   else{
@@ -240,5 +246,3 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
 }
-
-
