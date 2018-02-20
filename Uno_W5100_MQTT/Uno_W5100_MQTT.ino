@@ -1,9 +1,7 @@
 /*
           Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
-          and gives the Temperature and Humidity, as well as the state of some switches
-          The topics have the format "home/br/sb" for southbound messages and  "home/nb" for northbound messages
-          Southbound are messages going to the client, northbound are messages coming from the client
+          The topics have the format "domus_mqtt/up" for outgoing messages and  "domus_mqtt/down" for incoming messages
           As the available memory of a UNO  with Ethernetcard is limited, I have kept the topics short
           Also, the payloads  are kept short
           The Northbound topics are
@@ -36,11 +34,20 @@
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #define CLIENT_ID       "SW1_huiskamer"
-#define PUBLISH_DELAY   5000 // that is 3 seconds interval
+#define PUBLISH_DELAY   3000 // that is 3 seconds interval
 #define ledPin 13
+#define DEBOUNCE_DELAY 100
 
 String hostname = "domus_huiskamer";
 int RelayPins[] = {9, 8, 7, 6, 5, 3, 14, 15, 16, 17};
+
+int ButtonPin = 18;
+static byte lastButtonState = 0;
+long lastActivityTime = 0;
+char messageBuffer[100];
+char topicBuffer[100];
+//char clientBuffer[50];
+
 int NumberOfRelays = 10;
 String ip = "";
 bool statusKD = HIGH;
@@ -68,7 +75,8 @@ void setup() {
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     pinMode(RelayPins[thisPin], OUTPUT);
   }
-
+  
+  pinMode(ButtonPin, INPUT_PULLUP);
   // setup serial communication
 
   Serial.begin(9600);
@@ -119,7 +127,35 @@ void loop() {
     sendData();
     previousMillis = millis();
   }
+  else {
+    processButtonDigital(ButtonPin);
+  }
   mqttClient.loop();
+}
+
+void processButtonDigital( int buttonId )
+{
+    int sensorReading = digitalRead( buttonId );
+    
+    if( sensorReading == 0 )  // Input pulled low to GND. Button pressed.
+    {
+      
+      if( lastButtonState == 0 )   // The button was previously un-pressed
+      {
+        if((millis() - lastActivityTime) > DEBOUNCE_DELAY)  // Proceed if we haven't seen a recent event on this button
+        {
+          lastActivityTime = millis();
+          Serial.println( "Button pressed" );
+          String messageString = "Button1";
+          messageString.toCharArray(messageBuffer, messageString.length()+1);
+          mqttClient.publish("/domus_mqtt/up", messageBuffer);
+        }
+      } 
+      lastButtonState = 1;
+    }
+    else {
+      lastButtonState = 0;
+    }
 }
 
 void sendData() {
@@ -128,16 +164,19 @@ void sendData() {
   ShowDebug("Relay is: ");
   ShowDebug((relaystate1 == LOW) ? "OPEN" : "CLOSED");
   if (mqttClient.connect(CLIENT_ID)) {
-    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      mqttClient.publish("/domus_mqtt/up", String(thisPin).c_str());
-      mqttClient.publish("/domus_mqtt/up", (digitalRead(RelayPins[thisPin]) == LOW) ? "OPEN" : "CLOSED");
-    }
     mqttClient.subscribe("/domus_mqtt/down");
     if (startsend) {
       mqttClient.publish("/domus_mqtt/up", ip.c_str());
       startsend = LOW;
     }
   }
+}
+
+void report_state(int outputport)
+{
+  String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
+  messageString.toCharArray(messageBuffer, messageString.length()+1);
+  mqttClient.publish("/domus_mqtt/up", messageBuffer);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -169,8 +208,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     ShowDebug(String(RelayPort));
     ShowDebug(String(RelayValue));
     ShowDebug(String(HIGH));
-
+    
+    if (RelayValue == 40) {
+      ShowDebug("Toggling...");
+      digitalWrite(RelayPins[RelayPort], !digitalRead(RelayPins[RelayPort]));
+    } else {
     digitalWrite(RelayPins[RelayPort], RelayValue);
+    }
+    report_state(RelayPort);
   } else if (payload[0] == 50)
   {
     mqttClient.publish("/domus_mqtt/up", ip.c_str());// publish IP nr
@@ -179,18 +224,25 @@ void callback(char* topic, byte* payload, unsigned int length) {
   {
     for (int i = 0 ; i < 10; i++) { 
       digitalWrite(RelayPins[i], 1);
+      report_state(i);
     }
   }
   else if (strPayload == "AOF")
   {
     for (int i = 0 ; i < 10; i++) { 
       digitalWrite(RelayPins[i], 0);
+      report_state(i);
+    }
+  }
+  else if (strPayload == "STAT")
+  {
+    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+      report_state(thisPin);
     }
   }
   else{
     ShowDebug("Unknown value");
-    mqttClient.publish("/domus_mqtt/up", "Syntax Error");
+    mqttClient.publish("/domus_mqtt/up", "Unknown command");
   }
 
 }
-
