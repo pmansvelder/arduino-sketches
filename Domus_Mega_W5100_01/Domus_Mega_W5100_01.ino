@@ -1,4 +1,6 @@
 /*
+ *        <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
+ *        
           Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus_mqtt/up" for outgoing messages and  "domus_mqtt/down" for incoming messages
@@ -25,6 +27,10 @@
 
           removed Temp/Humidity, added multiple relays for MQTT house control
           I used the following ports:
+
+          Uno: pins 4,10,11,12,13 in use
+          Mega: 4,10,50,51,52,53 in use
+          
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
           ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
@@ -64,7 +70,7 @@ bool pir = LOW;
 bool startsend = HIGH;// flag for sending at startup
 bool debug = true;
 int lichtstatus; //contains LDR reading
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x07};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -199,12 +205,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   ShowDebug(strPayload);
   ShowDebug("Message arrived");
   ShowDebug(topic);
-  ShowDebug("] ");//MQTT_BROKER
-  for (int i = 0; i < length; i++) {
-    ShowDebug(String((char)payload[i]));
-  }
-  ShowDebug("");
-  ShowDebug(String(payload[0]));
+  ShowDebug(strPayload);
 
   int RelayPort;
   int RelayValue;

@@ -39,7 +39,7 @@
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #define CLIENT_ID       "SW1_huiskamer"
 #define PUBLISH_DELAY   3000 // that is 3 seconds interval
-#define DEBOUNCE_DELAY 200
+#define DEBOUNCE_DELAY 300
 
 String hostname = "domus_huiskamer";
 
@@ -171,9 +171,6 @@ void processButtonDigital( int buttonId )
 
 void sendData() {
   char msgBuffer[20];
-  ShowDebug("%");
-  ShowDebug("Relay is: ");
-  ShowDebug((relaystate1 == LOW) ? "OPEN" : "CLOSED");
   if (mqttClient.connect(CLIENT_ID)) {
     mqttClient.subscribe("/domus_mqtt/down");
     if (startsend) {
