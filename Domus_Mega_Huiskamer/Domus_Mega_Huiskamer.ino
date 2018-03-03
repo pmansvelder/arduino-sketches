@@ -1,5 +1,8 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
+          Locatie: Huiskamer
+          Macadres: 00:01:02:03:04:08
+          
 
           Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
@@ -64,21 +67,25 @@
 
 // Vul hier de pin in van de DHT11 sensor
 #define DHT_PIN 3
-DHT dht(DHT_PIN, DHT11);
+// DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_test"
+#define CLIENT_ID  "domus_huiskamer"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
-#define PUBLISH_DELAY  3000 // that is 3 seconds interval
+#define PUBLISH_DELAY 3000 // that is 3 seconds interval
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
 
 // Vul hier de tijd in voor het pulserelais
 #define PULSE_RELAY_TIME 2500
 
-String hostname = "domus_huiskamer";
-const char* topic_in = "domus/hk/in";
+String hostname = CLIENT_ID;
+
+// Vul hier de MQTT topic in waar deze arduino naar luistert
+const char* topic_in = "domus/hk/in"; 
+
+// Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/hk/uit";
 const char* topic_out_smoke = "domus/hk/uit/rook";
 const char* topic_out_light = "domus/hk/uit/licht";
@@ -90,6 +97,7 @@ const char* topic_out_heat = "domus/hk/uit/warmte";
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 2;
 int RelayPins[] = {6, 7};
+bool RelayInitialState[] = {HIGH, HIGH};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 2;
@@ -100,6 +108,7 @@ long LongPressActive[] = {0, 0};
 
 // Vul hier de pin in van het pulserelais.
 int PulseRelayPin = 5;
+bool PulseRelayInitialState = HIGH;
 long PulseActivityTime = 0;
 
 // Vul hier de pin in van de rooksensor
@@ -124,7 +133,7 @@ bool debug = true;
 int lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x07};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x08};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -140,18 +149,20 @@ void ShowDebug(String tekst) {
 void setup() {
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     pinMode(RelayPins[thisPin], OUTPUT);
+    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
 
-  dht.begin();
+  // dht.begin();
 
   pinMode(SmokeSensor, INPUT);
   pinMode(PWMoutput, OUTPUT);
   pinMode(LightSensor, INPUT);
   pinMode(PulseRelayPin, OUTPUT);
+  digitalWrite(PulseRelayPin, PulseRelayInitialState);
 
   // setup serial communication
 
@@ -160,6 +171,7 @@ void setup() {
     while (!Serial) {};
 
     ShowDebug(F("MQTT Arduino Domus"));
+    ShowDebug(hostname);
     ShowDebug("");
   }
   // setup ethernet communication using DHCP
@@ -257,37 +269,38 @@ void reconnect() {
 }
 
 void sendData() {
-  int smoke = analogRead(SmokeSensor);
-  bool light = digitalRead(LightSensor);
+//  int smoke = analogRead(SmokeSensor);
+//  bool light = digitalRead(LightSensor);
+  String messageString;
 
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  float hic = dht.computeHeatIndex(t, h, false);
+//  float h = dht.readHumidity();
+//  float t = dht.readTemperature();
+//  float hic = dht.computeHeatIndex(t, h, false);
 
   // Send Temperature sensor
-  String messageString = String(t);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_temp, messageBuffer);
+//  messageString = String(t);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_temp, messageBuffer);
 
   // Send Humidity sensor
-  messageString = String(h);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_hum, messageBuffer);
+//  messageString = String(h);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_hum, messageBuffer);
 
   // Send Heat index sensor
-  messageString = String(hic);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_heat, messageBuffer);
+//  messageString = String(hic);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_heat, messageBuffer);
 
   // Send smoke sensor
-  messageString = String(map(smoke, 0, 1023, 0, 100));
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_smoke, messageBuffer);
+//  messageString = String(map(smoke, 0, 1023, 0, 100));
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_smoke, messageBuffer);
 
   // Send light sensor
-  messageString = String(light);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_light, messageBuffer);
+//  messageString = String(light);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_light, messageBuffer);
 }
 
 void report_state(int outputport)
