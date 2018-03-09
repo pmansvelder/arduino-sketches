@@ -76,8 +76,9 @@ DHT dht(DHT_PIN, DHT11);
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
 
+String hostname = CLIENT_ID;
+
 // De MQTT topics: 1 in, meerdere uit
-String hostname = "domus_huiskamer";
 const char* topic_in = "domus/hk/in";
 const char* topic_out = "domus/hk/uit";
 const char* topic_out_smoke = "domus/hk/uit/rook";
@@ -118,6 +119,7 @@ int PWMoutput = 11; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
 int LightSensor = 2;
+
 // Vul hier de pin in van de PIR
 int PirSensor = 12;
 int PreviousDetect = false; // Statusvariabele PIR sensor
@@ -125,10 +127,7 @@ int PreviousDetect = false; // Statusvariabele PIR sensor
 char messageBuffer[100];
 char topicBuffer[100];
 String ip = "";
-bool statusKD = HIGH;
-bool statusBD = HIGH;
-bool statusGD = HIGH;
-bool relaystate1 = LOW;
+
 bool pir = LOW;
 bool startsend = HIGH;// flag for sending at startup
 bool debug = true;
@@ -212,7 +211,7 @@ void setup() {
   //  mqttClient.publish(topic_out, ip.c_str());
 }
 
-void processButtonDigital( int buttonId ){
+void processButtonDigital( int buttonId ) {
   // Process the reading of the control buttons
   int sensorReading = digitalRead( ButtonPins[buttonId] );
   if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
@@ -321,7 +320,7 @@ void sendData() {
   mqttClient.publish(topic_out_light, messageBuffer);
 }
 
-void report_state(int outputport){
+void report_state(int outputport) {
   // Report the state of the relay
   String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
   messageString.toCharArray(messageBuffer, messageString.length() + 1);
