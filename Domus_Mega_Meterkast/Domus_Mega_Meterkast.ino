@@ -107,9 +107,9 @@ const char* topic_out_hum = "domus/mk/uit/vocht";
 const char* topic_out_heat = "domus/mk/uit/warmte";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 3;
-int RelayPins[] = {5,6,7};
-bool RelayInitialState[] = {HIGH, HIGH,HIGH};
+int NumberOfRelays = 4;
+int RelayPins[] = {5,6,7,30};
+bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW};
 
 // Vul hier de pin in van het pulserelais.
 int PulseRelayPin = 8;
