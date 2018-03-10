@@ -82,7 +82,7 @@
 // DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_huiskamer"
+#define CLIENT_ID  "domus_meterkast"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 3000 // that is 3 seconds interval

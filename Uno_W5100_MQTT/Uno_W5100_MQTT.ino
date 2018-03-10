@@ -41,7 +41,7 @@
 #define PUBLISH_DELAY   3000 // that is 3 seconds interval
 #define DEBOUNCE_DELAY 300
 
-String hostname = "domus_huiskamer";
+String hostname = "domus_meterkast";
 
 int NumberOfRelays = 10;
 int RelayPins[] = {9, 8, 7, 6, 5, 3, 14, 15, 16, 17};

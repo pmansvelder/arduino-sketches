@@ -70,7 +70,7 @@
 // DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_huiskamer"
+#define CLIENT_ID  "domus_huiskamer_2"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 3000 // that is 3 seconds interval
@@ -93,19 +93,20 @@ const char* topic_out_heat = "domus/hk/uit/warmte";
 const char* topic_out_pir = "domus/hk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
+// Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
 int NumberOfRelays = 2;
-int RelayPins[] = {6, 7};
-bool RelayInitialState[] = {HIGH, HIGH};
+int RelayPins[] = {9, 8};
+bool RelayInitialState[] = {LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 2;
-int ButtonPins[] = {8, 9};
+int NumberOfButtons = 0;
+int ButtonPins[] = {35, 36};
 static byte lastButtonStates[] = {0, 0};
 long lastActivityTimes[] = {0, 0};
 long LongPressActive[] = {0, 0};
 
 // Vul hier het aantal pulsrelais in
-int NumberOfPulseRelays = 2;
+int NumberOfPulseRelays = 0;
 // Vul hier de pins in van het pulserelais.
 int PulseRelayPins[] = {5, 11};
 long PulseActivityTimes[] = {0, 0};
@@ -137,7 +138,7 @@ bool debug = true;
 int lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x08};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -425,6 +426,13 @@ void loop() {
     reconnect();
   }
 
+  // ... then send all relay stats when we've just started up....
+  if (startsend) {
+    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+      report_state(thisPin);
+    }
+    startsend = false;
+  }
   // ...handle the PulseRelays, ...
   for (int id; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
@@ -442,23 +450,23 @@ void loop() {
   }
 
   // ...read out the PIR sensor...
-  if (digitalRead(PirSensor) == HIGH) {
-    if (!PreviousDetect) {
-      ShowDebug("Detecting movement.");
-      String messageString = "Detect";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-      PreviousDetect = true;
-    }
-  }
-  else {
-    if (PreviousDetect) {
-      String messageString = "No Detect";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-    }
-    PreviousDetect = false;
-  }
+  //  if (digitalRead(PirSensor) == HIGH) {
+  //    if (!PreviousDetect) {
+  //      ShowDebug("Detecting movement.");
+  //      String messageString = "Detect";
+  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //      mqttClient.publish(topic_out_pir, messageBuffer);
+  //      PreviousDetect = true;
+  //    }
+  //  }
+  //  else {
+  //    if (PreviousDetect) {
+  //      String messageString = "No Detect";
+  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //      mqttClient.publish(topic_out_pir, messageBuffer);
+  //    }
+  //    PreviousDetect = false;
+  //  }
 
   mqttClient.loop();
 }

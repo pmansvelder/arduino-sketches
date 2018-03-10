@@ -438,24 +438,24 @@ void loop() {
       processButtonDigital(id);
     }
   }
-  // ...read out the PIR sensor...
-  if (digitalRead(PirSensor) == HIGH) {
-    if (!PreviousDetect) {
-      ShowDebug("Detecting movement.");
-      String messageString = "Detect";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-      PreviousDetect = true;
-    }
-  }
-  else {
-    if (PreviousDetect) {
-      String messageString = "No Detect";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-    }
-    PreviousDetect = false;
-  }
-  // ...and close the loop.
+//  // ...read out the PIR sensor...
+//  if (digitalRead(PirSensor) == HIGH) {
+//    if (!PreviousDetect) {
+//      ShowDebug("Detecting movement.");
+//      String messageString = "Detect";
+//      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//      mqttClient.publish(topic_out_pir, messageBuffer);
+//      PreviousDetect = true;
+//    }
+//  }
+//  else {
+//    if (PreviousDetect) {
+//      String messageString = "No Detect";
+//      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//      mqttClient.publish(topic_out_pir, messageBuffer);
+//    }
+//    PreviousDetect = false;
+//  }
+//  // ...and close the loop.
   mqttClient.loop();
 }
