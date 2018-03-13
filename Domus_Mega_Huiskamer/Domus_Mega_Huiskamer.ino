@@ -44,8 +44,8 @@
           Uno: pins 4,10,11,12,13 in use
           Mega: 4,10,50,51,52,53 in use
 
-          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
-          ports (0, 1 used by serial interface).
+          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used 
+          by ethernet shield (4, 10, 11, 12, 13) and other ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
           ToDo:
@@ -58,6 +58,16 @@
           - added alarm function for smoke with buzzer
           - added pulse relay
 
+          Adapted 12-3-2018:
+          - added connections for hallway & sensors:
+          1. NC
+          2. NC
+          3. Heating              to pin 37
+          4. GND
+          5. Led                  to pin A8
+          6. SSR Relay for lamp   to pin 36
+          7. +5V
+          8. Button               to pin 35
 */
 
 #include <Ethernet.h>// Ethernet.h library
@@ -94,16 +104,16 @@ const char* topic_out_pir = "domus/hk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 // Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
-int NumberOfRelays = 2;
-int RelayPins[] = {9, 8};
-bool RelayInitialState[] = {LOW, LOW};
+int NumberOfRelays = 5;
+int RelayPins[] = {9, 8, 36, 37};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 0;
-int ButtonPins[] = {35, 36};
-static byte lastButtonStates[] = {0, 0};
-long lastActivityTimes[] = {0, 0};
-long LongPressActive[] = {0, 0};
+int NumberOfButtons = 1;
+int ButtonPins[] = {35};
+static byte lastButtonStates[] = {0};
+long lastActivityTimes[] = {0};
+long LongPressActive[] = {0};
 
 // Vul hier het aantal pulsrelais in
 int NumberOfPulseRelays = 0;
@@ -119,7 +129,7 @@ const int PulseRelayTimes[] = {2500, 10000};
 int SmokeSensor = A0;
 
 // Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
-int PWMoutput = 11; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
+int PWMoutput = A8; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
 int LightSensor = 2;

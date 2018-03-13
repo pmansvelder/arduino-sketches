@@ -79,8 +79,8 @@ DHT dht(DHT_PIN, DHT11);
 String hostname = CLIENT_ID;
 
 // De MQTT topics: 1 in, meerdere uit
-const char* topic_in = "domus/hk/in";
-const char* topic_out = "domus/hk/uit";
+const char* topic_in = "domus/test/in";
+const char* topic_out = "domus/test/uit";
 const char* topic_out_smoke = "domus/hk/uit/rook";
 const char* topic_out_light = "domus/hk/uit/licht";
 const char* topic_out_door = "domus/ex/uit/deur";
@@ -90,9 +90,9 @@ const char* topic_out_heat = "domus/hk/uit/warmte";
 const char* topic_out_pir = "domus/hk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 2;
-int RelayPins[] = {6, 7};
-bool RelayInitialState[] = {LOW, HIGH};
+int NumberOfRelays = 3;
+int RelayPins[] = {6, 7, 35};
+bool RelayInitialState[] = {LOW, HIGH, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 2;
@@ -202,7 +202,8 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  mqttClient.setServer( "steven", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
@@ -438,24 +439,24 @@ void loop() {
       processButtonDigital(id);
     }
   }
-//  // ...read out the PIR sensor...
-//  if (digitalRead(PirSensor) == HIGH) {
-//    if (!PreviousDetect) {
-//      ShowDebug("Detecting movement.");
-//      String messageString = "Detect";
-//      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//      mqttClient.publish(topic_out_pir, messageBuffer);
-//      PreviousDetect = true;
-//    }
-//  }
-//  else {
-//    if (PreviousDetect) {
-//      String messageString = "No Detect";
-//      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//      mqttClient.publish(topic_out_pir, messageBuffer);
-//    }
-//    PreviousDetect = false;
-//  }
-//  // ...and close the loop.
+  //  // ...read out the PIR sensor...
+  //  if (digitalRead(PirSensor) == HIGH) {
+  //    if (!PreviousDetect) {
+  //      ShowDebug("Detecting movement.");
+  //      String messageString = "Detect";
+  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //      mqttClient.publish(topic_out_pir, messageBuffer);
+  //      PreviousDetect = true;
+  //    }
+  //  }
+  //  else {
+  //    if (PreviousDetect) {
+  //      String messageString = "No Detect";
+  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //      mqttClient.publish(topic_out_pir, messageBuffer);
+  //    }
+  //    PreviousDetect = false;
+  //  }
+  //  // ...and close the loop.
   mqttClient.loop();
 }
