@@ -217,7 +217,8 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+//  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  mqttClient.setServer( "steven", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
