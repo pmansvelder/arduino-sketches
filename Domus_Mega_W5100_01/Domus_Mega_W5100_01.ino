@@ -84,9 +84,9 @@ const char* topic_out = "domus/test/uit";
 const char* topic_out_smoke = "domus/test/uit/rook";
 const char* topic_out_light = "domus/hk/uit/licht";
 const char* topic_out_door = "domus/test/uit/deur";
-const char* topic_out_temp = "domus/test/uit/temp";
-const char* topic_out_hum = "domus/test/uit/vocht";
-const char* topic_out_heat = "domus/test/uit/warmte";
+const char* topic_out_temp = "domus/hk/uit/temp";
+const char* topic_out_hum = "domus/hk/uit/vocht";
+const char* topic_out_heat = "domus/hk/uit/warmte";
 const char* topic_out_pir = "domus/test/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
