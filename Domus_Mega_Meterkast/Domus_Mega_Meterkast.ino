@@ -12,7 +12,7 @@
           9:  Button 2 (keuken)
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
-          13: 
+          13:
 
           incoming topic: domus/mk/in
 
@@ -95,7 +95,7 @@
 String hostname = CLIENT_ID;
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/mk/in"; 
+const char* topic_in = "domus/mk/in";
 
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/mk/uit";
@@ -108,7 +108,7 @@ const char* topic_out_heat = "domus/mk/uit/warmte";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 4;
-int RelayPins[] = {5,6,7,30};
+int RelayPins[] = {5, 6, 7, 30};
 bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW};
 
 // Vul hier de pin in van het pulserelais.
@@ -170,9 +170,9 @@ void setup() {
 
   // dht.begin();
 
-//  pinMode(SmokeSensor, INPUT);
-//  pinMode(PWMoutput, OUTPUT);
-//  pinMode(LightSensor, INPUT);
+  //  pinMode(SmokeSensor, INPUT);
+  //  pinMode(PWMoutput, OUTPUT);
+  //  pinMode(LightSensor, INPUT);
   pinMode(PulseRelayPin, OUTPUT);
   digitalWrite(PulseRelayPin, PulseRelayInitialState);
 
@@ -210,7 +210,8 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
@@ -281,38 +282,38 @@ void reconnect() {
 }
 
 void sendData() {
-//  int smoke = analogRead(SmokeSensor);
-//  bool light = digitalRead(LightSensor);
+  //  int smoke = analogRead(SmokeSensor);
+  //  bool light = digitalRead(LightSensor);
   String messageString;
 
-//  float h = dht.readHumidity();
-//  float t = dht.readTemperature();
-//  float hic = dht.computeHeatIndex(t, h, false);
+  //  float h = dht.readHumidity();
+  //  float t = dht.readTemperature();
+  //  float hic = dht.computeHeatIndex(t, h, false);
 
   // Send Temperature sensor
-//  messageString = String(t);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_temp, messageBuffer);
+  //  messageString = String(t);
+  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //  mqttClient.publish(topic_out_temp, messageBuffer);
 
   // Send Humidity sensor
-//  messageString = String(h);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_hum, messageBuffer);
+  //  messageString = String(h);
+  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //  mqttClient.publish(topic_out_hum, messageBuffer);
 
   // Send Heat index sensor
-//  messageString = String(hic);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_heat, messageBuffer);
+  //  messageString = String(hic);
+  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //  mqttClient.publish(topic_out_heat, messageBuffer);
 
   // Send smoke sensor
-//  messageString = String(map(smoke, 0, 1023, 0, 100));
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_smoke, messageBuffer);
+  //  messageString = String(map(smoke, 0, 1023, 0, 100));
+  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //  mqttClient.publish(topic_out_smoke, messageBuffer);
 
   // Send light sensor
-//  messageString = String(light);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_light, messageBuffer);
+  //  messageString = String(light);
+  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //  mqttClient.publish(topic_out_light, messageBuffer);
 }
 
 void report_state(int outputport)
@@ -357,7 +358,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     }
     report_state(RelayPort);
   } else if (strPayload == "IP")  {
-    
+
     // 'Show IP' commando
     mqttClient.publish(topic_out, ip.c_str());// publish IP nr
   }

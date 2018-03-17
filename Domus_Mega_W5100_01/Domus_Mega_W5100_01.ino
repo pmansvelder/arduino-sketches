@@ -81,13 +81,13 @@ String hostname = CLIENT_ID;
 // De MQTT topics: 1 in, meerdere uit
 const char* topic_in = "domus/test/in";
 const char* topic_out = "domus/test/uit";
-const char* topic_out_smoke = "domus/hk/uit/rook";
+const char* topic_out_smoke = "domus/test/uit/rook";
 const char* topic_out_light = "domus/hk/uit/licht";
-const char* topic_out_door = "domus/ex/uit/deur";
-const char* topic_out_temp = "domus/hk/uit/temp";
-const char* topic_out_hum = "domus/hk/uit/vocht";
-const char* topic_out_heat = "domus/hk/uit/warmte";
-const char* topic_out_pir = "domus/hk/uit/pir";
+const char* topic_out_door = "domus/test/uit/deur";
+const char* topic_out_temp = "domus/test/uit/temp";
+const char* topic_out_hum = "domus/test/uit/vocht";
+const char* topic_out_heat = "domus/test/uit/warmte";
+const char* topic_out_pir = "domus/test/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 3;
@@ -203,7 +203,7 @@ void setup() {
   // setup mqtt client
   mqttClient.setClient(ethClient);
   //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
-  mqttClient.setServer( "steven", 1883); // or local broker
+  mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
