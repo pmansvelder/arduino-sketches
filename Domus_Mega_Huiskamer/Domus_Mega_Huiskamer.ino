@@ -44,7 +44,7 @@
           Uno: pins 4,10,11,12,13 in use
           Mega: 4,10,50,51,52,53 in use
 
-          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used 
+          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used
           by ethernet shield (4, 10, 11, 12, 13) and other ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
@@ -217,7 +217,7 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-//  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
@@ -334,6 +334,10 @@ void sendData() {
   //  messageString = String(light);
   //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
   //  mqttClient.publish(topic_out_light, messageBuffer);
+  // Status van alle relais
+  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    report_state(thisPin);
+  }
 }
 
 void report_state(int outputport)
@@ -401,33 +405,32 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   else if (strPayload == "STAT") {
 
-    // Status van alle relais
-    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      report_state(thisPin);
-    }
+    // Status van alle sensors and relais
+    sendData();
   }
-  else if (strPayload[0] == 'P') {
+}
+else if (strPayload[0] == 'P') {
 
-    int PulseRelayPort = strPayload[1] - 48;
+  int PulseRelayPort = strPayload[1] - 48;
 
-    // Pulserelais aan
-    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
-    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    String messageString = "P" + String(PulseRelayPort) + "1";
-    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-    mqttClient.publish(topic_out_door, messageBuffer);
-    PulseActivityTimes[PulseRelayPort] = millis();
-    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
-  }
-  else if (strPayload[0] == 'L') {
-    analogWrite(PWMoutput, strPayload.substring(1).toInt());
-  }
-  else {
+  // Pulserelais aan
+  ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
+  digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+  String messageString = "P" + String(PulseRelayPort) + "1";
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_door, messageBuffer);
+  PulseActivityTimes[PulseRelayPort] = millis();
+  ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
+}
+else if (strPayload[0] == 'L') {
+  analogWrite(PWMoutput, strPayload.substring(1).toInt());
+}
+else {
 
-    // Onbekend commando
-    ShowDebug("Unknown value");
-    mqttClient.publish(topic_out, "Unknown command");
-  }
+  // Onbekend commando
+  ShowDebug("Unknown value");
+  mqttClient.publish(topic_out, "Unknown command");
+}
 }
 
 void loop() {

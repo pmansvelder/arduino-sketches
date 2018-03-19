@@ -319,6 +319,11 @@ void sendData() {
   messageString = String(light);
   messageString.toCharArray(messageBuffer, messageString.length() + 1);
   mqttClient.publish(topic_out_light, messageBuffer);
+
+  // Status van alle relais
+  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    report_state(thisPin);
+  }
 }
 
 void report_state(int outputport) {
@@ -387,10 +392,8 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   else if (strPayload == "STAT") {
 
-    // Status van alle relais
-    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      report_state(thisPin);
-    }
+    // Status van alle sensors and relais
+    sendData();
   }
   else if (strPayload[0] == 'P') {
 
