@@ -3,14 +3,11 @@
           Locatie: Huiskamer
           Macadres: 00:01:02:03:04:08
 
-
-          Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
-          It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
+          Arduino Mega with W5100 Ethernetshield used as MQTT client
+          It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hk/uit" for outgoing messages and
           "domus/hk/in" for incoming messages.
-          As the available memory of a UNO  with Ethernetcard is limited,
-          I have kept the topics short
-          Also, the payloads  are kept short
+
           The outgoing topics are
 
           domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
@@ -44,7 +41,7 @@
           Uno: pins 4,10,11,12,13 in use
           Mega: 4,10,50,51,52,53 in use
 
-          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used 
+          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used
           by ethernet shield (4, 10, 11, 12, 13) and other ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
@@ -80,7 +77,7 @@
 // DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_huiskamer_2"
+#define CLIENT_ID  "domus_huiskamer"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 3000 // that is 3 seconds interval
@@ -104,7 +101,7 @@ const char* topic_out_pir = "domus/hk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 // Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
-int NumberOfRelays = 5;
+int NumberOfRelays = 4;
 int RelayPins[] = {9, 8, 36, 37};
 bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
 
@@ -126,7 +123,7 @@ bool PulseRelayInitialStates[] = {HIGH, LOW};
 const int PulseRelayTimes[] = {2500, 10000};
 
 // Vul hier de pin in van de rooksensor
-int SmokeSensor = A0;
+int SmokeSensor = A9;
 
 // Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
 int PWMoutput = A8; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
@@ -135,7 +132,7 @@ int PWMoutput = A8; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 int LightSensor = 2;
 
 // Vul hier de pin in van de PIR
-int PirSensor = 12;
+int PirSensor = 38;
 int PreviousDetect = false; // Statusvariabele PIR sensor
 
 char messageBuffer[100];
@@ -217,7 +214,7 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-//  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
@@ -302,8 +299,8 @@ void reconnect() {
 }
 
 void sendData() {
-  //  int smoke = analogRead(SmokeSensor);
-  //  bool light = digitalRead(LightSensor);
+
+
   String messageString;
 
   //  float h = dht.readHumidity();
@@ -326,11 +323,13 @@ void sendData() {
   //  mqttClient.publish(topic_out_heat, messageBuffer);
 
   // Send smoke sensor
-  //  messageString = String(map(smoke, 0, 1023, 0, 100));
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_smoke, messageBuffer);
+  int smoke = analogRead(SmokeSensor);
+  messageString = String(map(smoke, 0, 1023, 0, 100));
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_smoke, messageBuffer);
 
   // Send light sensor
+  //  bool light = digitalRead(LightSensor);
   //  messageString = String(light);
   //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
   //  mqttClient.publish(topic_out_light, messageBuffer);
@@ -461,23 +460,23 @@ void loop() {
   }
 
   // ...read out the PIR sensor...
-  //  if (digitalRead(PirSensor) == HIGH) {
-  //    if (!PreviousDetect) {
-  //      ShowDebug("Detecting movement.");
-  //      String messageString = "Detect";
-  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //      mqttClient.publish(topic_out_pir, messageBuffer);
-  //      PreviousDetect = true;
-  //    }
-  //  }
-  //  else {
-  //    if (PreviousDetect) {
-  //      String messageString = "No Detect";
-  //      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //      mqttClient.publish(topic_out_pir, messageBuffer);
-  //    }
-  //    PreviousDetect = false;
-  //  }
+  if (digitalRead(PirSensor) == HIGH) {
+    if (!PreviousDetect) {
+      ShowDebug("Detecting movement.");
+      String messageString = "on";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+      PreviousDetect = true;
+    }
+  }
+  else {
+    if (PreviousDetect) {
+      String messageString = "off";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+    }
+    PreviousDetect = false;
+  }
 
   mqttClient.loop();
 }
