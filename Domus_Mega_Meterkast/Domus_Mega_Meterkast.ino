@@ -4,19 +4,23 @@
           Macadres: 00:01:02:03:04:08
           Pins used:
           2: PWM voor LEDs
-          3
+          3: DHT sensor
+          4: <in gebruik voor W5100>
           5: Relay 0
-          6: Relay 1 (Plafondlamp huiskamer)
+          6: Relay 1 
           7: Relay 2
           8: Relay 3 (Pulse, Deuropener)
           9:  Button 2 (keuken)
+          10: <in gebruik voor W5100>
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
           13:
+          30: SSR Relais voor keukenlamp
+          31: SSR Relais voor plafondlamp huiskamer
 
           incoming topic: domus/mk/in
 
-          Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
+          Arduino MEGA with W5100 Ethernetshield used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hk/uit" for outgoing messages and
           "domus/hk/in" for incoming messages.
@@ -85,12 +89,9 @@
 #define CLIENT_ID  "domus_meterkast"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
-#define PUBLISH_DELAY 3000 // that is 3 seconds interval
+#define PUBLISH_DELAY 5000 // that is 3 seconds interval
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
-
-// Vul hier de tijd in voor het pulserelais
-#define PULSE_RELAY_TIME 2500
 
 String hostname = CLIENT_ID;
 
@@ -107,14 +108,19 @@ const char* topic_out_hum = "domus/mk/uit/vocht";
 const char* topic_out_heat = "domus/mk/uit/warmte";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 4;
-int RelayPins[] = {5, 6, 7, 30};
-bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW};
+int NumberOfRelays = 5;
+int RelayPins[] = {5, 6, 7, 30, 31};
+bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW, LOW};
 
-// Vul hier de pin in van het pulserelais.
-int PulseRelayPin = 8;
-bool PulseRelayInitialState = HIGH;
-long PulseActivityTime = 0;
+// Vul hier het aantal pulsrelais in
+int NumberOfPulseRelays = 1;
+// Vul hier de pins in van het pulserelais.
+int PulseRelayPins[] = {8};
+long PulseActivityTimes[] = {0};
+// Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
+bool PulseRelayInitialStates[] = {HIGH};
+// Vul hier de tijden in voor de pulserelais
+const int PulseRelayTimes[] = {2500};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 3;
@@ -164,6 +170,11 @@ void setup() {
     digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
+  for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
+    pinMode(PulseRelayPins[thisPin], OUTPUT);
+    digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
+  }
+
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
@@ -173,8 +184,6 @@ void setup() {
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
-  pinMode(PulseRelayPin, OUTPUT);
-  digitalWrite(PulseRelayPin, PulseRelayInitialState);
 
   // setup serial communication
 
@@ -257,6 +266,19 @@ void processButtonDigital( int buttonId )
       }
       lastButtonStates[buttonId] = false;
     }
+  }
+}
+
+void ProcessPulseRelays(int PulseRelayId) {
+  // Process the timers of the pulse relays and see if we have to close them.
+  if (((millis() - PulseActivityTimes[PulseRelayId]) > PulseRelayTimes[PulseRelayId]) && digitalRead(PulseRelayPins[PulseRelayId]) == !PulseRelayInitialStates[PulseRelayId])
+  {
+    ShowDebug("Disabling pulse relay" + String(PulseRelayId) + ".");
+    ShowDebug(String(PulseActivityTimes[PulseRelayId]));
+    String messageString = "P" + String(PulseRelayId) + "0";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_door, messageBuffer);
+    digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
   }
 }
 
@@ -389,16 +411,18 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Status van alle sensors and relais
     sendData();
   }
-  else if (strPayload == "P01") {
+  else if (strPayload[0] == 'P') {
+
+    int PulseRelayPort = strPayload[1] - 48;
 
     // Pulserelais aan
-    ShowDebug("Enabling pulse relay.");
-    digitalWrite(PulseRelayPin, LOW);
-    String messageString = "P01";
+    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
+    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+    String messageString = "P" + String(PulseRelayPort) + "1";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_door, messageBuffer);
-    PulseActivityTime = millis();
-    ShowDebug(String(PulseActivityTime));
+    PulseActivityTimes[PulseRelayPort] = millis();
+    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
   }
   else if (strPayload[0] == 'L') {
     analogWrite(PWMoutput, strPayload.substring(1).toInt());
@@ -412,21 +436,26 @@ void callback(char* topic, byte * payload, unsigned int length) {
 }
 
 void loop() {
+  // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
   }
 
-  if (((millis() - PulseActivityTime) > PULSE_RELAY_TIME) && digitalRead(PulseRelayPin) == LOW)
-  {
-    ShowDebug("Disabling pulse relay.");
-    ShowDebug(String(PulseActivityTime));
-    String messageString = "P00";
-    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-    mqttClient.publish(topic_out_door, messageBuffer);
-    digitalWrite(PulseRelayPin, HIGH);
+  // ... then send all relay stats when we've just started up....
+  if (startsend) {
+    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+      report_state(thisPin);
+    }
+    startsend = false;
   }
-  // it's time to send new data?
+
+  // ...handle the PulseRelays, ...
+  for (int id; id < NumberOfPulseRelays; id++) {
+    ProcessPulseRelays(id);
+  }
+
+  // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
     previousMillis = millis();
     sendData();
@@ -436,5 +465,7 @@ void loop() {
       processButtonDigital(id);
     }
   }
+
+  // and loop.
   mqttClient.loop();
 }

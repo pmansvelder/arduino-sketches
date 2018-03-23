@@ -333,10 +333,6 @@ void sendData() {
   //  messageString = String(light);
   //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
   //  mqttClient.publish(topic_out_light, messageBuffer);
-  // Status van alle relais
-  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    report_state(thisPin);
-  }
 }
 
 void report_state(int outputport)
@@ -404,32 +400,33 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   else if (strPayload == "STAT") {
 
-    // Status van alle sensors and relais
-    sendData();
+    // Status van alle relais
+    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+      report_state(thisPin);
+    }
   }
-}
-else if (strPayload[0] == 'P') {
+  else if (strPayload[0] == 'P') {
 
-  int PulseRelayPort = strPayload[1] - 48;
+    int PulseRelayPort = strPayload[1] - 48;
 
-  // Pulserelais aan
-  ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
-  digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-  String messageString = "P" + String(PulseRelayPort) + "1";
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_door, messageBuffer);
-  PulseActivityTimes[PulseRelayPort] = millis();
-  ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
-}
-else if (strPayload[0] == 'L') {
-  analogWrite(PWMoutput, strPayload.substring(1).toInt());
-}
-else {
+    // Pulserelais aan
+    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
+    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+    String messageString = "P" + String(PulseRelayPort) + "1";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_door, messageBuffer);
+    PulseActivityTimes[PulseRelayPort] = millis();
+    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
+  }
+  else if (strPayload[0] == 'L') {
+    analogWrite(PWMoutput, strPayload.substring(1).toInt());
+  }
+  else {
 
-  // Onbekend commando
-  ShowDebug("Unknown value");
-  mqttClient.publish(topic_out, "Unknown command");
-}
+    // Onbekend commando
+    ShowDebug("Unknown value");
+    mqttClient.publish(topic_out, "Unknown command");
+  }
 }
 
 void loop() {
