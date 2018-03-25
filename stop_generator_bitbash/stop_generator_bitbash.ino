@@ -21,8 +21,11 @@
 #define TRIG_OFF() PORTB &= ~_BV(TRIG)
 #define ENABLE_PIN 4
 
-#define PATTERN_BYTES 18
-#define COMMAND_BYTES 7
+//#define PATTERN_BYTES 22 // for DCC
+#define PATTERN_BYTES 36 // for motorola
+
+//#define TIMER2_TARGET 114 // for DCC
+#define TIMER2_TARGET 56 // for Motorola
 
 #define WAIT_A_STR  0 /* or testmode, or timer2 delta*/
 #define WAIT_A_INT  1
@@ -39,18 +42,44 @@
 #define WAIT_D_INT_0 9
 #define WAIT_D_INT_1 10
 
-#define TIMER2_TARGET 114
+const byte stop_pattern[] = { B10101010, B10101010, B10101010, B11001010, B11001100, // 1111 1111 1111 11 0  <00
+                              B11001100, B11001100, B11001100, B11001100, B11001010, // 00 00 00> 0 <0 11 0
+                              B11001100, B11001100, B11001100, B11001010, B11001100, // 00 00> 0 <0 11 0 00
+                              B11001100, B00000010, B00000000 // 00> 1
+                            };
+const byte stop_pattern_double[] = { B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, // preamble (14 x 1)
+                                     B11110000, // start bit (0)
+                                     B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, // 8 zero bits
+                                     B11110000, // start bit
+                                     B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000, // 0 11 0 0000
+                                     B11110000, // start bit
+                                     B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000, // 0 11 0 0000
+                                     B00001100, B00000000, B00000000, B00000000, B00000000 // 1 0
+                                   };
 
-const byte stop_pattern[] = { B10101010, B10101010, B10101010, B11001010, B11001100,
-                              B11001100, B11001100, B11001100, B11001100, B11001010,
-                              B11001100, B11001100, B11001100, B11001010, B11001100,
-                              B11001100, B00000010, B00000000
+const byte test_pattern_old[] = { B10101010, B10101010, B10101010, B11001010, B11001100, // 1111 1111 1111 11 0 <00
+                                  B11001100, B10110010, B00110010, B11001011, B11001100, // 00 101 100 1000
+                                  B00110010, B00110011, B11001011, B10101100, B11101010, // 100 00 100 11111 0
+                                  B11001100, B00000010, B00000000 // 01
+                                };
+
+const byte test_pattern[] = { B10101010, B10101010, B10101010, B11001010,
+                              B11001100, B11001100, // 1111 1111 1111 11 0 <00 00
+                              B10110010, B00110010,
+                              B00101011, B11001011, B00110010, B10110011, // 101 1> 0 0 110 10 10 0 <01
+                              B00110010, B00110011, B00101011, B00000000, B00000000, B00000000 // 10 0 00 1> 1
                             };
-const byte test_pattern[] = { B10101010, B10101010, B10101010, B11001010, B11001100,
-                              B11001100, B10110010, B00110010, B11001011, B11001100,
-                              B00110010, B00110011, B11001011, B10101100, B11101010,
-                              B11001100, B00000010, B00000000
-                            };
+
+const byte test_pattern_double[] = { B11001100, B11001100, B11001100, B11001100,
+                                     B11001100, B11001100, B11001100, // preamble (14 x 1)
+                                     B11110000, // start bit (0)
+                                     B11110000, B11110000, B11110000, B11110000,
+                                     B00001100, B11001111, B00001100, B00001111, // adress: 00 00 1011 0
+                                     B11001111, B00001100, B11001111, B11110000,
+                                     B00001100, B00001111, B00001111, // data: 01101010 0
+                                     B11001111, B00001100, B00001111, B00001111, B00001111, B11001111, B00001100,
+                                     B00000000, B00000000, B00000000, B00000000// checksum: 01101101 1
+                                   };
 
 byte cmd_state = WAIT_A_STR;
 
@@ -62,14 +91,14 @@ unsigned int mycount = 0;
 byte dcc_bit_pattern[PATTERN_BYTES];
 byte dcc_bit_pattern_buffered[PATTERN_BYTES];
 
-byte c_bit;
-byte dcc_bit_count_target;
-byte dcc_bit_count_target_buffered;
+int c_bit;
+int dcc_bit_count_target;
+int dcc_bit_count_target_buffered;
 
-byte c_buf;
+int c_buf;
 
-char dcc_address = 11;
-char dcc_speed = 6;
+byte dcc_address = 11;
+byte dcc_speed = 2;
 boolean dcc_forward = true;
 
 boolean valid_frame = false;
@@ -78,6 +107,16 @@ char in;
 
 boolean got_command = false;
 boolean stop_command = true;
+
+void printBits(byte myByte) {
+  for (byte mask = 0x80; mask; mask >>= 1) {
+    if (mask & myByte)
+      Serial.print('1');
+    else
+      Serial.print('0');
+  }
+  Serial.println();
+}
 
 void setup() {
 
@@ -98,10 +137,9 @@ void setup() {
   pinMode(TRIGGER_PIN, OUTPUT); // trigger
   pinMode(ENABLE_PIN, OUTPUT);  // enable
 
-  // Messing
-
-  build_frame(3, true, 2);
-  build_frame(5, false, 2);
+  for (int i; i < PATTERN_BYTES; i++) {
+    dcc_bit_pattern[i] = 0;
+  }
 
   load_new_frame();
   c_buf = 0;
@@ -160,7 +198,7 @@ void load_new_frame() {
 
 void show_bit_pattern() {
   for ( int i = 0; i < PATTERN_BYTES; i++) {
-    Serial.println(dcc_bit_pattern[i], BIN);
+    printBits(dcc_bit_pattern[i]);
   }
   Serial.print(dcc_bit_count_target);
   Serial.println(" bits.");
@@ -282,14 +320,15 @@ void _build_frame( byte byte1, byte byte2, byte byte3) {
 };
 
 
-void loop()
+void loop2()
 {
   if (digitalRead(SWITCH_PIN) == HIGH)
   {
     dcc_address = 11;
     dcc_forward = true;
-    dcc_speed = 10;
+    dcc_speed = 6;
     if (stop_command) {
+      Serial.println("Drive command");
       got_command = true;
     }
     stop_command = false;
@@ -300,6 +339,7 @@ void loop()
     dcc_forward = true;
     dcc_speed = 0;
     if (not stop_command) {
+      Serial.println("Stop command");
       got_command = true;
     }
     stop_command = true;
@@ -313,14 +353,14 @@ void loop()
   }
 }
 
-void loop2()
+void loop_singe() // single bit, DCC spacing (116 us)
 {
   if (digitalRead(SWITCH_PIN) == HIGH)
   {
     if (stop_command) {
       valid_frame = false;
       memcpy( dcc_bit_pattern, test_pattern, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 118;
+      dcc_bit_count_target = 118; // was 118
       valid_frame = true;
       got_command = true;
     }
@@ -331,7 +371,40 @@ void loop2()
     if (not stop_command) {
       valid_frame = false;
       memcpy( dcc_bit_pattern, stop_pattern, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 130;
+      dcc_bit_count_target = 130; // was 130
+      valid_frame = true;
+      got_command = true;
+    }
+    stop_command = true;
+  }
+
+  if ( got_command ) {
+    show_bit_pattern();
+    got_command = false;
+  }
+}
+
+void loop() // double bit, MM spacing (58us)
+{
+  if (digitalRead(SWITCH_PIN) == HIGH)
+  {
+    if (stop_command) {
+      valid_frame = false;
+      Serial.println("Drive command");
+      memcpy( dcc_bit_pattern, test_pattern_double, PATTERN_BYTES * sizeof(byte) );
+      dcc_bit_count_target = 236;
+      valid_frame = true;
+      got_command = true;
+    }
+    stop_command = false;
+  }
+  else
+  {
+    if (not stop_command) {
+      valid_frame = false;
+      Serial.println("Stop command");
+      memcpy( dcc_bit_pattern, stop_pattern_double, PATTERN_BYTES * sizeof(byte) );
+      dcc_bit_count_target = 264;
       valid_frame = true;
       got_command = true;
     }
