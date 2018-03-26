@@ -22,7 +22,7 @@
 #define ENABLE_PIN 4
 
 //#define PATTERN_BYTES 22 // for DCC
-#define PATTERN_BYTES 36 // for motorola
+#define PATTERN_BYTES 64 // for motorola
 
 //#define TIMER2_TARGET 114 // for DCC
 #define TIMER2_TARGET 56 // for Motorola
@@ -42,44 +42,32 @@
 #define WAIT_D_INT_0 9
 #define WAIT_D_INT_1 10
 
-const byte stop_pattern[] = { B10101010, B10101010, B10101010, B11001010, B11001100, // 1111 1111 1111 11 0  <00
-                              B11001100, B11001100, B11001100, B11001100, B11001010, // 00 00 00> 0 <0 11 0
-                              B11001100, B11001100, B11001100, B11001010, B11001100, // 00 00> 0 <0 11 0 00
-                              B11001100, B00000010, B00000000 // 00> 1
-                            };
-const byte stop_pattern_double[] = { B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, // preamble (14 x 1)
-                                     B11110000, // start bit (0)
-                                     B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, // 8 zero bits
-                                     B11110000, // start bit
-                                     B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000, // 0 11 0 0000
-                                     B11110000, // start bit
-                                     B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000, // 0 11 0 0000
-                                     B00001100, B00000000, B00000000, B00000000, B00000000 // 1 0
-                                   };
+const byte stop_pattern[] = {
+  // MM stop for adres 72
+  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+  B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
+  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+  B00000000, B00000000, B00000000, B00000000, B00000000,
+  // broadcast stop for DCC
+  B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11110000,
+  B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000,
+  B11110000, B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000,
+  B11110000, B11110000, B11001100, B11110000, B11110000, B11110000, B11110000, B11110000,
+  B00001100
+};
 
-const byte test_pattern_old[] = { B10101010, B10101010, B10101010, B11001010, B11001100, // 1111 1111 1111 11 0 <00
-                                  B11001100, B10110010, B00110010, B11001011, B11001100, // 00 101 100 1000
-                                  B00110010, B00110011, B11001011, B10101100, B11101010, // 100 00 100 11111 0
-                                  B11001100, B00000010, B00000000 // 01
-                                };
-
-const byte test_pattern[] = { B10101010, B10101010, B10101010, B11001010,
-                              B11001100, B11001100, // 1111 1111 1111 11 0 <00 00
-                              B10110010, B00110010,
-                              B00101011, B11001011, B00110010, B10110011, // 101 1> 0 0 110 10 10 0 <01
-                              B00110010, B00110011, B00101011, B00000000, B00000000, B00000000 // 10 0 00 1> 1
-                            };
-
-const byte test_pattern_double[] = { B11001100, B11001100, B11001100, B11001100,
-                                     B11001100, B11001100, B11001100, // preamble (14 x 1)
-                                     B11110000, // start bit (0)
-                                     B11110000, B11110000, B11110000, B11110000,
-                                     B00001100, B11001111, B00001100, B00001111, // adress: 00 00 1011 0
-                                     B11001111, B00001100, B11001111, B11110000,
-                                     B00001100, B00001111, B00001111, // data: 01101010 0
-                                     B11001111, B00001100, B00001111, B00001111, B00001111, B11001111, B00001100,
-                                     B00000000, B00000000, B00000000, B00000000// checksum: 01101101 1
-                                   };
+const byte test_pattern[] = {
+  // MM address 72, speed 7, lights on
+  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+  B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B01111111,
+  B00000001, B01111111, B01111111, B01111111, B00000001, B00000001, B00000001, B00000000,
+  B00000000, B00000000, B00000000, B00000000, B00000000,
+  // DCC address 11, speed 6
+  B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11110000,
+  B11110000, B11110000, B11110000, B11110000, B00001100, B11001111, B00001100, B00001111,
+  B11001111, B00001100, B11001111, B11110000, B00001100, B00001111, B00001111, B11001111,
+  B00001100, B00001111, B00001111, B00001111, B11001111, B00001100
+};
 
 byte cmd_state = WAIT_A_STR;
 
@@ -353,59 +341,30 @@ void loop2()
   }
 }
 
-void loop_singe() // single bit, DCC spacing (116 us)
-{
-  if (digitalRead(SWITCH_PIN) == HIGH)
-  {
-    if (stop_command) {
-      valid_frame = false;
-      memcpy( dcc_bit_pattern, test_pattern, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 118; // was 118
-      valid_frame = true;
-      got_command = true;
-    }
-    stop_command = false;
-  }
-  else
-  {
-    if (not stop_command) {
-      valid_frame = false;
-      memcpy( dcc_bit_pattern, stop_pattern, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 130; // was 130
-      valid_frame = true;
-      got_command = true;
-    }
-    stop_command = true;
-  }
-
-  if ( got_command ) {
-    show_bit_pattern();
-    got_command = false;
-  }
-}
-
 void loop() // double bit, MM spacing (58us)
 {
-  if (digitalRead(SWITCH_PIN) == HIGH)
+  if (digitalRead(SWITCH_PIN) == HIGH) // Stop button not pressed
   {
-    if (stop_command) {
-      valid_frame = false;
+    if (stop_command) { // Stop command was given before or initial state
+      valid_frame = false; // block updates from ISR
       Serial.println("Drive command");
-      memcpy( dcc_bit_pattern, test_pattern_double, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 236;
-      valid_frame = true;
+      Serial.print("Length of test pattern: ");
+      Serial.println(sizeof(test_pattern) * 8);
+      memcpy( dcc_bit_pattern, test_pattern, sizeof(test_pattern) * sizeof(byte) ); // copy drive command to buffer
+      dcc_bit_count_target = sizeof(test_pattern) * 8; // was 472
+      valid_frame = true; // start issuing commands from ISR
       got_command = true;
     }
     stop_command = false;
   }
-  else
+  else // Stop button pressed
   {
-    if (not stop_command) {
-      valid_frame = false;
+    if (not stop_command) { // No stop command issued before
+      valid_frame = false; // block updates from ISR
       Serial.println("Stop command");
-      memcpy( dcc_bit_pattern, stop_pattern_double, PATTERN_BYTES * sizeof(byte) );
-      dcc_bit_count_target = 264;
-      valid_frame = true;
+      memcpy( dcc_bit_pattern, stop_pattern, sizeof(stop_pattern) * sizeof(byte) ); // copy stop command to buffer
+      dcc_bit_count_target = sizeof(stop_pattern) * 8; // was 520
+      valid_frame = true; // start issuing commands from ISR
       got_command = true;
     }
     stop_command = true;
