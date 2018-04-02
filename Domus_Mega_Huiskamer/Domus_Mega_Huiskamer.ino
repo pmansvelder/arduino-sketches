@@ -43,11 +43,10 @@
 
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used
           by ethernet shield (4, 10, 11, 12, 13) and other ports (0, 1 used by serial interface).
-          A4(18) and A5(19) are used as inputs, for 2 buttons
-
+          
           ToDo:
           - add extra button on input A5(19) => done
-          - use output 17 as a PWM channel for the button LEDs => done, used A9
+          - use output 17 as a PWM channel for the button LEDs => done, used A8
           - implement short/long press for buttons => done
 
           Adapted 24-02-2018 by Peter Mansvelder:
@@ -57,14 +56,44 @@
 
           Adapted 12-3-2018:
           - added connections for hallway & sensors:
-          1. NC
-          2. NC
-          3. Heating              to pin 37
-          4. GND
-          5. Led                  to pin A8
-          6. SSR Relay for lamp   to pin 36
-          7. +5V
-          8. Button               to pin 35
+          1. MQ-2sensor           to pin A9   red
+          2. PIR                  to pin 38   blue
+          3. Heating              to pin 37   yellow
+          4. GND                              red
+          5. Led                  to pin A8   black
+          6. SSR Relay for lamp   to pin 36   yellow
+          7. +5V                              blue
+          8. Button               to pin 35   blue
+
+          Adapted 1-4-2018:
+          - added connections for bedroom & sensors
+
+          1.  GND                             black   white/brown
+          2.  SSR Relay for lamp  to pin 22   white   brown
+          3.  Led                 to pin A8   yellow  white/orange
+          4.  Button              to pin 23   brown   orange
+          5.  DHT-11              to pin 24   blue    white/blue
+          6.  LDR                 to pin A10  orange  blue
+          7.  Buzzer              to pin 25   yellow  white/green
+          8.  +5V                             red     green
+
+          Pins in use:
+
+          9     Relay port R0: 12v relay for lamp living room
+          8     Relay port R1: 12v relay for lamp living room
+          22    Relay port R4: SSR for lamp bed chamber
+          23    Button bed chamber
+          24    DHT11 living room
+          25    Relay port R5 :Buzzer living room
+          35    Button hallway
+          36 .  Relay port R2: SSR for lamp hallway
+          37    Relay port R3: heating
+          38    PIR sensor living room
+          
+          A8    LED for button hallway
+          A9    Smoke Sensor MQ-2 living room
+          A10   LDR living room
+          
 */
 
 #include <Ethernet.h>// Ethernet.h library
@@ -81,8 +110,8 @@
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 3000 // that is 3 seconds interval
-#define DEBOUNCE_DELAY 150
-#define LONGPRESS_TIME 450
+#define DEBOUNCE_DELAY 150 // debounce for buttons
+#define LONGPRESS_TIME 450 // time to detect 'long press'
 
 String hostname = CLIENT_ID;
 
@@ -101,22 +130,22 @@ const char* topic_out_pir = "domus/hk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 // Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
-int NumberOfRelays = 4;
-int RelayPins[] = {9, 8, 36, 37};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
+int NumberOfRelays = 6;
+int RelayPins[] = {9, 8, 36, 37, 22, 25};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 1;
-int ButtonPins[] = {35};
-static byte lastButtonStates[] = {0};
-long lastActivityTimes[] = {0};
-long LongPressActive[] = {0};
+int NumberOfButtons = 2;
+int ButtonPins[] = {35, 23};
+static byte lastButtonStates[] = {0, 0};
+long lastActivityTimes[] = {0, 0};
+long LongPressActive[] = {0,0};
 
 // Vul hier het aantal pulsrelais in
 int NumberOfPulseRelays = 0;
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {5, 11};
-long PulseActivityTimes[] = {0, 0};
+int PulseRelayPins[] = {};
+long PulseActivityTimes[] = {};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 bool PulseRelayInitialStates[] = {HIGH, LOW};
 // Vul hier de tijden in voor de pulserelais
@@ -140,9 +169,9 @@ char topicBuffer[100];
 String ip = "";
 
 bool pir = LOW;
-bool startsend = HIGH;// flag for sending at startup
-bool debug = true;
-int lichtstatus; //contains LDR reading
+bool startsend = HIGH; // flag for sending at startup
+bool debug = true; // true for debug messages
+int lichtstatus; // contains LDR reading
 
 // Vul hier het macadres in
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
@@ -176,7 +205,7 @@ void setup() {
   // dht.begin();
 
   pinMode(SmokeSensor, INPUT);
-  pinMode(PWMoutput, OUTPUT);
+ // pinMode(PWMoutput, OUTPUT);
   pinMode(LightSensor, INPUT);
   pinMode(PirSensor, INPUT);
 
