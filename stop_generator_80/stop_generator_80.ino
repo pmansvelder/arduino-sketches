@@ -2,7 +2,6 @@
 // Generating a DCC Signal using Timer2 and the Waveform Generator
 //
 
-#include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -22,52 +21,90 @@
 #define TRIG_OFF() PORTB &= ~_BV(TRIG)
 #define ENABLE_PIN 4
 
+//#define PATTERN_BYTES 22 // for DCC
 #define PATTERN_BYTES 64 // for motorola
 
+//#define TIMER2_TARGET 114 // for DCC
 #define TIMER2_TARGET 56 // for Motorola
 
-const byte stop_pattern_array[][29] = {
+#define WAIT_A_STR  0 /* or testmode, or timer2 delta*/
+#define WAIT_A_INT  1
+#define WAIT_A_INT_0  100
+#define WAIT_A_INT_1  101
+#define WAIT_A_INT_2  102
+#define WAIT_SEP_1  2
+#define WAIT_DIR    3
+#define WAIT_SEP_2  4
+#define WAIT_S_STR  5
+#define WAIT_S_INT  6
+#define WAIT_TERM   7
+#define WAIT_T_INT  8  /* testmode */
+#define WAIT_D_INT_0 9
+#define WAIT_D_INT_1 10
+
+const byte stop_pattern_array[][29] PROGMEM = {
   // Stop command for all MM locs
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B00000001, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B00000001, B00000001, B01111111, B01111111, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B00000001, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B01111111, B00000001, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B01111111, B01111111, B01111111, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B01111111, B01111111, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B00000001, B01111111, B01111111, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B01111111,
-  B01111111, B00000001, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
+  // 0: address
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B00000001, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 1:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B00000001, B00000001, B01111111, B01111111, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 2:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B00000001, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 3:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B01111111, B00000001, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 4:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B01111111, B01111111, B01111111, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 5:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B01111111, B01111111, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 6:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 7:
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B00000001, B01111111, B01111111, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  // 8: Address 72
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+    B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+  //
+  { B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B01111111,
+    B01111111, B00000001, B00000001, B00000001, B00000001, B01111111, B01111111, B00000001,
+    B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+    B00000000, B00000000, B00000000, B00000000, B00000000
+  },
+
   B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B01111111,
   B01111111, B00000001, B00000001, B01111111, B01111111, B01111111, B01111111, B00000001,
   B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
@@ -354,7 +391,12 @@ const byte stop_pattern_array[][29] = {
   B00000000, B00000000, B00000000, B00000000, B00000000
 };
 
-const byte stop_pattern_dcc[] = {
+const byte stop_pattern[] = {
+  // MM stop for adres 72
+  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
+  B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
+  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
+  B00000000, B00000000, B00000000, B00000000, B00000000,
   // broadcast stop for DCC
   B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11110000,
   B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000,
@@ -363,12 +405,7 @@ const byte stop_pattern_dcc[] = {
   B00001100
 };
 
-const byte stop_pattern[] = {
-  // MM stop for adres 72
-  B00000000, B00000000, B00000000, B00000000, B00000000, B00000001, B00000001, B00000001,
-  B00000001, B01111111, B00000001, B01111111, B00000001, B01111111, B01111111, B00000001,
-  B00000001, B00000001, B01111111, B00000001, B00000001, B00000001, B01111111, B00000000,
-  B00000000, B00000000, B00000000, B00000000, B00000000,
+const byte dcc_stop_pattern[] PROGMEM = {
   // broadcast stop for DCC
   B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11001100, B11110000,
   B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000, B11110000,
@@ -390,7 +427,11 @@ const byte test_pattern[] = {
   B00001100, B00001111, B00001111, B00001111, B11001111, B00001100
 };
 
-bool debug = true;
+int COMMAND_DELAY = 1; // number of millis to wait
+
+int Motorola_address = 0;
+
+byte cmd_state = WAIT_A_STR;
 
 byte timer2_target = TIMER2_TARGET;
 int timer2_delta = 0;
@@ -399,6 +440,10 @@ unsigned int mycount = 0;
 
 byte dcc_bit_pattern[PATTERN_BYTES];
 byte dcc_bit_pattern_buffered[PATTERN_BYTES];
+
+byte source_pattern[PATTERN_BYTES];
+
+long int counter = 0;
 
 int c_bit;
 int dcc_bit_count_target;
@@ -410,44 +455,28 @@ byte dcc_address = 11;
 byte dcc_speed = 2;
 boolean dcc_forward = true;
 
-int motorola_address = 0;
-
 boolean valid_frame = false;
 
 char in;
 
 boolean got_command = false;
-boolean stop_command = true;
-
-void ShowDebug(String tekst) {
-  if (debug) {
-    ShowDebug(tekst);
-  }
-}
-
-void ShowDebugLn(String tekst) {
-  if (debug) {
-    ShowDebugLn(tekst);
-  }
-}
+boolean stop_command = false;
+boolean drive_command = false;
 
 void printBits(byte myByte) {
   for (byte mask = 0x80; mask; mask >>= 1) {
     if (mask & myByte)
-      ShowDebug(String('1'));
+      Serial.print('1');
     else
-      ShowDebug(String('0'));
+      Serial.print('0');
   }
-  ShowDebugLn(" ");
+  Serial.println();
 }
 
 void setup() {
 
   // Messing
-  if (debug) {
-    Serial.begin(9600);
-  }
-  ShowDebugLn("Beginning...");
+  Serial.begin(9600);
   show_bit_pattern();
 
   // Setup Timer2
@@ -510,7 +539,7 @@ ISR( TIMER2_COMPA_vect ) {
 
 /**
    This function is called from within the interrupt handler
-   so it cannot use ShowDebug functions without failing.
+   so it cannot use Serial.print functions without failing.
 */
 void load_new_frame() {
   if ( valid_frame ) {
@@ -526,8 +555,8 @@ void show_bit_pattern() {
   for ( int i = 0; i < PATTERN_BYTES; i++) {
     printBits(dcc_bit_pattern[i]);
   }
-  ShowDebug(String(dcc_bit_count_target));
-  ShowDebugLn(" bits.");
+  Serial.print(dcc_bit_count_target);
+  Serial.println(" bits.");
 }
 
 void configure_for_dcc_timing() {
@@ -536,7 +565,6 @@ void configure_for_dcc_timing() {
     for a '1'. So, we set up timer2 to fire an interrupt every
     58us, and we'll change the output in the interrupt service
     routine.
-
     Prescaler: set to divide-by-8 (B'010)
     Compare target: 58us / ( 1 / ( 16MHz/8) ) = 116
   */
@@ -654,7 +682,7 @@ void loop2()
     dcc_forward = true;
     dcc_speed = 6;
     if (stop_command) {
-      ShowDebugLn("Drive command");
+      Serial.println("Drive command");
       got_command = true;
     }
     stop_command = false;
@@ -665,7 +693,7 @@ void loop2()
     dcc_forward = true;
     dcc_speed = 0;
     if (not stop_command) {
-      ShowDebugLn("Stop command");
+      Serial.println("Stop command");
       got_command = true;
     }
     stop_command = true;
@@ -674,50 +702,67 @@ void loop2()
   if ( got_command ) {
     build_frame(dcc_address, dcc_forward, dcc_speed);
     show_bit_pattern();
-    ShowDebugLn(String(dcc_bit_count_target));
+    Serial.println(dcc_bit_count_target);
     got_command = false;
   }
 }
 
 void loop() // double bit, MM spacing (58us)
 {
-//  if (motorola_address < 80) {
+  if (Motorola_address < 80) {
     if (digitalRead(SWITCH_PIN) == HIGH) // Stop button not pressed
     {
-      if (stop_command) { // Stop command was given before or initial state
+      Motorola_address = 0 ;
+      if (not drive_command) { // Drive command was given before or initial state
+        counter = millis();  // start counting
         valid_frame = false; // block updates from ISR
-        ShowDebugLn("Drive command");
-        ShowDebug("Length of test pattern: ");
-        ShowDebugLn(String(sizeof(test_pattern) * 8));
+        Serial.println("Drive command");
+        Serial.print("Length of test pattern: ");
+        Serial.println(sizeof(test_pattern) * 8);
         memcpy( dcc_bit_pattern, test_pattern, sizeof(test_pattern) * sizeof(byte) ); // copy drive command to buffer
         dcc_bit_count_target = sizeof(test_pattern) * 8; // was 472
         valid_frame = true; // start issuing commands from ISR
         got_command = true;
       }
-      stop_command = false;
-      motorola_address = 0;
+      drive_command = true;
     }
     else // Stop button pressed
     {
-      if (not stop_command) { // No stop command issued before
+      if (not stop_command)
+      { // No stop command issued before
+        counter = millis();  // start counting
         valid_frame = false; // block updates from ISR
-        ShowDebugLn("Stop command");
-//        ShowDebugLn(String(sizeof(stop_pattern_array[motorola_address])));
-        memcpy( dcc_bit_pattern, stop_pattern, sizeof(stop_pattern) * sizeof(byte) ); // copy stop command to buffer
-        dcc_bit_count_target = sizeof(stop_pattern) * 8; // was 520
+        //        Serial.println("Stop command");
+        memcpy_P(source_pattern, stop_pattern_array[Motorola_address], 29);
+        memcpy_P(source_pattern + (sizeof(stop_pattern_array[Motorola_address]) * sizeof(byte)), dcc_stop_pattern, sizeof(dcc_stop_pattern)* sizeof(byte));
+        memcpy( dcc_bit_pattern, source_pattern, sizeof(source_pattern) * sizeof(byte) ); // copy stop command to buffer
+        dcc_bit_count_target = sizeof(source_pattern) * 8; // was 520
+
+        // memcpy( dcc_bit_pattern, stop_pattern, sizeof(stop_pattern) * sizeof(byte) ); // copy stop command to buffer
+        // dcc_bit_count_target = sizeof(stop_pattern) * 8; // was 520
+
         valid_frame = true; // start issuing commands from ISR
         got_command = true;
+        stop_command = true;
+        drive_command = false;
       }
-      stop_command = true;
-//      motorola_address += 1;
-    }
 
+      if ((counter - millis()) > COMMAND_DELAY)
+      {
+        stop_command = false;
+        Motorola_address += 1;
+        //        Serial.print("Address:");
+        //        Serial.println(Motorola_address);
+        //        Serial.println(counter);
+        counter = millis();
+      }
+    }
     if ( got_command ) {
-      show_bit_pattern();
+//       show_bit_pattern();
       got_command = false;
     }
   }
-//  else {
-//    motorola_address = 0 ;
-//  }
-//}
+  else {
+    Motorola_address = 0 ;
+  }
+}
