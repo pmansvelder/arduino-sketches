@@ -70,11 +70,11 @@
 
           1.  GND                             black   white/brown
           2.  SSR Relay for lamp  to pin 22   white   brown
-          3.  Led                 to pin A8   yellow  white/orange
+          3.  Button Led          to pin A8   yellow  white/orange
           4.  Button              to pin 23   brown   orange
-          5.  DHT-11              to pin 24   blue    white/blue
-          6.  LDR                 to pin A10  orange  blue
-          7.  Buzzer              to pin 25   yellow  white/green
+          5.  DHT-11              to pin 24   blue    white/blue  *
+          6.  LDR                 to pin A10  orange  blue        *
+          7.  Buzzer              to pin 25   yellow  white/green *
           8.  +5V                             red     green
 
           Pins in use:
