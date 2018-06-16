@@ -13,9 +13,9 @@
           domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
           domus/hk/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
           domus/hk/uit/licht  // LDR-melder: 0=licht, 1=donker
-          domus/hk/uit/temp   // DHT-11 temperatuursensor
-          domus/hk/uit/warmte // DHT-11 gevoelstemperatuur
-          domus/hk/uit/vocht  // DHT-11 luchtvochtigheid
+          domus/hk/uit/temp   // DHT-22 temperatuursensor
+          domus/hk/uit/warmte // DHT-22 gevoelstemperatuur
+          domus/hk/uit/vocht  // DHT-22 luchtvochtigheid
           domus/ex/uit/deur   // Pulserelais t.b.v. deuropener
 
           Here, each relay state is reported using the same syntax as the switch command:
@@ -43,7 +43,7 @@
 
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used
           by ethernet shield (4, 10, 11, 12, 13) and other ports (0, 1 used by serial interface).
-          
+
           ToDo:
           - add extra button on input A5(19) => done
           - use output 17 as a PWM channel for the button LEDs => done, used A8
@@ -72,9 +72,9 @@
           2.  SSR Relay for lamp  to pin 22   white   brown
           3.  Button Led          to pin A8   yellow  white/orange
           4.  Button              to pin 23   brown   orange
-          5.  DHT-11              to pin 24   blue    white/blue  *
+          5.  DHT-22              to pin 24   blue    white/blue  *
           6.  LDR                 to pin A10  orange  blue        *
-          7.  Buzzer              to pin 25   yellow  white/green *
+          7.  Buzzer              to pin 25   yellow  white/green * (relay 5)
           8.  +5V                             red     green
 
           Pins in use:
@@ -83,17 +83,17 @@
           8     Relay port R1: 12v relay for lamp living room
           22    Relay port R4: SSR for lamp bed chamber
           23    Button bed chamber
-          24    DHT11 living room
+          24    DHT22 living room
           25    Relay port R5 :Buzzer living room
           35    Button hallway
           36 .  Relay port R2: SSR for lamp hallway
           37    Relay port R3: heating
           38    PIR sensor living room
-          
+
           A8    LED for button hallway
           A9    Smoke Sensor MQ-2 living room
           A10   LDR living room
-          
+
 */
 
 #include <Ethernet.h>// Ethernet.h library
@@ -101,9 +101,9 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
-// Vul hier de pin in van de DHT11 sensor
-#define DHT_PIN 3
-// DHT dht(DHT_PIN, DHT11);
+// Vul hier de pin in van de DHT22 sensor
+#define DHT_PIN 24
+DHT dht(DHT_PIN, DHT22);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_huiskamer"
@@ -139,7 +139,7 @@ int NumberOfButtons = 2;
 int ButtonPins[] = {35, 23};
 static byte lastButtonStates[] = {0, 0};
 long lastActivityTimes[] = {0, 0};
-long LongPressActive[] = {0,0};
+long LongPressActive[] = {0, 0};
 
 // Vul hier het aantal pulsrelais in
 int NumberOfPulseRelays = 0;
@@ -158,7 +158,7 @@ int SmokeSensor = A9;
 int PWMoutput = A8; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
-int LightSensor = 2;
+int LightSensor = A10;
 
 // Vul hier de pin in van de PIR
 int PirSensor = 38;
@@ -171,7 +171,6 @@ String ip = "";
 bool pir = LOW;
 bool startsend = HIGH; // flag for sending at startup
 bool debug = true; // true for debug messages
-int lichtstatus; // contains LDR reading
 
 // Vul hier het macadres in
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
@@ -202,10 +201,10 @@ void setup() {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
 
-  // dht.begin();
+  dht.begin();
 
   pinMode(SmokeSensor, INPUT);
- // pinMode(PWMoutput, OUTPUT);
+  // pinMode(PWMoutput, OUTPUT);
   pinMode(LightSensor, INPUT);
   pinMode(PirSensor, INPUT);
 
@@ -329,27 +328,26 @@ void reconnect() {
 
 void sendData() {
 
-
   String messageString;
 
-  //  float h = dht.readHumidity();
-  //  float t = dht.readTemperature();
-  //  float hic = dht.computeHeatIndex(t, h, false);
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float hic = dht.computeHeatIndex(t, h, false);
 
   // Send Temperature sensor
-  //  messageString = String(t);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_temp, messageBuffer);
+  messageString = String(t);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_temp, messageBuffer);
 
   // Send Humidity sensor
-  //  messageString = String(h);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_hum, messageBuffer);
+  messageString = String(h);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_hum, messageBuffer);
 
   // Send Heat index sensor
-  //  messageString = String(hic);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_heat, messageBuffer);
+  messageString = String(hic);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_heat, messageBuffer);
 
   // Send smoke sensor
   int smoke = analogRead(SmokeSensor);
@@ -358,10 +356,10 @@ void sendData() {
   mqttClient.publish(topic_out_smoke, messageBuffer);
 
   // Send light sensor
-  //  bool light = digitalRead(LightSensor);
-  //  messageString = String(light);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_light, messageBuffer);
+  int light = analogRead(LightSensor);
+  messageString = String(map(light, 0, 1023, 0, 100));
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_light, messageBuffer);
 }
 
 void report_state(int outputport)
@@ -409,6 +407,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
 
     // 'Show IP' commando
     mqttClient.publish(topic_out, ip.c_str());// publish IP nr
+    mqttClient.publish(topic_out, hostname.c_str()); // publish hostname
   }
   else if (strPayload == "AON") {
 

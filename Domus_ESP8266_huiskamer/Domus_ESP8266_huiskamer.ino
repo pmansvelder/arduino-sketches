@@ -20,23 +20,25 @@ const char* topic_in = "domus/esp/in";
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/esp/uit";
 
-int NumberOfRelays = 1;
-int RelayPins[] = {0};
-bool RelayInitialState[] = {HIGH};
+int NumberOfRelays = 2;
+int RelayPins[] = {2, 0};
+bool RelayInitialState[] = {LOW, HIGH};
 
 // Vul hier het aantal pulsrelais in
-int NumberOfPulseRelays = 0;
+int NumberOfPulseRelays = 1;
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {0};
+int PulseRelayPins[] = {2};
 long PulseActivityTimes[] = {};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
-bool PulseRelayInitialStates[] = {HIGH};
+bool PulseRelayInitialStates[] = {LOW};
 // Vul hier de tijden in voor de pulserelais
 const int PulseRelayTimes[] = {250};
 
 char messageBuffer[100];
 char topicBuffer[100];
 String ip = "";
+
+bool pulse_command;
 
 WiFiClient espClient;
 PubSubClient mqttClient;
@@ -97,7 +99,7 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(espClient);
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer( "hassbian", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
 }
@@ -107,11 +109,16 @@ void ProcessPulseRelays(int PulseRelayId) {
   if (((millis() - PulseActivityTimes[PulseRelayId]) > PulseRelayTimes[PulseRelayId]) && digitalRead(PulseRelayPins[PulseRelayId]) == !PulseRelayInitialStates[PulseRelayId])
   {
     ShowDebug("Disabling pulse relay" + String(PulseRelayId) + ".");
+    ShowDebug(String(PulseRelayId));
+    digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
+    pulse_command = false;
     ShowDebug(String(PulseActivityTimes[PulseRelayId]));
+    ShowDebug(String(millis()));
+    ShowDebug(String(digitalRead(PulseRelayPins[PulseRelayId])));
+    ShowDebug(String(PulseRelayInitialStates[PulseRelayId]));
     String messageString = "P" + String(PulseRelayId) + "0";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out, messageBuffer);
-    digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
   }
 }
 
@@ -129,9 +136,10 @@ void reconnect() {
     // Attempt to connect
     if (mqttClient.connect(CLIENT_ID)) {
       ShowDebug("connected");
+      digitalWrite(0, LOW);
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, "ESP8266 connected");
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -154,16 +162,38 @@ void callback(char* topic, byte * payload, unsigned int length) {
   ShowDebug(topic);
   ShowDebug(strPayload);
 
+  int RelayPort;
+  int RelayValue;
+
   if (strPayload[0] == 'R') {
-    digitalWrite(0, !digitalRead(0));
-    report_state(0);
+
+    // Relais commando
+    ShowDebug("Relay command");
+
+    RelayPort = strPayload[1] - 48;
+    if (RelayPort > 16) RelayPort -= 3;
+    RelayValue = strPayload[2] - 48;
+
+    ShowDebug(String(RelayPort));
+    ShowDebug(String(RelayValue));
+    ShowDebug(String(HIGH));
+
+    if (RelayValue == 40) {
+      ShowDebug("Toggling relay...");
+      digitalWrite(RelayPins[RelayPort], !digitalRead(RelayPins[RelayPort]));
+    } else {
+      digitalWrite(RelayPins[RelayPort], RelayValue);
+    }
+    report_state(RelayPort);
   }
+
   else if (strPayload == "IP")  {
     // 'Show IP' commando
     mqttClient.publish(topic_out, ip.c_str()); // publish IP nr
+    mqttClient.publish(topic_out, hostname.c_str()); // publish hostname
   }
   else if (strPayload[0] == 'P') {
-
+    pulse_command = true;
     int PulseRelayPort = strPayload[1] - 48;
 
     // Pulserelais aan
@@ -173,6 +203,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out, messageBuffer);
     PulseActivityTimes[PulseRelayPort] = millis();
+    ShowDebug("Timestamp at beginning of pulse");
     ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
   }
 
@@ -193,9 +224,11 @@ void loop() {
     startsend = false;
   }
   // ...handle the PulseRelays, ...
-//  for (int id; id < NumberOfPulseRelays; id++) {
-//    ProcessPulseRelays(id);
-//  }
+  if (pulse_command) {
+    for (int id; id < NumberOfPulseRelays; id++) {
+      ProcessPulseRelays(id);
+    }
+  }
 
   mqttClient.loop();
 }
