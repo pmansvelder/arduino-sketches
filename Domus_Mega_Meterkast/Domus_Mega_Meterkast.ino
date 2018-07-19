@@ -7,7 +7,7 @@
           3: DHT sensor
           4: <in gebruik voor W5100>
           5: Relay 0
-          6: Relay 1 
+          6: Relay 1
           7: Relay 2
           8: Relay 3 (Pulse, Deuropener)
           9:  Button 2 (keuken)
@@ -85,6 +85,10 @@
 #define DHT_PIN 3
 // DHT dht(DHT_PIN, DHT11);
 
+// Vul hier de pin in van de PIR
+int PirSensor = 28;
+int PreviousDetect = false; // Statusvariabele PIR sensor
+
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_meterkast"
 
@@ -106,6 +110,7 @@ const char* topic_out_door = "domus/mk/uit/deur";
 const char* topic_out_temp = "domus/mk/uit/temp";
 const char* topic_out_hum = "domus/mk/uit/vocht";
 const char* topic_out_heat = "domus/mk/uit/warmte";
+const char* topic_out_pir = "domus/mk/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 5;
@@ -184,6 +189,7 @@ void setup() {
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
+  pinMode(PirSensor, INPUT);
 
   // setup serial communication
 
@@ -464,6 +470,25 @@ void loop() {
     for (int id; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
+  }
+
+  // ...read out the PIR sensor...
+  if (digitalRead(PirSensor) == HIGH) {
+    if (!PreviousDetect) {
+      ShowDebug("Detecting movement.");
+      String messageString = "on";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+      PreviousDetect = true;
+    }
+  }
+  else {
+    if (PreviousDetect) {
+      String messageString = "off";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+    }
+    PreviousDetect = false;
   }
 
   // and loop.
