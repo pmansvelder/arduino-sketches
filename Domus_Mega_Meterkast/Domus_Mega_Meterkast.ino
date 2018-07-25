@@ -74,7 +74,12 @@
           - added alarm function for smoke with buzzer
           - added pulse relay
 
+          Adapted 22-07-2018 by Peter Mansvelder
+          - added smart meter P1 input
+
 */
+
+#include <Scheduler.h>
 
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
@@ -111,6 +116,12 @@ const char* topic_out_temp = "domus/mk/uit/temp";
 const char* topic_out_hum = "domus/mk/uit/vocht";
 const char* topic_out_heat = "domus/mk/uit/warmte";
 const char* topic_out_pir = "domus/mk/uit/pir";
+const char* topic_out_meter_voltage = "domus/mk/uit/meter/voltage";
+const char* topic_out_meter_tariff = "domus/mk/uit/meter/tarief";
+const char* topic_out_meter_high = "domus/mk/uit/meter/meterhigh";
+const char* topic_out_meter_low = "domus/mk/uit/meter/meterlow";
+const char* topic_out_meter_power = "domus/mk/uit/meter/power";
+const char* topic_out_meter_gas = "domus/mk/uit/meter/gas";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 5;
@@ -163,6 +174,20 @@ PubSubClient mqttClient;
 
 long previousMillis;
 
+// variables for meter reading
+char input; // incoming serial data (byte)
+bool readnextLine = false;
+#define BUFSIZE 75
+char buffer[BUFSIZE]; //Buffer for serial data to find \n .
+int bufpos = 0;
+long mEVLT = 0; //Meter reading Electrics - consumption low tariff
+long mEVHT = 0; //Meter reading Electrics - consumption high tariff
+long mEAV = 0;  //Meter reading Electrics - Actual consumption
+long mG = 0;   //Meter reading Gas
+int Tariff = 1; // Current tariff
+long Voltage = 0; // Voltage
+
+// General variables
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
@@ -233,7 +258,72 @@ void setup() {
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
   //  mqttClient.publish(topic_out, ip.c_str());
+
+  // Setup P1 smart meter reading
+  Serial1.begin(115200); //Serial1 on pins 19 (RX) and 18 (TX)
 }
+
+void decodeTelegram() {
+  long tl = 0;
+  long tld = 0;
+
+  if (Serial1.available()) {
+    input = Serial1.read();
+    char inChar = (char)input;
+    // Fill buffer up to and including a new line (\n)
+    buffer[bufpos] = input & 127;
+    bufpos++;
+
+    if (input == '\n') { // We received a new line (data up to \n)
+      ShowDebug(buffer);
+
+      // 0-0:96.14 = Elektra tarief (laag = 1)
+      if (sscanf(buffer, "0-0:96.14(%ld.%ld" , &tl, &tld) == 2) {
+        Tariff = tl;
+      }
+
+      // 1-0:32.7 = Netspanning
+      if (sscanf(buffer, "1-0:32.7.0(%ld.%ld" , &tl, &tld) == 2) {
+        tl += tld;
+        Voltage = tl;
+      }
+
+      // 1-0:1.8.1 = Elektra verbruik laag tarief (DSMR v4.0)
+      if (sscanf(buffer, "1-0:1.8.1(%ld.%ld" , &tl, &tld) == 2) {
+        tl *= 1000;
+        tl += tld;
+        mEVLT = tl;
+      }
+
+      // 1-0:1.8.2 = Elektra verbruik hoog tarief (DSMR v4.0)
+      if (sscanf(buffer, "1-0:1.8.2(%ld.%ld" , &tl, &tld) == 2) {
+        tl *= 1000;
+        tl += tld;
+        mEVHT = tl;
+      }
+
+      // 1-0:1.7.0 = Electricity consumption actual usage (DSMR v4.0)
+      if (sscanf(buffer, "1-0:1.7.0(%ld.%ld" , &tl , &tld) == 2)
+      {
+        mEAV = (tl * 1000) + tld;
+      }
+
+      // 0-1:24.2.1 = Gas (DSMR v4.0) on Kaifa MA105 meter
+      if (strncmp(buffer, "0-1:24.2.1", strlen("0-1:24.2.1")) == 0) {
+        if (sscanf(strrchr(buffer, '(') + 1, "%d.%d", &tl, &tld) == 2) {
+          mG = (tl * 1000) + tld;
+        }
+      }
+
+      // Empty buffer again (whole array)
+      for (int i = 0; i < 75; i++)
+      {
+        buffer[i] = 0;
+      }
+      bufpos = 0;
+    }
+  } //Einde 'if Serial1.available'
+} //Einde 'decodeTelegram()' functie
 
 void processButtonDigital( int buttonId )
 {
@@ -347,6 +437,32 @@ void sendData() {
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
   }
+  //send meter data to MQTT
+//  messageString = String(Voltage);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_voltage, messageBuffer);
+//  messageString = String(Tariff);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_tariff, messageBuffer);
+//  messageString = String(mEVLT);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_low, messageBuffer);
+//  messageString = String(mEVHT);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_high, messageBuffer);
+//  messageString = String(mEAV);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_power, messageBuffer);
+//  messageString = String(mG);
+//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+//  mqttClient.publish(topic_out_meter_gas, messageBuffer);
+//  //Reset variables to zero for next run
+//  Voltage = 0;
+//  Tariff = 0;
+//  mEVLT = 0;
+//  mEVHT = 0;
+//  mEAV = 0;
+//  mG = 0;
 }
 
 void report_state(int outputport)
@@ -490,6 +606,9 @@ void loop() {
     }
     PreviousDetect = false;
   }
+
+  // ...read out the smart meter...
+//  decodeTelegram();
 
   // and loop.
   mqttClient.loop();
