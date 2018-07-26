@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
           Locatie: Meterkast
-          Macadres: 00:01:02:03:04:08
+          Macadres: 00:01:02:03:04:12
           Pins used:
           2: PWM voor LEDs
           3: DHT sensor
@@ -79,6 +79,8 @@
 
 */
 
+#include <Scheduler.h>
+
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
@@ -93,7 +95,7 @@ int PirSensor = 28;
 int PreviousDetect = false; // Statusvariabele PIR sensor
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_meterkast"
+#define CLIENT_ID  "domus_due_meterkast"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 5000 // that is 3 seconds interval
@@ -103,23 +105,23 @@ int PreviousDetect = false; // Statusvariabele PIR sensor
 String hostname = CLIENT_ID;
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/mk/in";
+const char* topic_in = "domus/due/in";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/mk/uit";
-const char* topic_out_smoke = "domus/mk/uit/rook";
-const char* topic_out_light = "domus/mk/uit/licht";
-const char* topic_out_door = "domus/mk/uit/deur";
-const char* topic_out_temp = "domus/mk/uit/temp";
-const char* topic_out_hum = "domus/mk/uit/vocht";
-const char* topic_out_heat = "domus/mk/uit/warmte";
-const char* topic_out_pir = "domus/mk/uit/pir";
-const char* topic_out_meter_voltage = "domus/mk/uit/meter/voltage";
-const char* topic_out_meter_tariff = "domus/mk/uit/meter/tarief";
-const char* topic_out_meter_high = "domus/mk/uit/meter/meterhigh";
-const char* topic_out_meter_low = "domus/mk/uit/meter/meterlow";
-const char* topic_out_meter_power = "domus/mk/uit/meter/power";
-const char* topic_out_meter_gas = "domus/mk/uit/meter/gas";
+const char* topic_out = "domus/due/uit";
+const char* topic_out_smoke = "domus/due/uit/rook";
+const char* topic_out_light = "domus/due/uit/licht";
+const char* topic_out_door = "domus/due/uit/deur";
+const char* topic_out_temp = "domus/due/uit/temp";
+const char* topic_out_hum = "domus/due/uit/vocht";
+const char* topic_out_heat = "domus/due/uit/warmte";
+const char* topic_out_pir = "domus/due/uit/pir";
+const char* topic_out_meter_voltage = "domus/due/uit/meter/voltage";
+const char* topic_out_meter_tariff = "domus/due/uit/meter/tarief";
+const char* topic_out_meter_high = "domus/due/uit/meter/meterhigh";
+const char* topic_out_meter_low = "domus/due/uit/meter/meterlow";
+const char* topic_out_meter_power = "domus/due/uit/meter/power";
+const char* topic_out_meter_gas = "domus/due/uit/meter/gas";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 5;
@@ -165,7 +167,7 @@ bool debug = true;
 int lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x08};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x12};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -208,7 +210,8 @@ void setup() {
   }
 
   // dht.begin();
-
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH);
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
@@ -217,10 +220,10 @@ void setup() {
   // setup serial communication
 
   if (debug) {
-    Serial.begin(9600);
+    Serial.begin(115200);
     while (!Serial) {};
 
-    ShowDebug(F("MQTT Arduino Domus"));
+    ShowDebug(F("MQTT Arduino Domus Due"));
     ShowDebug(hostname);
     ShowDebug("");
   }
@@ -248,7 +251,6 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
@@ -259,6 +261,7 @@ void setup() {
 
   // Setup P1 smart meter reading
   Serial1.begin(115200); //Serial1 on pins 19 (RX) and 18 (TX)
+  Scheduler.startLoop(loop2); // Start second loop for meter reading
 }
 
 void decodeTelegram() {
@@ -398,6 +401,9 @@ void reconnect() {
 }
 
 void sendData() {
+
+  ShowDebug("Sending data...");
+
   //  int smoke = analogRead(SmokeSensor);
   //  bool light = digitalRead(LightSensor);
   String messageString;
@@ -436,31 +442,31 @@ void sendData() {
     report_state(thisPin);
   }
   //send meter data to MQTT
-//  messageString = String(Voltage);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_voltage, messageBuffer);
-//  messageString = String(Tariff);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_tariff, messageBuffer);
-//  messageString = String(mEVLT);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_low, messageBuffer);
-//  messageString = String(mEVHT);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_high, messageBuffer);
-//  messageString = String(mEAV);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_power, messageBuffer);
-//  messageString = String(mG);
-//  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//  mqttClient.publish(topic_out_meter_gas, messageBuffer);
-//  //Reset variables to zero for next run
-//  Voltage = 0;
-//  Tariff = 0;
-//  mEVLT = 0;
-//  mEVHT = 0;
-//  mEAV = 0;
-//  mG = 0;
+  messageString = String(Voltage);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_voltage, messageBuffer);
+  messageString = String(Tariff);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_tariff, messageBuffer);
+  messageString = String(mEVLT);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_low, messageBuffer);
+  messageString = String(mEVHT);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_high, messageBuffer);
+  messageString = String(mEAV);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_power, messageBuffer);
+  messageString = String(mG);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_meter_gas, messageBuffer);
+  //Reset variables to zero for next run
+  Voltage = 0;
+  Tariff = 0;
+  mEVLT = 0;
+  mEVHT = 0;
+  mEAV = 0;
+  mG = 0;
 }
 
 void report_state(int outputport)
@@ -571,43 +577,47 @@ void loop() {
   }
 
   // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
-    ProcessPulseRelays(id);
-  }
+//    for (int id; id < NumberOfPulseRelays; id++) {
+//      ProcessPulseRelays(id);
+//    }
 
   // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
     previousMillis = millis();
     sendData();
   }
-  else {
-    for (int id; id < NumberOfButtons; id++) {
-      processButtonDigital(id);
-    }
-  }
+//    else {
+//      for (int id; id < NumberOfButtons; id++) {
+//        processButtonDigital(id);
+//      }
+//    }
 
   // ...read out the PIR sensor...
-  if (digitalRead(PirSensor) == HIGH) {
-    if (!PreviousDetect) {
-      ShowDebug("Detecting movement.");
-      String messageString = "on";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-      PreviousDetect = true;
+    if (digitalRead(PirSensor) == HIGH) {
+      if (!PreviousDetect) {
+        ShowDebug("Detecting movement.");
+        String messageString = "on";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pir, messageBuffer);
+        PreviousDetect = true;
+      }
     }
-  }
-  else {
-    if (PreviousDetect) {
-      String messageString = "off";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
+    else {
+      if (PreviousDetect) {
+        String messageString = "off";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pir, messageBuffer);
+      }
+      PreviousDetect = false;
     }
-    PreviousDetect = false;
-  }
-
-  // ...read out the smart meter...
-//  decodeTelegram();
 
   // and loop.
   mqttClient.loop();
+  yield();
+}
+
+void loop2()
+{ // ...read out the smart meter...
+  decodeTelegram();
+  yield();
 }

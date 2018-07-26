@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
           Locatie: Huiskamer
-          Macadres: 00:01:02:03:04:08
+          Macadres: 00:01:02:03:04:06
 
           Arduino Mega with W5100 Ethernetshield used as MQTT client
           It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
