@@ -90,7 +90,7 @@ void decodeTelegram() {
 //      Serial.print(buffer);
 
       // 0-0:96.14 = Elektra tarief (laag = 1)
-      if (sscanf(buffer, "0-0:96.14(%ld.%ld" , &tl, &tld) == 2) {
+      if (sscanf(buffer, "0-0:96.14.0(%d" , &tl) == 1) {
         Tariff = tl;
       }
 
