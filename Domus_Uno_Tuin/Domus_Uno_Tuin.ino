@@ -170,12 +170,6 @@ bool readnextLine = false;
 #define BUFSIZE 75
 char buffer[BUFSIZE]; //Buffer for serial data to find \n .
 int bufpos = 0;
-long mEVLT = 0; //Meter reading Electrics - consumption low tariff
-long mEVHT = 0; //Meter reading Electrics - consumption high tariff
-long mEAV = 0;  //Meter reading Electrics - Actual consumption
-long mG = 0;   //Meter reading Gas
-int Tariff = 1; // Current tariff
-long Voltage = 0; // Voltage
 
 // General variables
 void ShowDebug(String tekst) {
