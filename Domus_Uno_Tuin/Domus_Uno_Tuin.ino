@@ -1,5 +1,5 @@
 /*
-          <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
+          <========Arduino Sketch for Arduino Uno with Ethernet module W5100=========>
           Locatie: Tuin
           Macadres: 00:01:02:03:04:0A
           Pins used:
@@ -8,19 +8,17 @@
           4:
           5: Relay 0
           6: Relay 1
-          7: Relay 2
-          8: Relay 3 (Pulse, Deuropener)
-          9:  Button 2 (keuken)
+          7:
+          8: Reset for W5100
+          9:
           10: <in gebruik voor W5100>
           11: <in gebruik voor W5100>
           12: <in gebruik voor W5100>
           13: <in gebruik voor W5100>
-          30: SSR Relais voor keukenlamp
-          31: SSR Relais voor plafondlamp huiskamer
 
           incoming topic: domus/tuin/in
 
-          Arduino MEGA with W5100 Ethernetshield used as MQTT client
+          Arduino Uno with W5100 Module used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/uin/uit" for outgoing messages and
           "domus/tuin/in" for incoming messages.
