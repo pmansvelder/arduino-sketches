@@ -87,7 +87,7 @@
 DHT dht(DHT_PIN, DHT22);
 
 // Vul hier de pin in van de PIR
-int PirSensor = 28;
+int PirSensor = 4;
 int PreviousDetect = false; // Statusvariabele PIR sensor
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
@@ -114,9 +114,9 @@ const char* topic_out_heat = "domus/tuin/uit/warmte";
 const char* topic_out_pir = "domus/tuin/uit/pir";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 1;
-int RelayPins[] = {5};
-bool RelayInitialState[] = {LOW};
+int NumberOfRelays = 2;
+int RelayPins[] = {5,6};
+bool RelayInitialState[] = {LOW, LOW};
 
 // Vul hier het aantal pulsrelais in
 int NumberOfPulseRelays = 1;
@@ -307,7 +307,7 @@ void reconnect() {
       ShowDebug("connected");
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, "MQTT Arduino Domus Tuin connected");
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
