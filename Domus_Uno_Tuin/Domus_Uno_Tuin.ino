@@ -3,11 +3,11 @@
           Locatie: Tuin
           Macadres: 00:01:02:03:04:0A
           Pins used:
-          2: PWM voor LEDs
-          3: DHT sensor
+          2:
+          3: DHT-22 sensor
           4:
-          5: Relay 0
-          6: Relay 1
+          5: Relay 0 (SSR)
+          6: Relay 1 (SSR)
           7:
           8: Reset for W5100
           9:
@@ -15,6 +15,7 @@
           11: <in gebruik voor W5100>
           12: <in gebruik voor W5100>
           13: <in gebruik voor W5100>
+
 
           incoming topic: domus/tuin/in
 
@@ -79,16 +80,29 @@
 
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
-#include <Adafruit_Sensor.h>
+//#include <Adafruit_Sensor.h>
 #include <DHT.h>
+#include <Adafruit_BMP280.h>
+
+#define BUFFERSIZE 100 // default 100
 
 // Vul hier de pin in van de DHT11 sensor
 #define DHT_PIN 3
 DHT dht(DHT_PIN, DHT22);
 
+// Zet debug mode aan
+#define DEBUG 1
+// Vul hier de variabelen voor de BMP280 sensor in
+//#define BMP280 1
+
+#if defined(BMP280)
+Adafruit_BMP280 bmp; // I2C
+bool bmp_present = true;
+#endif
+
 // Vul hier de pin in van de PIR
-int PirSensor = 4;
-int PreviousDetect = false; // Statusvariabele PIR sensor
+byte PirSensor = 4;
+boolean PreviousDetect = false; // Statusvariabele PIR sensor
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_tuin"
@@ -105,56 +119,57 @@ const char* topic_in = "domus/tuin/in";
 
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/tuin/uit";
-const char* topic_out_smoke = "domus/tuin/uit/rook";
-const char* topic_out_light = "domus/tuin/uit/licht";
-const char* topic_out_door = "domus/tuin/uit/deur";
+//const char* topic_out_smoke = "domus/tuin/uit/rook";
+//const char* topic_out_light = "domus/tuin/uit/licht";
+//const char* topic_out_door = "domus/tuin/uit/deur";
 const char* topic_out_temp = "domus/tuin/uit/temp";
 const char* topic_out_hum = "domus/tuin/uit/vocht";
 const char* topic_out_heat = "domus/tuin/uit/warmte";
 const char* topic_out_pir = "domus/tuin/uit/pir";
+const char* topic_out_bmptemp = "domus/tuin/uit/b_temp";
+const char* topic_out_pressure = "domus/tuin/uit/druk";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 2;
-int RelayPins[] = {5,6};
+byte NumberOfRelays = 2;
+byte RelayPins[] = {5, 6};
 bool RelayInitialState[] = {LOW, LOW};
 
 // Vul hier het aantal pulsrelais in
-int NumberOfPulseRelays = 1;
+byte NumberOfPulseRelays = 1;
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {8};
+byte PulseRelayPins[] = {8};
 long PulseActivityTimes[] = {0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 bool PulseRelayInitialStates[] = {HIGH};
 // Vul hier de tijden in voor de pulserelais
-const int PulseRelayTimes[] = {2500};
+const byte PulseRelayTimes[] = {2500};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 0;
-int ButtonPins[] = {};
+byte NumberOfButtons = 0;
+byte ButtonPins[] = {};
 static byte lastButtonStates[] = {};
 long lastActivityTimes[] = {};
 long LongPressActive[] = {};
 
 // Vul hier de pin in van de rooksensor
-int SmokeSensor = A0;
+//int SmokeSensor = A0;
 
 // Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
-int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
+//int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
 // int LightSensor = 2;
 
-char messageBuffer[100];
-char topicBuffer[100];
+char messageBuffer[BUFFERSIZE];
+char topicBuffer[BUFFERSIZE];
 String ip = "";
-bool statusKD = HIGH;
-bool statusBD = HIGH;
-bool statusGD = HIGH;
-bool relaystate1 = LOW;
-bool pir = LOW;
 bool startsend = HIGH;// flag for sending at startup
+#if defined (DEBUG)
 bool debug = true;
-int lichtstatus; //contains LDR reading
+#else
+bool debug = false;
+#endif
+byte lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
@@ -164,13 +179,6 @@ PubSubClient mqttClient;
 
 long previousMillis;
 
-// variables for meter reading
-char input; // incoming serial data (byte)
-bool readnextLine = false;
-#define BUFSIZE 75
-char buffer[BUFSIZE]; //Buffer for serial data to find \n .
-int bufpos = 0;
-
 // General variables
 void ShowDebug(String tekst) {
   if (debug) {
@@ -179,17 +187,17 @@ void ShowDebug(String tekst) {
 }
 
 void setup() {
-  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+  for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     pinMode(RelayPins[thisPin], OUTPUT);
     digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
-  for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
+  for (byte thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
     pinMode(PulseRelayPins[thisPin], OUTPUT);
     digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
   }
 
-  for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
+  for (byte thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
 
@@ -242,12 +250,17 @@ void setup() {
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
   //  mqttClient.publish(topic_out, ip.c_str());
-
+#if defined(BMP280)
+  if (!bmp.begin()) {
+    ShowDebug("Could not find a valid BMP280 sensor, check wiring!");
+    bmp_present = false;
+  }
+#endif
 }
 
-void processButtonDigital( int buttonId )
+void processButtonDigital(byte buttonId )
 {
-  int sensorReading = digitalRead( ButtonPins[buttonId] );
+  byte sensorReading = digitalRead( ButtonPins[buttonId] );
   if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
   {
     if ( lastButtonStates[buttonId] == LOW )  // The button was previously un-pressed
@@ -285,18 +298,6 @@ void processButtonDigital( int buttonId )
   }
 }
 
-void ProcessPulseRelays(int PulseRelayId) {
-  // Process the timers of the pulse relays and see if we have to close them.
-  if (((millis() - PulseActivityTimes[PulseRelayId]) > PulseRelayTimes[PulseRelayId]) && digitalRead(PulseRelayPins[PulseRelayId]) == !PulseRelayInitialStates[PulseRelayId])
-  {
-    ShowDebug("Disabling pulse relay" + String(PulseRelayId) + ".");
-    ShowDebug(String(PulseActivityTimes[PulseRelayId]));
-    String messageString = "P" + String(PulseRelayId) + "0";
-    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-    mqttClient.publish(topic_out_door, messageBuffer);
-    digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
-  }
-}
 
 void reconnect() {
   // Loop until we're reconnected
@@ -319,6 +320,11 @@ void reconnect() {
   }
 }
 
+void sendMessage(String m, char* topic) {
+  m.toCharArray(messageBuffer, m.length() + 1);
+  mqttClient.publish(topic, messageBuffer);
+}
+
 void sendData() {
   //  int smoke = analogRead(SmokeSensor);
   //  bool light = digitalRead(LightSensor);
@@ -329,20 +335,22 @@ void sendData() {
   float hic = dht.computeHeatIndex(t, h, false);
 
   //  Send Temperature sensor
-  messageString = String(t);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_temp, messageBuffer);
+  sendMessage(String(t), topic_out_temp);
 
   //  Send Humidity sensor
-  messageString = String(h);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_hum, messageBuffer);
+  sendMessage(String(h), topic_out_hum);
 
   //  Send Heat index sensor
-  messageString = String(hic);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_heat, messageBuffer);
+  sendMessage(String(hic), topic_out_heat);
 
+#if defined(BMP280)
+  if (bmp_present) {
+    t = bmp.readTemperature();
+    sendMessage(String(t), topic_out_bmptemp);
+    long p = bmp.readPressure();
+    sendMessage(String(p), topic_out_pressure);
+  }
+#endif
   // Send smoke sensor
   //  messageString = String(map(smoke, 0, 1023, 0, 100));
   //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
@@ -354,45 +362,18 @@ void sendData() {
   //  mqttClient.publish(topic_out_light, messageBuffer);
 
   // Send status of relays
-  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+  for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
   }
-  //send meter data to MQTT
-  //  messageString = String(Voltage);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_voltage, messageBuffer);
-  //  messageString = String(Tariff);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_tariff, messageBuffer);
-  //  messageString = String(mEVLT);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_low, messageBuffer);
-  //  messageString = String(mEVHT);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_high, messageBuffer);
-  //  messageString = String(mEAV);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_power, messageBuffer);
-  //  messageString = String(mG);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_gas, messageBuffer);
-  //  //Reset variables to zero for next run
-  //  Voltage = 0;
-  //  Tariff = 0;
-  //  mEVLT = 0;
-  //  mEVHT = 0;
-  //  mEAV = 0;
-  //  mG = 0;
 }
 
-void report_state(int outputport)
+void report_state(byte outputport)
 {
   String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out, messageBuffer);
+  sendMessage(messageString, topic_out);
 }
 
-void callback(char* topic, byte * payload, unsigned int length) {
+void callback(char* topic, byte * payload, byte length) {
   char msgBuffer[20];
   // I am only using one ascii character as command, so do not need to take an entire word as payload
   // However, if you want to send full word commands, uncomment the next line and use for string comparison
@@ -403,8 +384,8 @@ void callback(char* topic, byte * payload, unsigned int length) {
   ShowDebug(topic);
   ShowDebug(strPayload);
 
-  int RelayPort;
-  int RelayValue;
+  byte RelayPort;
+  byte RelayValue;
 
   if (strPayload[0] == 'R') {
 
@@ -434,7 +415,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   else if (strPayload == "AON") {
 
     // Alle relais aan
-    for (int i = 0 ; i < NumberOfRelays; i++) {
+    for (byte i = 0 ; i < NumberOfRelays; i++) {
       digitalWrite(RelayPins[i], 1);
       report_state(i);
     }
@@ -443,7 +424,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   else if (strPayload == "AOF") {
 
     // Alle relais uit
-    for (int i = 0 ; i < NumberOfRelays; i++) {
+    for (byte i = 0 ; i < NumberOfRelays; i++) {
       digitalWrite(RelayPins[i], 0);
       report_state(i);
     }
@@ -453,22 +434,22 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Status van alle sensors and relais
     sendData();
   }
-  else if (strPayload[0] == 'P') {
-
-    int PulseRelayPort = strPayload[1] - 48;
-
-    // Pulserelais aan
-    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
-    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    String messageString = "P" + String(PulseRelayPort) + "1";
-    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-    mqttClient.publish(topic_out_door, messageBuffer);
-    PulseActivityTimes[PulseRelayPort] = millis();
-    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
-  }
-  else if (strPayload[0] == 'L') {
-    analogWrite(PWMoutput, strPayload.substring(1).toInt());
-  }
+  //  else if (strPayload[0] == 'P') {
+  //
+  //    int PulseRelayPort = strPayload[1] - 48;
+  //
+  //    // Pulserelais aan
+  //    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
+  //    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+  //    String messageString = "P" + String(PulseRelayPort) + "1";
+  //    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  //    mqttClient.publish(topic_out_door, messageBuffer);
+  //    PulseActivityTimes[PulseRelayPort] = millis();
+  //    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
+  //  }
+  //  else if (strPayload[0] == 'L') {
+  //    analogWrite(PWMoutput, strPayload.substring(1).toInt());
+  //  }
   else {
 
     // Onbekend commando
@@ -486,15 +467,10 @@ void loop() {
 
   // ... then send all relay stats when we've just started up....
   if (startsend) {
-    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
       report_state(thisPin);
     }
     startsend = false;
-  }
-
-  // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
-    ProcessPulseRelays(id);
   }
 
   // ...see if it's time to send new data, ....
@@ -503,7 +479,7 @@ void loop() {
     sendData();
   }
   else {
-    for (int id; id < NumberOfButtons; id++) {
+    for (byte id; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }
@@ -512,23 +488,16 @@ void loop() {
   if (digitalRead(PirSensor) == HIGH) {
     if (!PreviousDetect) {
       ShowDebug("Detecting movement.");
-      String messageString = "on";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
+      sendMessage("on", topic_out_pir);
       PreviousDetect = true;
     }
   }
   else {
     if (PreviousDetect) {
-      String messageString = "off";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
+      sendMessage("off", topic_out_pir);
     }
     PreviousDetect = false;
   }
-
-  // ...read out the smart meter...
-  //  decodeTelegram();
 
   // and loop.
   mqttClient.loop();
