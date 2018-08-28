@@ -92,6 +92,7 @@ DHT dht(DHT_PIN, DHT22);
 
 // Zet debug mode aan
 #define DEBUG 1
+
 // Vul hier de variabelen voor de BMP280 sensor in
 //#define BMP280 1
 
@@ -126,8 +127,11 @@ const char* topic_out_temp = "domus/tuin/uit/temp";
 const char* topic_out_hum = "domus/tuin/uit/vocht";
 const char* topic_out_heat = "domus/tuin/uit/warmte";
 const char* topic_out_pir = "domus/tuin/uit/pir";
+
+#if defined(BMP280)
 const char* topic_out_bmptemp = "domus/tuin/uit/b_temp";
 const char* topic_out_pressure = "domus/tuin/uit/druk";
+#endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 byte NumberOfRelays = 2;
@@ -206,6 +210,7 @@ void setup() {
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
+  
   pinMode(PirSensor, INPUT);
 
   // setup serial communication
@@ -218,6 +223,7 @@ void setup() {
     ShowDebug(hostname);
     ShowDebug("");
   }
+  
   // setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
 
