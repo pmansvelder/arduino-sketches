@@ -81,21 +81,30 @@
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <Adafruit_BMP280.h>
 
 #define BUFFERSIZE 100 // default 100
 
-// Vul hier de pin in van de DHT11 sensor
-#define DHT_PIN 3
-DHT dht(DHT_PIN, DHT22);
 
+<<<<<<< HEAD
+//#define DEBUG 1 // Zet debug mode aan
+#define BMP280 1
+//#define DHT_present 1
+
+#if defined(DHT_present)
+#include <DHT.h>
+#define DHT_PIN 3 // Vul hier de pin in van de DHT11 sensor
+DHT dht(DHT_PIN, DHT22);
+#endif
+=======
 // Zet debug mode aan
 #define DEBUG 1
+
 // Vul hier de variabelen voor de BMP280 sensor in
 //#define BMP280 1
+>>>>>>> 4d1271609d2cb568ca7cce60bad45353c4febedc
 
 #if defined(BMP280)
+#include <Adafruit_BMP280.h>
 Adafruit_BMP280 bmp; // I2C
 bool bmp_present = true;
 #endif
@@ -126,12 +135,15 @@ const char* topic_out_temp = "domus/tuin/uit/temp";
 const char* topic_out_hum = "domus/tuin/uit/vocht";
 const char* topic_out_heat = "domus/tuin/uit/warmte";
 const char* topic_out_pir = "domus/tuin/uit/pir";
+
+#if defined(BMP280)
 const char* topic_out_bmptemp = "domus/tuin/uit/b_temp";
 const char* topic_out_pressure = "domus/tuin/uit/druk";
+#endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-byte NumberOfRelays = 2;
-byte RelayPins[] = {5, 6};
+const PROGMEM byte NumberOfRelays = 2;
+const PROGMEM byte RelayPins[] = {5, 6};
 bool RelayInitialState[] = {LOW, LOW};
 
 // Vul hier het aantal pulsrelais in
@@ -172,7 +184,7 @@ bool debug = false;
 byte lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
+const PROGMEM uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -200,12 +212,14 @@ void setup() {
   for (byte thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
-
+#if defined(DHT_present)
   dht.begin();
+#endif
 
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
+  
   pinMode(PirSensor, INPUT);
 
   // setup serial communication
@@ -218,6 +232,7 @@ void setup() {
     ShowDebug(hostname);
     ShowDebug("");
   }
+  
   // setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
 
@@ -298,7 +313,6 @@ void processButtonDigital(byte buttonId )
   }
 }
 
-
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
@@ -328,8 +342,9 @@ void sendMessage(String m, char* topic) {
 void sendData() {
   //  int smoke = analogRead(SmokeSensor);
   //  bool light = digitalRead(LightSensor);
-  String messageString;
+  //  String messageString;
 
+#if defined(DHT_present)
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   float hic = dht.computeHeatIndex(t, h, false);
@@ -342,10 +357,11 @@ void sendData() {
 
   //  Send Heat index sensor
   sendMessage(String(hic), topic_out_heat);
+#endif
 
 #if defined(BMP280)
   if (bmp_present) {
-    t = bmp.readTemperature();
+    float t = bmp.readTemperature();
     sendMessage(String(t), topic_out_bmptemp);
     long p = bmp.readPressure();
     sendMessage(String(p), topic_out_pressure);
