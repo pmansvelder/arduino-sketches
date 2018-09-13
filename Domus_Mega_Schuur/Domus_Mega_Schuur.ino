@@ -10,13 +10,13 @@
           4: <in gebruik voor W5100>
           5: Relais 0
           6: Relais 1
-          7: Relais 2
-          8: Relais 3
-          9: Relais 4
+          7: Relais 2 : Lamp brandgang
+          8: Relais 3 : Tuinlamp achter
+          9: Relais 4 : Lamp Fietsenhok
           10: <in gebruik voor W5100>
           11: Relais 5
           12: Relais 6
-          13: Relais 7
+          13: Relais 7 : Lamp Schuur
 
           14:
           15:
@@ -26,10 +26,10 @@
           19:
           20: SDA voor i2C
           21: SCL voor i2C
-          22: PIR1
-          23: PIR2
-          24: PIR3
-          25: PIR4
+          22: PIR0
+          23: PIR1
+          24: PIR2
+          25: PIR3
           26:
           27:
           28:

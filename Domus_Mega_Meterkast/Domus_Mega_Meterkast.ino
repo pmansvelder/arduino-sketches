@@ -15,6 +15,11 @@
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
           13:
+          22:
+          23:
+          24:
+          25:
+          28: PIR Keuken
           30: SSR Relais voor keukenlamp
           31: SSR Relais voor plafondlamp huiskamer
 
