@@ -28,14 +28,13 @@
           Also, the payloads  are kept short
           The outgoing topics are
 
-          domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
-          domus/hk/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
-          domus/hk/uit/licht  // LDR-melder: 0=licht, 1=donker
-          domus/hk/uit/temp   // DHT-11 temperatuursensor
-          domus/hk/uit/warmte // DHT-11 gevoelstemperatuur
-          domus/hk/uit/vocht  // DHT-11 luchtvochtigheid
-          domus/ex/uit/deur   // Pulserelais t.b.v. deuropener
-
+          domus/tuin/uit        // Relaisuitgangen: R<relaisnummer><status>
+          domus/tuin/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
+          domus/tuin/uit/licht  // LDR-melder: 0=licht, 1=donker
+          domus/tuin/uit/temp   // DHT-22 temperatuursensor
+          domus/tuin/uit/warmte // DHT-22 gevoelstemperatuur
+          domus/tuin/uit/vocht  // DHT-22 luchtvochtigheid
+          
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
@@ -78,13 +77,13 @@
 
 */
 
-#include <Ethernet.h>// Ethernet.h library
-#include "PubSubClient.h" //PubSubClient.h Library from Knolleary
+#include <Ethernet.h>           // Ethernet.h library
+#include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <Adafruit_BMP280.h>
+#include <DHT.h>                // Library for DHT-11/22 sensors
+#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
-#define BUFFERSIZE 100 // default 100
+#define BUFFERSIZE 100          // default 100
 
 // Vul hier de pin in van de DHT11 sensor
 #define DHT_PIN 3
