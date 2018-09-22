@@ -8,8 +8,8 @@
           4: <in gebruik voor W5100>
           5: Relay 0
           6: Relay 1
-          7: Relay 2
-          8: Relay 3 (Pulse, Deuropener)
+          7: Relay 2 (Pulse, Voordeuropener)
+          8: Relay 3 (Pulse, Haldeuropener)
           9:  Button 2 (keuken)
           10: <in gebruik voor W5100>
           11: Button 0 (huiskamer)
@@ -108,10 +108,10 @@ int PreviousDetect = false; // Statusvariabele PIR sensor
 String hostname = CLIENT_ID;
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/test/in";
+const char* topic_in = "domus/mk/in";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/test/uit";
+const char* topic_out = "domus/mk/uit";
 const char* topic_out_smoke = "domus/mk/uit/rook";
 const char* topic_out_light = "domus/mk/uit/licht";
 const char* topic_out_door = "domus/mk/uit/deur";
@@ -126,14 +126,14 @@ int RelayPins[] = {5, 6, 7, 30, 31, 22, 24};
 bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW, LOW, HIGH, HIGH};
 
 // Vul hier het aantal pulsrelais in
-int NumberOfPulseRelays = 3;
+int NumberOfPulseRelays = 4;
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {8, 23, 25};
-long PulseActivityTimes[] = {0};
+int PulseRelayPins[] = {8, 7,  23, 25};
+long PulseActivityTimes[] = {0, 0, 0, 0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
-bool PulseRelayInitialStates[] = {HIGH};
+bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de tijden in voor de pulserelais
-const long int PulseRelayTimes[] = {2500, 5000, 60000};
+const long int PulseRelayTimes[] = {2000, 250, 5000, 60000};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 3;
@@ -511,7 +511,7 @@ void loop() {
   }
 
   // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
+  for (int id = 0; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
   }
 
@@ -521,7 +521,7 @@ void loop() {
     sendData();
   }
   else {
-    for (int id; id < NumberOfButtons; id++) {
+    for (int id = 0; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }

@@ -379,6 +379,9 @@ void ProcessPulseRelays(int PulseRelayId) {
     mqttClient.publish(topic_out_door, messageBuffer);
     digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
   }
+  else {
+    ShowDebug("Current time: " + String(millis()) + " / " + String(PulseActivityTimes[PulseRelayId]));
+  }
 }
 
 void reconnect() {
@@ -547,7 +550,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_door, messageBuffer);
     PulseActivityTimes[PulseRelayPort] = millis();
-    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
+    ShowDebug("Current time: " + String(PulseActivityTimes[PulseRelayPort]));
   }
   else if (strPayload[0] == 'L') {
     analogWrite(PWMoutput, strPayload.substring(1).toInt());
@@ -576,7 +579,9 @@ void loop() {
   }
 
   // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
+  
+  for (int id = 0; id < NumberOfPulseRelays; id++) {
+    ShowDebug("Processing pulse relays!");
     ProcessPulseRelays(id);
   }
 
@@ -586,7 +591,7 @@ void loop() {
     sendData();
   }
   else {
-    for (int id; id < NumberOfButtons; id++) {
+    for (int id = 0; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }
