@@ -129,7 +129,6 @@ int PreviousDetects[] = {false, false, false, false}; // Statusvariabele PIR sen
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_schuur"
 
-
 #define PUBLISH_DELAY 5000 // // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT, dat is 5 seconden interval
 #define DEBOUNCE_DELAY 150 // Debounce tijd voor buttons: 150 ms
 #define LONGPRESS_TIME 450 // Detectie tijd voor 'long press': 450 ms
@@ -568,7 +567,6 @@ void loop() {
       processButtonDigital(id);
     }
   }
-
 
   // and loop.
   mqttClient.loop();
