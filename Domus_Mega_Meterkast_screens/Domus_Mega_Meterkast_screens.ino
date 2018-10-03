@@ -94,9 +94,9 @@
 // DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 1;
-int PirSensors[] = {28};
-int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
+byte NumberOfPirs = 2;
+int PirSensors[] = {28, 29};
+int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
 
 // Vul hier de gegevens in van de motorsturing voor de screens:
 // 2 relais per motor: 1 x richting, 1 x motorpuls
@@ -222,7 +222,7 @@ void setup() {
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT);
+    pinMode(PirSensors[pirid], INPUT_PULLUP);
   }
 
   //   setup ethernet communication using DHCP
