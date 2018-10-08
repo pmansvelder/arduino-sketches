@@ -32,15 +32,6 @@
           As the available memory of a UNO  with Ethernetcard is limited,
           I have kept the topics short
           Also, the payloads  are kept short
-          The outgoing topics are
-
-          domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
-          domus/hk/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
-          domus/hk/uit/licht  // LDR-melder: 0=licht, 1=donker
-          domus/hk/uit/temp   // DHT-11 temperatuursensor
-          domus/hk/uit/warmte // DHT-11 gevoelstemperatuur
-          domus/hk/uit/vocht  // DHT-11 luchtvochtigheid
-          domus/ex/uit/deur   // Pulserelais t.b.v. deuropener
 
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
@@ -94,9 +85,9 @@
 // DHT dht(DHT_PIN, DHT11);
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 2;
-int PirSensors[] = {28, 29};
-int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
+byte NumberOfPirs = 3;
+int PirSensors[] = {28, 29, 21};
+int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
 
 // Vul hier de gegevens in van de motorsturing voor de screens:
 // 2 relais per motor: 1 x richting, 1 x motorpuls
@@ -122,15 +113,15 @@ String hostname = CLIENT_ID;
 const char* topic_in = "domus/mk/in";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/mk/uit";
-const char* topic_out_smoke = "domus/mk/uit/rook";
-const char* topic_out_light = "domus/mk/uit/licht";
-const char* topic_out_pulse = "domus/mk/uit/deur";
-const char* topic_out_temp = "domus/mk/uit/temp";
-const char* topic_out_hum = "domus/mk/uit/vocht";
-const char* topic_out_heat = "domus/mk/uit/warmte";
-const char* topic_out_pir = "domus/mk/uit/pir";
-const char* topic_out_screen = "domus/mk/uit/screen";
+const char* topic_out = "domus/mk/uit";               // Relaisuitgangen: R<relaisnummer><status>
+const char* topic_out_smoke = "domus/mk/uit/rook";    // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
+const char* topic_out_light = "domus/mk/uit/licht";   // LDR-melder: 0=licht, 1=donker
+const char* topic_out_pulse = "domus/mk/uit/deur";    // Pulserelais t.b.v. deuropener
+const char* topic_out_temp = "domus/mk/uit/temp";     // DHT-22 temperatuursensor
+const char* topic_out_hum = "domus/mk/uit/vocht";     // DHT-22 luchtvochtigheid
+const char* topic_out_heat = "domus/mk/uit/warmte";   // DHT-22 gevoelstemperatuur
+const char* topic_out_pir = "domus/mk/uit/pir";       // PIR sensors
+const char* topic_out_screen = "domus/mk/uit/screen"; // Screens (zonwering)
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 int NumberOfRelays = 9;
@@ -433,18 +424,14 @@ void callback(char* topic, byte * payload, unsigned int length) {
   int RelayValue;
 
   if (strPayload[0] == 'R') {
-
     // Relais commando
     ShowDebug("Relay command");
-
     RelayPort = strPayload[1] - 48;
     if (RelayPort > 16) RelayPort -= 3;
     RelayValue = strPayload[2] - 48;
-
     ShowDebug(String(RelayPort));
     ShowDebug(String(RelayValue));
     ShowDebug(String(HIGH));
-
     if (RelayValue == 40) {
       ShowDebug("Toggling relay...");
       digitalWrite(RelayPins[RelayPort], !digitalRead(RelayPins[RelayPort]));
