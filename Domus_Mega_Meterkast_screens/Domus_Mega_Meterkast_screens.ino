@@ -136,7 +136,7 @@ long PulseActivityTimes[] = {0, 0, 0, 0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
 bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
-// Vul hier de tijden in voor de pulserelais
+// Vul hier de pulsetijden in voor de pulserelais
 const long int PulseRelayTimes[] = {2000, 250, COVERDELAYTIME, COVERDELAYTIME};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn

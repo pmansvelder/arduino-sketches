@@ -239,7 +239,7 @@ void setup() {
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT);
+    pinMode(PirSensors[pirid], INPUT_PULLUP);
   }
 
   // setup ethernet communication using DHCP
