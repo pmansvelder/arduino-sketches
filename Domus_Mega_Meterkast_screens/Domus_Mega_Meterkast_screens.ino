@@ -137,7 +137,7 @@ long PulseActivityTimes[] = {0, 0, 0, 0};
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
 bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
-const long int PulseRelayTimes[] = {2000, 250, COVERDELAYTIME, COVERDELAYTIME};
+long int PulseRelayTimes[] = {2000, 250, COVERDELAYTIME, COVERDELAYTIME};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 3;
@@ -466,7 +466,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Status van alle sensors and relais
     sendData();
   }
-  else if (strPayload[0] == 'P') {
+  else if (strPayload[0] == 'P') {  // PULSE RELAY
     int PulseRelayPort = strPayload[1] - 48;
     // Pulserelais aan
     ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
@@ -476,16 +476,26 @@ void callback(char* topic, byte * payload, unsigned int length) {
     mqttClient.publish(topic_out_pulse, messageBuffer);
     PulseActivityTimes[PulseRelayPort] = millis();
   }
-  else if (strPayload[0] == 'L') {
+  else if (strPayload[0] == 'L') {  // LED PWM
     analogWrite(PWMoutput, strPayload.substring(1).toInt());
   }
-  else if (strPayload[0] == 'O') {
+  //
+  // Command: O + cover number
+  //  opens cover: 
+  //    - sets direction relay: open = inverse state
+  //    - opens motor relay for duration of pulse
+  //
+  else if (strPayload[0] == 'O') {  
     // Cover commando: open
     ShowDebug("Cover command : Open");
     byte CoverPort = strPayload[1] - 48;
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
+      // allow for custom pulse time
+      long PulseTime = strPayload.substring(2).toInt();
+      if (PulseTime == 0) PulseTime = COVERDELAYTIME;
+      PulseRelayTimes[PulseRelayPort] = PulseTime;
       // Set direction relay
       digitalWrite(RelayPins[CoverDir[CoverPort - 1]], !RelayInitialState[CoverDir[CoverPort - 1]]);
       // Set opening pulse
@@ -503,6 +513,12 @@ void callback(char* topic, byte * payload, unsigned int length) {
       ShowDebug("No such cover defined.");
     }
   }
+  //
+  // Command: C + cover number
+  //  closes cover: 
+  //    - sets direction relay: open = normal state
+  //    - opens motor relay for duration of pulse
+  //
   else if (strPayload[0] == 'C') {
     // Cover commando: close
     ShowDebug("Cover command : Close");
@@ -510,6 +526,10 @@ void callback(char* topic, byte * payload, unsigned int length) {
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
+      // allow for custom pulse time
+      long PulseTime = strPayload.substring(2).toInt();
+      if (PulseTime == 0) PulseTime = COVERDELAYTIME;
+      PulseRelayTimes[PulseRelayPort] = PulseTime;
       // Set direction relay
       digitalWrite(RelayPins[CoverDir[CoverPort - 1]], RelayInitialState[CoverDir[CoverPort - 1]]);
       // Set opening pulse
@@ -527,6 +547,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
       ShowDebug("No such cover defined.");
     }
   }
+  //
+  // Command: S + cover number
+  //  stops cover movement: 
+  //    - closes motor relay
+  //
   else if (strPayload[0] == 'S') {
     // Cover commando: stop
     ShowDebug("Cover command : Stop");
