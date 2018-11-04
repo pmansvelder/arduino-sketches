@@ -481,33 +481,39 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   //
   // Command: O + cover number
-  //  opens cover: 
+  //  opens cover:
   //    - sets direction relay: open = inverse state
   //    - opens motor relay for duration of pulse
   //
-  else if (strPayload[0] == 'O') {  
+  else if (strPayload[0] == 'O') {
     // Cover commando: open
     ShowDebug("Cover command : Open");
     byte CoverPort = strPayload[1] - 48;
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
-      // allow for custom pulse time
-      long PulseTime = strPayload.substring(2).toInt();
-      if (PulseTime == 0) PulseTime = COVERDELAYTIME;
-      PulseRelayTimes[PulseRelayPort] = PulseTime;
-      // Set direction relay
-      digitalWrite(RelayPins[CoverDir[CoverPort - 1]], !RelayInitialState[CoverDir[CoverPort - 1]]);
-      // Set opening pulse
-      digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-      String messageString = "P" + String(PulseRelayPort) + "1";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pulse, messageBuffer);
-      PulseActivityTimes[PulseRelayPort] = millis();
-      // report state of screen
-      messageString = "O" + String(CoverPort);
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_screen, messageBuffer);
+      // Check if another command is already running
+      if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
+        // allow for custom pulse time
+        long PulseTime = strPayload.substring(2).toInt();
+        if (PulseTime == 0) PulseTime = COVERDELAYTIME;
+        PulseRelayTimes[PulseRelayPort] = PulseTime;
+        // Set direction relay
+        digitalWrite(RelayPins[CoverDir[CoverPort - 1]], !RelayInitialState[CoverDir[CoverPort - 1]]);
+        // Set opening pulse
+        digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+        String messageString = "P" + String(PulseRelayPort) + "1";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
+        PulseActivityTimes[PulseRelayPort] = millis();
+        // report state of screen
+        messageString = "O" + String(CoverPort);
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_screen, messageBuffer);
+      }
+      else {
+        ShowDebug("Cover moving, command ignored.");
+      }
     }
     else {
       ShowDebug("No such cover defined.");
@@ -515,7 +521,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   //
   // Command: C + cover number
-  //  closes cover: 
+  //  closes cover:
   //    - sets direction relay: open = normal state
   //    - opens motor relay for duration of pulse
   //
@@ -526,22 +532,28 @@ void callback(char* topic, byte * payload, unsigned int length) {
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
-      // allow for custom pulse time
-      long PulseTime = strPayload.substring(2).toInt();
-      if (PulseTime == 0) PulseTime = COVERDELAYTIME;
-      PulseRelayTimes[PulseRelayPort] = PulseTime;
-      // Set direction relay
-      digitalWrite(RelayPins[CoverDir[CoverPort - 1]], RelayInitialState[CoverDir[CoverPort - 1]]);
-      // Set opening pulse
-      digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-      String messageString = "P" + String(PulseRelayPort) + "1";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pulse, messageBuffer);
-      PulseActivityTimes[PulseRelayPort] = millis();
-      // report state of screen
-      messageString = "C" + String(CoverPort);
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_screen, messageBuffer);
+      // Check if another command is already running
+      if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
+        // allow for custom pulse time
+        long PulseTime = strPayload.substring(2).toInt();
+        if (PulseTime == 0) PulseTime = COVERDELAYTIME;
+        PulseRelayTimes[PulseRelayPort] = PulseTime;
+        // Set direction relay
+        digitalWrite(RelayPins[CoverDir[CoverPort - 1]], RelayInitialState[CoverDir[CoverPort - 1]]);
+        // Set opening pulse
+        digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+        String messageString = "P" + String(PulseRelayPort) + "1";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
+        PulseActivityTimes[PulseRelayPort] = millis();
+        // report state of screen
+        messageString = "C" + String(CoverPort);
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_screen, messageBuffer);
+      }
+      else {
+        ShowDebug("Cover moving, command ignored.");
+      }
     }
     else {
       ShowDebug("No such cover defined.");
@@ -549,7 +561,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   //
   // Command: S + cover number
-  //  stops cover movement: 
+  //  stops cover movement:
   //    - closes motor relay
   //
   else if (strPayload[0] == 'S') {
