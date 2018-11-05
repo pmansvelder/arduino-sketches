@@ -45,6 +45,9 @@
           2 - Publish the IP number of the client
           R<relay number><state> - switch relay into specified state (0=off, 1=on)
           R<relay number>X - toggle relay
+          C<cover number>[<pulse length>] - close cover
+          O<cover number>[<pulse length>] - open cover
+          S<cover number> - stops cover movement
 
           On Startup, the Client publishes the IP number
 
@@ -58,12 +61,6 @@
 
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
           ports (0, 1 used by serial interface).
-          A4(18) and A5(19) are used as inputs, for 2 buttons
-
-          ToDo:
-          - add extra button on input A5(19) => done
-          - use output 17 as a PWM channel for the button LEDs => done, used A9
-          - implement short/long press for buttons => done
 
           Adapted 24-02-2018 by Peter Mansvelder:
           - added sensors for light and smoke (MQ-2), reporting on output topics
@@ -71,7 +68,10 @@
           - added pulse relay
 
           Adapted 22-07-2018 by Peter Mansvelder
-          - added smart meter P1 input
+          - added smart meter P1 input (later removed)
+
+          Adapted 4-11-2018 by Peter Mansvelder
+          - added cover control
 
 */
 
@@ -97,7 +97,7 @@ byte NumberOfCovers = 2;
 byte CoverDir[] = {6, 8}; // relay numbers for direction
 byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
 byte CoverState[] = {false, false}; // false = open, true = closed
-#define COVERDELAYTIME 10000 // time to wait for full open or close
+#define COVERDELAYTIME 30000 // time to wait for full open or close
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_meterkast_screens"
@@ -445,7 +445,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
     mqttClient.publish(topic_out, ip.c_str());// publish IP nr
   }
   else if (strPayload == "AON") {
-
     // Alle relais aan
     for (int i = 0 ; i < NumberOfRelays; i++) {
       digitalWrite(RelayPins[i], 1);
@@ -454,7 +453,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
 
   else if (strPayload == "AOF") {
-
     // Alle relais uit
     for (int i = 0 ; i < NumberOfRelays; i++) {
       digitalWrite(RelayPins[i], 0);
@@ -462,7 +460,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
     }
   }
   else if (strPayload == "STAT") {
-
     // Status van alle sensors and relais
     sendData();
   }
@@ -480,10 +477,12 @@ void callback(char* topic, byte * payload, unsigned int length) {
     analogWrite(PWMoutput, strPayload.substring(1).toInt());
   }
   //
-  // Command: O + cover number
+  // Command: O + cover number [+ pulse duration in ms]
   //  opens cover:
   //    - sets direction relay: open = inverse state
+  //    - pulse duration taken from command, if not given, use parameter COVERDELAYTIME
   //    - opens motor relay for duration of pulse
+  //  example command: O120000 = open cover 1, use 20000ms (=20s) pulse
   //
   else if (strPayload[0] == 'O') {
     // Cover commando: open
@@ -512,7 +511,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
         mqttClient.publish(topic_out_screen, messageBuffer);
       }
       else {
-        ShowDebug("Cover moving, command ignored.");
+        // Commmand given while cover moving, Stop pulse
+        digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
+        String messageString = "P" + String(PulseRelayPort) + "0";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
       }
     }
     else {
@@ -520,10 +523,12 @@ void callback(char* topic, byte * payload, unsigned int length) {
     }
   }
   //
-  // Command: C + cover number
+  // Command: C + cover number [+ pulse duration in ms]
   //  closes cover:
   //    - sets direction relay: open = normal state
+  //    - pulse duration taken from command, if not given, use parameter COVERDELAYTIME
   //    - opens motor relay for duration of pulse
+  //  example command: C120000 = close cover 1, use 20000ms (=20s) pulse
   //
   else if (strPayload[0] == 'C') {
     // Cover commando: close
@@ -552,7 +557,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
         mqttClient.publish(topic_out_screen, messageBuffer);
       }
       else {
-        ShowDebug("Cover moving, command ignored.");
+        // Commmand given while cover moving, Stop pulse
+        digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
+        String messageString = "P" + String(PulseRelayPort) + "0";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
       }
     }
     else {
@@ -562,7 +571,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   //
   // Command: S + cover number
   //  stops cover movement:
-  //    - closes motor relay
+  //    - closes motor relay, stops pulse
   //
   else if (strPayload[0] == 'S') {
     // Cover commando: stop
