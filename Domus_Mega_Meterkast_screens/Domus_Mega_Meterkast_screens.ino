@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
           Locatie: Meterkast
-          Macadres: 00:01:02:03:04:08
+          Macadres: 00:01:02:03:04:0B
           Pins used:
           2: PWM voor LEDs
           3: DHT sensor
