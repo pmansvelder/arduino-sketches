@@ -79,8 +79,8 @@
 
           Pins in use:
 
-          9     Relay port R0: 12v relay for lamp living room
           8     Relay port R1: 12v relay for lamp living room
+          9     Relay port R0: 12v relay for lamp living room
           22    Relay port R4: SSR for lamp bed chamber
           23    Button bed chamber
           24    DHT22 living room
@@ -155,7 +155,7 @@ const int PulseRelayTimes[] = {2500, 10000};
 int SmokeSensor = A9;
 
 // Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
-int PWMoutput = A8; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
+int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
 int LightSensor = A10;
