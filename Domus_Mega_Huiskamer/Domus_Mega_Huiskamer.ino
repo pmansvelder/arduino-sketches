@@ -79,6 +79,8 @@
 
           Pins in use:
 
+
+          2     LED for button hallway
           8     Relay port R1: 12v relay for lamp living room
           9     Relay port R0: 12v relay for lamp living room
           22    Relay port R4: SSR for lamp bed chamber
@@ -90,7 +92,6 @@
           37    Relay port R3: heating
           38    PIR sensor living room
 
-          A8    LED for button hallway
           A9    Smoke Sensor MQ-2 living room
           A10   LDR living room
 
