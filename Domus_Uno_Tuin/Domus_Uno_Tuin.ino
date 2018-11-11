@@ -21,7 +21,7 @@
 
           Arduino Uno with W5100 Module used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
-          The topics have the format "domus/uin/uit" for outgoing messages and
+          The topics have the format "domus/tuin/uit" for outgoing messages and
           "domus/tuin/in" for incoming messages.
           As the available memory of a UNO  with Ethernetcard is limited,
           I have kept the topics short
@@ -72,40 +72,26 @@
           - added alarm function for smoke with buzzer
           - added pulse relay
 
-          Adapted 22-07-2018 by Peter Mansvelder
-          - added smart meter P1 input
-
 */
+// parameters to tune memory use
+//#define BMP280 1 // use BMP280 sensor
+#define DHT_present 1 // use DHT sensor
+#define DEBUG 1 // Zet debug mode aan
 
 #include <Ethernet.h>           // Ethernet.h library
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
-<<<<<<< HEAD
-#include <DHT.h>                // Library for DHT-11/22 sensors
-#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
-=======
->>>>>>> 62c1275d4c9885053dd5fa8e388ade50ed0fd3f5
+//#include <DHT.h>                // Library for DHT-11/22 sensors
+//#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
 #define BUFFERSIZE 100          // default 100
-
-
-<<<<<<< HEAD
-//#define DEBUG 1 // Zet debug mode aan
-#define BMP280 1
-//#define DHT_present 1
 
 #if defined(DHT_present)
 #include <DHT.h>
 #define DHT_PIN 3 // Vul hier de pin in van de DHT11 sensor
 DHT dht(DHT_PIN, DHT22);
 #endif
-=======
-// Zet debug mode aan
-#define DEBUG 1
 
-// Vul hier de variabelen voor de BMP280 sensor in
-//#define BMP280 1
->>>>>>> 4d1271609d2cb568ca7cce60bad45353c4febedc
 
 #if defined(BMP280)
 #include <Adafruit_BMP280.h>
@@ -122,8 +108,6 @@ boolean PreviousDetect = false; // Statusvariabele PIR sensor
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 5000 // that is 3 seconds interval
-#define DEBOUNCE_DELAY 150
-#define LONGPRESS_TIME 450
 
 String hostname = CLIENT_ID;
 
@@ -150,32 +134,6 @@ const PROGMEM byte NumberOfRelays = 2;
 const PROGMEM byte RelayPins[] = {5, 6};
 bool RelayInitialState[] = {LOW, LOW};
 
-// Vul hier het aantal pulsrelais in
-byte NumberOfPulseRelays = 1;
-// Vul hier de pins in van het pulserelais.
-byte PulseRelayPins[] = {8};
-long PulseActivityTimes[] = {0};
-// Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
-bool PulseRelayInitialStates[] = {HIGH};
-// Vul hier de tijden in voor de pulserelais
-const byte PulseRelayTimes[] = {2500};
-
-// Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-byte NumberOfButtons = 0;
-byte ButtonPins[] = {};
-static byte lastButtonStates[] = {};
-long lastActivityTimes[] = {};
-long LongPressActive[] = {};
-
-// Vul hier de pin in van de rooksensor
-//int SmokeSensor = A0;
-
-// Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
-//int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
-
-// Vul hier de pin in van de lichtsensor
-// int LightSensor = 2;
-
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
 String ip = "";
@@ -185,7 +143,6 @@ bool debug = true;
 #else
 bool debug = false;
 #endif
-byte lichtstatus; //contains LDR reading
 
 // Vul hier het macadres in
 const PROGMEM uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
@@ -208,14 +165,6 @@ void setup() {
     digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
-  for (byte thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
-    pinMode(PulseRelayPins[thisPin], OUTPUT);
-    digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
-  }
-
-  for (byte thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
-    pinMode(ButtonPins[thisButton], INPUT_PULLUP);
-  }
 #if defined(DHT_present)
   dht.begin();
 #endif
@@ -261,7 +210,6 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
@@ -275,46 +223,6 @@ void setup() {
     bmp_present = false;
   }
 #endif
-}
-
-void processButtonDigital(byte buttonId )
-{
-  byte sensorReading = digitalRead( ButtonPins[buttonId] );
-  if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
-  {
-    if ( lastButtonStates[buttonId] == LOW )  // The button was previously un-pressed
-    {
-      if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
-      {
-        lastActivityTimes[buttonId] = millis();
-      }
-    }
-    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (LongPressActive[buttonId] == false))// Button long press
-    {
-      LongPressActive[buttonId] = true;
-      ShowDebug( "Button" + String(buttonId) + " long pressed" );
-      String messageString = "Button" + String(buttonId) + "_long";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out, messageBuffer);
-    }
-    lastButtonStates[buttonId] = 1;
-  }
-  else {
-    if (lastButtonStates[buttonId] == true) {
-      if (LongPressActive[buttonId] == true) {
-        LongPressActive[buttonId] = false;
-      } else {
-        if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
-        {
-          ShowDebug( "Button" + String(buttonId) + " pressed" );
-          String messageString = "Button" + String(buttonId);
-          messageString.toCharArray(messageBuffer, messageString.length() + 1);
-          mqttClient.publish(topic_out, messageBuffer);
-        }
-      }
-      lastButtonStates[buttonId] = false;
-    }
-  }
 }
 
 void reconnect() {
@@ -344,9 +252,6 @@ void sendMessage(String m, char* topic) {
 }
 
 void sendData() {
-  //  int smoke = analogRead(SmokeSensor);
-  //  bool light = digitalRead(LightSensor);
-  //  String messageString;
 
 #if defined(DHT_present)
   float h = dht.readHumidity();
@@ -371,16 +276,6 @@ void sendData() {
     sendMessage(String(p), topic_out_pressure);
   }
 #endif
-  // Send smoke sensor
-  //  messageString = String(map(smoke, 0, 1023, 0, 100));
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_smoke, messageBuffer);
-
-  // Send light sensor
-  //  messageString = String(light);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_light, messageBuffer);
-
   // Send status of relays
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
@@ -454,22 +349,7 @@ void callback(char* topic, byte * payload, byte length) {
     // Status van alle sensors and relais
     sendData();
   }
-  //  else if (strPayload[0] == 'P') {
-  //
-  //    int PulseRelayPort = strPayload[1] - 48;
-  //
-  //    // Pulserelais aan
-  //    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
-  //    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-  //    String messageString = "P" + String(PulseRelayPort) + "1";
-  //    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //    mqttClient.publish(topic_out_door, messageBuffer);
-  //    PulseActivityTimes[PulseRelayPort] = millis();
-  //    ShowDebug(String(PulseActivityTimes[PulseRelayPort]));
-  //  }
-  //  else if (strPayload[0] == 'L') {
-  //    analogWrite(PWMoutput, strPayload.substring(1).toInt());
-  //  }
+
   else {
 
     // Onbekend commando
@@ -497,11 +377,6 @@ void loop() {
   if (millis() - previousMillis > PUBLISH_DELAY) {
     previousMillis = millis();
     sendData();
-  }
-  else {
-    for (byte id; id < NumberOfButtons; id++) {
-      processButtonDigital(id);
-    }
   }
 
   // ...read out the PIR sensor...
