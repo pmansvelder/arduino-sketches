@@ -3,8 +3,8 @@
 #include <ESP8266WiFi.h>
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 
-const char* ssid     = "LoggerMans";
-const char* password = "jukulapikkie";
+const char* ssid     = SECRET_SSID;
+const char* password = SECRET_PASS;
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_esp_huiskamer"

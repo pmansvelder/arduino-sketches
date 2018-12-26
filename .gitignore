@@ -1,1 +1,4 @@
 .DS_Store
+Domus_UnoWifi/secrets.h
+Domus_ESP8266_huiskamer/secrets.h
+Domus_ESP8266_meterkast/secrets.h
