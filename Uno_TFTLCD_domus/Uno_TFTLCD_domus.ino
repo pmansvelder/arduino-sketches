@@ -8,7 +8,7 @@
 #include <Adafruit_TFTLCD.h> // Hardware-specific library
 
 // The control pins for the LCD can be assigned to any digital or
-// analog pins...but we'll use the analog pins as this allows us to
+// analog pins...but we'll use the analog pins as this allows us to       
 // double up the pins with the touch screen (see the TFT paint example).
 
 #define LCD_CS A3 // Chip Select goes to Analog 3

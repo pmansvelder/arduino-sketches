@@ -6,9 +6,6 @@
   Hitachi HD44780 driver. There are many of them out there, and you
   can usually tell them by the 16-pin interface.
 
-  This sketch prints "Hello World!" to the LCD
-  and shows the time.
-
   The circuit:
    LCD RS pin to digital pin 12
    LCD Enable pin to digital pin 11
@@ -72,13 +69,14 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   // Print a message to the LCD.
-  lcd.print("Relais: ");
-  if (digitalRead(relay)) {
-    lcd.print("On");
-  }
-  else {
-    lcd.print("Off");
-  }
+  lcd.setCursor(0, 0);
+  clearLine();
+  lcd.setCursor(0, 0);
+  lcd.print("Arduino Box Demo");
+  lcd.setCursor(0, 1);
+  lcd.print("'arduino_box'");
+  delay(3000);
+  printState();
   printTemp();
   pinMode(10, INPUT_PULLUP);
   vorige_tijd = 0;
@@ -109,7 +107,7 @@ void printTemp() {
   lcd.setCursor(0, 1);
   lcd.print("Temp: ");
   lcd.print(int(temperature));
-  lcd.print(" deg");
+  lcd.print(" graden");
 }
 
 void loop() {

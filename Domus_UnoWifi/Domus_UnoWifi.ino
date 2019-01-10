@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Uno Wifi=========>
-          Locatie: Tuin
-          Macadres: 00:01:02:03:04:0E
+          Locatie: Hobbykamer
+          
           Pins used:
           2:
           3: DHT-22 sensor
@@ -74,8 +74,8 @@
 
 */
 // parameters to tune memory use
-//#define BMP280 1 // use BMP280 sensor
-#define DHT_present 1 // use DHT sensor
+//#define BMP280 0 // use BMP280 sensor
+//#define DHT_present 0 // use DHT sensor
 #define DEBUG 1 // Zet debug mode aan
 
 //#include <Ethernet.h>           // Ethernet.h library
@@ -111,9 +111,9 @@ bool bmp_present = true;
 String hostname = CLIENT_ID;
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 0;
-int PirSensors[] = {28, 29, 21};
-int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
+byte NumberOfPirs = 1;
+int PirSensors[] = {1};
+int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/hobby/in";
@@ -215,7 +215,7 @@ void setup() {
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT_PULLUP);
+    pinMode(PirSensors[pirid], INPUT);
   }
 
   // setup serial communication
