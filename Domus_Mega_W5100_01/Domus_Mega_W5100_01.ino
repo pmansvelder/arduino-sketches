@@ -3,14 +3,12 @@
           ========= Test module ==========
           Macadres: 00:01:02:03:04:07
 
-          Arduino UNO with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
+          Arduino Mega with W5100 Ethernetshield or W5100 Ethernet module, used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hk/uit" for outgoing messages and
           "domus/hk/in" for incoming messages.
-          As the available memory of a UNO  with Ethernetcard is limited,
-          I have kept the topics short
-          Also, the payloads  are kept short
-          The outgoing topics are
+
+          The outgoing topics are:
 
           domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
           domus/hk/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
@@ -29,16 +27,11 @@
           STAT - Report the status of all relays (0-9)
           AON - turn all the relays on
           AOF - turn all the relays off
-          2 - Publish the IP number of the client
+          IP - Publish the IP number of the client
           R<relay number><state> - switch relay into specified state (0=off, 1=on)
           R<relay number>X - toggle relay
 
           On Startup, the Client publishes the IP number
-
-          Adapted 4-2-2018 by Peter Mansvelder:
-
-          removed Temp/Humidity, added multiple relays for MQTT house control
-          I used the following ports:
 
           Uno: pins 4,10,11,12,13 in use
           Mega: 4,10,50,51,52,53 in use
@@ -46,11 +39,6 @@
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
           ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
-
-          ToDo:
-          - add extra button on input A5(19) => done
-          - use output 17 as a PWM channel for the button LEDs => done, used A9
-          - implement short/long press for buttons => done
 
           Adapted 24-02-2018 by Peter Mansvelder:
           - added sensors for light and smoke (MQ-2), reporting on output topics
@@ -64,21 +52,21 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
-// Vul hier de pin in van de DHT11 sensor
+// Define DHT11 sensor and the pin it is connected to
 #define DHT_PIN 3
 DHT dht(DHT_PIN, DHT11);
 
-// Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
+// Define the name for the MQTT client
 #define CLIENT_ID  "domus_test"
 
-// Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
+// Define some constants, these are based on trial and error...
 #define PUBLISH_DELAY  3000 // that is 3 seconds interval
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
 
 String hostname = CLIENT_ID;
 
-// De MQTT topics: 1 in, meerdere uit
+// MQTT topics: 1 in, multiple out
 const char* topic_in = "domus/test/in";
 const char* topic_out = "domus/test/uit";
 const char* topic_out_smoke = "domus/test/uit/rook";
@@ -89,51 +77,47 @@ const char* topic_out_hum = "domus/hk/uit/vocht";
 const char* topic_out_heat = "domus/hk/uit/warmte";
 const char* topic_out_pir = "domus/test/uit/pir";
 
-// Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
+// Parameters for the relays
 int NumberOfRelays = 3;
 int RelayPins[] = {6, 7, 35};
 bool RelayInitialState[] = {LOW, HIGH, LOW};
 
-// Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
+// Parameters for the buttons
 int NumberOfButtons = 2;
 int ButtonPins[] = {8, 9};
 static byte lastButtonStates[] = {0, 0};
 long lastActivityTimes[] = {0, 0};
 long LongPressActive[] = {0, 0};
 
-// Vul hier het aantal pulsrelais in
+// Parameters for the pulse relays
 int NumberOfPulseRelays = 2;
-// Vul hier de pins in van het pulserelais.
 int PulseRelayPins[] = {5, 11};
 long PulseActivityTimes[] = {0, 0};
-// Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 bool PulseRelayInitialStates[] = {HIGH, LOW};
-// Vul hier de tijden in voor de pulserelais
 const int PulseRelayTimes[] = {2500, 10000};
 
-// Vul hier de pin in van de rooksensor
+// Parameter for the smoke sensor (MQ-2)
 int SmokeSensor = A0;
 
-// Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
+// Parameter for the LED pwm output
 int PWMoutput = 11; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
-// Vul hier de pin in van de lichtsensor
+// Parameter for the light sensor
 int LightSensor = 2;
 
-// Vul hier de pin in van de PIR
+// Parameter for PIR sensor
 int PirSensor = 12;
 int PreviousDetect = false; // Statusvariabele PIR sensor
-
-char messageBuffer[100];
-char topicBuffer[100];
-String ip = "";
 
 bool pir = LOW;
 bool startsend = HIGH;// flag for sending at startup
 bool debug = true;
 int lichtstatus; //contains LDR reading
 
-// Vul hier het macadres in
+// Parameters for netwerk communication
+char messageBuffer[100];
+char topicBuffer[100];
+String ip = "";
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x07};
 
 EthernetClient ethClient;
@@ -147,73 +131,10 @@ void ShowDebug(String tekst) {
   }
 }
 
-void setup() {
-  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    pinMode(RelayPins[thisPin], OUTPUT);
-    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
-  }
-
-  for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
-    pinMode(PulseRelayPins[thisPin], OUTPUT);
-    digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
-  }
-
-  for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
-    pinMode(ButtonPins[thisButton], INPUT_PULLUP);
-  }
-
-  dht.begin();
-
-  pinMode(SmokeSensor, INPUT);
-  pinMode(PWMoutput, OUTPUT);
-  pinMode(LightSensor, INPUT);
-  pinMode(PirSensor, INPUT);
-
-  // setup serial communication
-
-  if (debug) {
-    Serial.begin(9600);
-    while (!Serial) {};
-
-    ShowDebug(F("MQTT Arduino Domus"));
-    ShowDebug("");
-  }
-  // setup ethernet communication using DHCP
-  if (Ethernet.begin(mac) == 0) {
-
-    ShowDebug(F("Unable to configure Ethernet using DHCP"));
-    for (;;);
-  }
-
-  ShowDebug(F("Ethernet configured via DHCP"));
-  ShowDebug("IP address: ");
-
-  //convert ip Array into String
-  ip = String (Ethernet.localIP()[0]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[1]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[2]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[3]);
-
-  ShowDebug(ip);
-  ShowDebug("");
-
-  // setup mqtt client
-  mqttClient.setClient(ethClient);
-  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
-  mqttClient.setServer( "majordomo", 1883); // or local broker
-  ShowDebug(F("MQTT client configured"));
-  mqttClient.setCallback(callback);
-  ShowDebug("");
-  ShowDebug(F("Ready to send data"));
-  previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
-}
-
 void processButtonDigital( int buttonId ) {
   // Process the reading of the control buttons
+  // for clarity's sake I use HIGH, LOW, true and false, but of course: HIGH=true=1, LOW=false=0
+  // Buttons are normally pulled HIGH, a buttonpress gives a reading of LOW
   int sensorReading = digitalRead( ButtonPins[buttonId] );
   if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
   {
@@ -224,7 +145,7 @@ void processButtonDigital( int buttonId ) {
         lastActivityTimes[buttonId] = millis();
       }
     }
-    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (LongPressActive[buttonId] == false))// Button long press
+    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (LongPressActive[buttonId] == LOW))// Button long press
     {
       LongPressActive[buttonId] = true;
       ShowDebug( "Button" + String(buttonId) + " long pressed" );
@@ -232,11 +153,11 @@ void processButtonDigital( int buttonId ) {
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
       mqttClient.publish(topic_out, messageBuffer);
     }
-    lastButtonStates[buttonId] = 1;
+    lastButtonStates[buttonId] = HIGH;
   }
   else {
-    if (lastButtonStates[buttonId] == true) {
-      if (LongPressActive[buttonId] == true) {
+    if (lastButtonStates[buttonId] == HIGH) {
+      if (LongPressActive[buttonId] == HIGH) {
         LongPressActive[buttonId] = false;
       } else {
         if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
@@ -247,7 +168,7 @@ void processButtonDigital( int buttonId ) {
           mqttClient.publish(topic_out, messageBuffer);
         }
       }
-      lastButtonStates[buttonId] = false;
+      lastButtonStates[buttonId] = LOW;
     }
   }
 }
@@ -417,6 +338,71 @@ void callback(char* topic, byte * payload, unsigned int length) {
     ShowDebug("Unknown value");
     mqttClient.publish(topic_out, "Unknown command");
   }
+}
+
+void setup() {
+  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    pinMode(RelayPins[thisPin], OUTPUT);
+    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
+  }
+
+  for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
+    pinMode(PulseRelayPins[thisPin], OUTPUT);
+    digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
+  }
+
+  for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
+    pinMode(ButtonPins[thisButton], INPUT_PULLUP);
+  }
+
+  dht.begin();
+
+  pinMode(SmokeSensor, INPUT);
+  pinMode(PWMoutput, OUTPUT);
+  pinMode(LightSensor, INPUT);
+  pinMode(PirSensor, INPUT);
+
+  // setup serial communication
+
+  if (debug) {
+    Serial.begin(9600);
+    while (!Serial) {};
+
+    ShowDebug(F("MQTT Arduino Domus"));
+    ShowDebug("");
+  }
+  // setup ethernet communication using DHCP
+  if (Ethernet.begin(mac) == 0) {
+
+    ShowDebug(F("Unable to configure Ethernet using DHCP"));
+    for (;;);
+  }
+
+  ShowDebug(F("Ethernet configured via DHCP"));
+  ShowDebug("IP address: ");
+
+  //convert ip Array into String
+  ip = String (Ethernet.localIP()[0]);
+  ip = ip + ".";
+  ip = ip + String (Ethernet.localIP()[1]);
+  ip = ip + ".";
+  ip = ip + String (Ethernet.localIP()[2]);
+  ip = ip + ".";
+  ip = ip + String (Ethernet.localIP()[3]);
+
+  ShowDebug(ip);
+  ShowDebug("");
+
+  // setup mqtt client
+  mqttClient.setClient(ethClient);
+  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
+  mqttClient.setServer( "majordomo", 1883); // or local broker
+  ShowDebug(F("MQTT client configured"));
+  mqttClient.setCallback(callback);
+  ShowDebug("");
+  ShowDebug(F("Ready to send data"));
+  previousMillis = millis();
+  //  mqttClient.publish(topic_out, ip.c_str());
 }
 
 void loop() {

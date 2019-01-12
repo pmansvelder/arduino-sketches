@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Uno Wifi=========>
           Locatie: Hobbykamer
-          
+
           Pins used:
           2:
           3: DHT-22 sensor
@@ -76,7 +76,7 @@
 // parameters to tune memory use
 //#define BMP280 0 // use BMP280 sensor
 //#define DHT_present 0 // use DHT sensor
-#define DEBUG 1 // Zet debug mode aan
+//#define DEBUG 1 // Zet debug mode aan
 
 //#include <Ethernet.h>           // Ethernet.h library
 #include <WiFiNINA.h>
@@ -168,82 +168,56 @@ void ShowDebug(String tekst) {
   }
 }
 
-void setup() {
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
-  WiFiDrv::pinMode(25, OUTPUT);  //RED
-  WiFiDrv::pinMode(26, OUTPUT);  //GREEN
-  WiFiDrv::pinMode(27, OUTPUT);  //BLUE
-  set_rgb_led(255, 255, 255); // Set Wifi Status LED to WHITE
+// Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
+int NumberOfButtons = 4;
+int ButtonPins[] = {6, 7, 8, 9};
+static byte lastButtonStates[] = {0, 0, 0, 0};
+long lastActivityTimes[] = {0, 0, 0, 0};
+long LongPressActive[] = {0, 0, 0, 0};
 
-  if (debug) {
-    Serial.begin(9600);
+#define DEBOUNCE_DELAY 150
+#define LONGPRESS_TIME 450
 
-    ShowDebug(F("MQTT Arduino Domus Test"));
-    ShowDebug(hostname);
-    ShowDebug("");
+void processButtonDigital( int buttonId )
+{
+  int sensorReading = digitalRead( ButtonPins[buttonId] );
+  if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
+  {
+    if ( lastButtonStates[buttonId] == LOW )  // The button was previously un-pressed
+    {
+      if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
+      {
+        lastActivityTimes[buttonId] = millis();
+      }
+    }
+    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (!LongPressActive[buttonId]))// Button long press
+    {
+      LongPressActive[buttonId] = true;
+      ShowDebug( "Button" + String(buttonId) + " long pressed" );
+      String messageString = "Button" + String(buttonId) + "_long";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out, messageBuffer);
+    }
+    lastButtonStates[buttonId] = HIGH;
   }
-  ShowDebug("Starting up...");
-  // attempt to connect to Wifi network:
-
-  while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to WPA SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network:
-    status = WiFi.begin(ssid, pass);
+  else {
+    if (lastButtonStates[buttonId] == HIGH) {
+      if (LongPressActive[buttonId]) {
+        LongPressActive[buttonId] = false;
+      } else {
+        if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
+        {
+          ShowDebug( "Button" + String(buttonId) + " pressed" );
+          String messageString = "Button" + String(buttonId);
+          messageString.toCharArray(messageBuffer, messageString.length() + 1);
+          mqttClient.publish(topic_out, messageBuffer);
+        }
+      }
+      lastButtonStates[buttonId] = LOW;
+    }
   }
-  set_rgb_led(0, 64, 0); // GREEN
-
-  if (debug) {
-    // you're connected now, so print out the data:
-    Serial.print("You're connected to the network IP = ");
-    IPAddress ip = WiFi.localIP();
-    Serial.println(ip);
-  }
-
-  for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    pinMode(RelayPins[thisPin], OUTPUT);
-    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
-  }
-
-#if defined(DHT_present)
-  dht.begin();
-#endif
-
-  //  pinMode(SmokeSensor, INPUT);
-  //  pinMode(PWMoutput, OUTPUT);
-  //  pinMode(LightSensor, INPUT);
-
-  for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
-    ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT);
-  }
-
-  // setup serial communication
-
-  //convert ip Array into String
-  ip = String (WiFi.localIP()[0]);
-  ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[1]);
-  ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[2]);
-  ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[3]);
-
-  // setup mqtt client
-  mqttClient.setServer( "majordomo", 1883); // or local broker
-  ShowDebug(F("MQTT client configured"));
-  set_rgb_led(32, 64, 0);
-  mqttClient.setCallback(callback);
-  ShowDebug("");
-  ShowDebug(F("Ready to send data"));
-  previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
-#if defined(BMP280)
-  if (!bmp.begin()) {
-    ShowDebug("Could not find a valid BMP280 sensor, check wiring!");
-    bmp_present = false;
-  }
-#endif
 }
 
 void reconnect() {
@@ -383,6 +357,11 @@ void callback(char* topic, byte * payload, byte length) {
     // Status van alle sensors and relais
     sendData();
   }
+  else if (strPayload == "#RESET") {
+    ShowDebug("Reset command received, resetting in one second...");
+    delay(1000);
+    resetFunc();
+  }
 
   else {
 
@@ -415,6 +394,89 @@ void check_pir(byte pirid)
   }
 }
 
+void setup() {
+
+  WiFiDrv::pinMode(25, OUTPUT);  //RED
+  WiFiDrv::pinMode(26, OUTPUT);  //GREEN
+  WiFiDrv::pinMode(27, OUTPUT);  //BLUE
+  set_rgb_led(255, 255, 255); // Set Wifi Status LED to WHITE
+
+  if (debug) {
+    Serial.begin(9600);
+
+    ShowDebug(F("MQTT Arduino Domus Test"));
+    ShowDebug(hostname);
+    ShowDebug("");
+  }
+  ShowDebug("Starting up...");
+  // attempt to connect to Wifi network:
+
+  while ( status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+  }
+  set_rgb_led(0, 64, 0); // GREEN
+
+  if (debug) {
+    // you're connected now, so print out the data:
+    Serial.print("You're connected to the network IP = ");
+    IPAddress ip = WiFi.localIP();
+    Serial.println(ip);
+  }
+
+  for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    pinMode(RelayPins[thisPin], OUTPUT);
+    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
+  }
+
+  for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
+    ShowDebug("Enabling button pin " + String(ButtonPins[thisButton]));
+    pinMode(ButtonPins[thisButton], INPUT_PULLUP);
+  }
+
+#if defined(DHT_present)
+  dht.begin();
+#endif
+
+  //  pinMode(SmokeSensor, INPUT);
+  //  pinMode(PWMoutput, OUTPUT);
+  //  pinMode(LightSensor, INPUT);
+
+  for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
+    ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
+    pinMode(PirSensors[pirid], INPUT);
+  }
+
+  // setup serial communication
+
+  //convert ip Array into String
+  ip = String (WiFi.localIP()[0]);
+  ip = ip + ".";
+  ip = ip + String (WiFi.localIP()[1]);
+  ip = ip + ".";
+  ip = ip + String (WiFi.localIP()[2]);
+  ip = ip + ".";
+  ip = ip + String (WiFi.localIP()[3]);
+
+  // setup mqtt client
+  mqttClient.setServer( "majordomo", 1883); // or local broker
+  ShowDebug(F("MQTT client configured"));
+  set_rgb_led(32, 64, 0);
+  mqttClient.setCallback(callback);
+  ShowDebug("");
+  ShowDebug(F("Ready to send data"));
+  previousMillis = millis();
+  //  mqttClient.publish(topic_out, ip.c_str());
+#if defined(BMP280)
+  if (!bmp.begin()) {
+    ShowDebug("Could not find a valid BMP280 sensor, check wiring!");
+    bmp_present = false;
+  }
+#endif
+}
+
 void loop() {
 
   // Main loop, where we check if we're connected to MQTT...
@@ -431,16 +493,23 @@ void loop() {
     startsend = false;
   }
 
+  // ...read out the PIR sensors...
+  for (int id = 0; id < NumberOfPirs; id++) {
+    check_pir(id);
+  }
+
   // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
     previousMillis = millis();
     sendData();
   }
-
-  // ...read out the PIR sensors...
-  for (int id = 0; id < NumberOfPirs; id++) {
-    check_pir(id);
+  else {
+    for (int id = 0; id < NumberOfButtons; id++) {
+      processButtonDigital(id);
+    }
   }
+
+
 
   // and loop.
   mqttClient.loop();

@@ -261,7 +261,7 @@ void processButtonDigital( int buttonId )
         lastActivityTimes[buttonId] = millis();
       }
     }
-    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (LongPressActive[buttonId] == false))// Button long press
+    else if ((millis() - lastActivityTimes[buttonId] > LONGPRESS_TIME) && (!LongPressActive[buttonId]))// Button long press
     {
       LongPressActive[buttonId] = true;
       ShowDebug( "Button" + String(buttonId) + " long pressed" );
@@ -269,11 +269,11 @@ void processButtonDigital( int buttonId )
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
       mqttClient.publish(topic_out, messageBuffer);
     }
-    lastButtonStates[buttonId] = 1;
+    lastButtonStates[buttonId] = HIGH;
   }
   else {
-    if (lastButtonStates[buttonId] == true) {
-      if (LongPressActive[buttonId] == true) {
+    if (lastButtonStates[buttonId] == HIGH) {
+      if (LongPressActive[buttonId]) {
         LongPressActive[buttonId] = false;
       } else {
         if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
@@ -284,7 +284,7 @@ void processButtonDigital( int buttonId )
           mqttClient.publish(topic_out, messageBuffer);
         }
       }
-      lastButtonStates[buttonId] = false;
+      lastButtonStates[buttonId] = LOW;
     }
   }
 }

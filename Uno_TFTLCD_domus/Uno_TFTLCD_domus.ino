@@ -162,7 +162,7 @@ void setup(void) {
   tft.setCursor(2, 2);
   tft.println("Welcome to DOMUS!");
 
-  BLOCKNUM = 4;
+  BLOCKNUM = 8;
 
   int v_size = 1;
   int h_size = 1;
@@ -227,10 +227,10 @@ void draw_square(int h, int v, uint16_t color) {
 uint16_t block_color(byte b) {
   byte color_t = random(1, 3);
   if (color_t == 1) {
-    return GREEN;
+    return YELLOW;
   }
   else {
-    return ORANGE;
+    return RED;
   }
 }
 
