@@ -40,10 +40,10 @@
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
 
-Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+//Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 // If using the shield, all control and data lines are fixed, and
 // a simpler declaration can optionally be used:
-// Adafruit_TFTLCD tft;
+ Adafruit_TFTLCD tft;
 
 void setup(void) {
   Serial.begin(9600);
@@ -58,18 +58,18 @@ void setup(void) {
   Serial.print("TFT size is "); Serial.print(tft.width()); Serial.print("x"); Serial.println(tft.height());
 
   tft.reset();
-
+  delay(100);
   uint16_t identifier = tft.readID();
 
-  if(identifier == 0x9325) {
+  if (identifier == 0x9325) {
     Serial.println(F("Found ILI9325 LCD driver"));
-  } else if(identifier == 0x9328) {
+  } else if (identifier == 0x9328) {
     Serial.println(F("Found ILI9328 LCD driver"));
-  } else if(identifier == 0x7575) {
+  } else if (identifier == 0x7575) {
     Serial.println(F("Found HX8347G LCD driver"));
-  } else if(identifier == 0x9341) {
+  } else if (identifier == 0x9341) {
     Serial.println(F("Found ILI9341 LCD driver"));
-  } else if(identifier == 0x8357) {
+  } else if (identifier == 0x8357) {
     Serial.println(F("Found HX8357D LCD driver"));
   } else {
     Serial.print(F("Unknown LCD driver chip: "));
@@ -80,11 +80,11 @@ void setup(void) {
     Serial.println(F("If using the breakout board, it should NOT be #defined!"));
     Serial.println(F("Also if using the breakout, double-check that all wiring"));
     Serial.println(F("matches the tutorial."));
-//    return;
+    //    return;
   }
-  
-// For the mucfriend shield, the 0x9341 identifier must be selected
-// To Do: find out why the ReadID function does not work...
+
+  // For the mucfriend shield, the 0x9341 identifier must be selected
+  // To Do: find out why the ReadID function does not work...
 
   identifier = 0x9341;
   tft.begin(identifier);
@@ -142,7 +142,7 @@ void setup(void) {
 }
 
 void loop(void) {
-  for(uint8_t rotation=0; rotation<4; rotation++) {
+  for (uint8_t rotation = 0; rotation < 4; rotation++) {
     tft.setRotation(rotation);
     testText();
     delay(2000);
@@ -197,9 +197,9 @@ unsigned long testLines(uint16_t color) {
   x1 = y1 = 0;
   y2    = h - 1;
   start = micros();
-  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (x2 = 0; x2 < w; x2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = w - 1;
-  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (y2 = 0; y2 < h; y2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   t     = micros() - start; // fillScreen doesn't count against timing
 
   tft.fillScreen(BLACK);
@@ -208,9 +208,9 @@ unsigned long testLines(uint16_t color) {
   y1    = 0;
   y2    = h - 1;
   start = micros();
-  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (x2 = 0; x2 < w; x2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = 0;
-  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (y2 = 0; y2 < h; y2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   t    += micros() - start;
 
   tft.fillScreen(BLACK);
@@ -219,9 +219,9 @@ unsigned long testLines(uint16_t color) {
   y1    = h - 1;
   y2    = 0;
   start = micros();
-  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (x2 = 0; x2 < w; x2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = w - 1;
-  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (y2 = 0; y2 < h; y2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   t    += micros() - start;
 
   tft.fillScreen(BLACK);
@@ -230,9 +230,9 @@ unsigned long testLines(uint16_t color) {
   y1    = h - 1;
   y2    = 0;
   start = micros();
-  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (x2 = 0; x2 < w; x2 += 6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = 0;
-  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
+  for (y2 = 0; y2 < h; y2 += 6) tft.drawLine(x1, y1, x2, y2, color);
 
   return micros() - start;
 }
@@ -243,8 +243,8 @@ unsigned long testFastLines(uint16_t color1, uint16_t color2) {
 
   tft.fillScreen(BLACK);
   start = micros();
-  for(y=0; y<h; y+=5) tft.drawFastHLine(0, y, w, color1);
-  for(x=0; x<w; x+=5) tft.drawFastVLine(x, 0, h, color2);
+  for (y = 0; y < h; y += 5) tft.drawFastHLine(0, y, w, color1);
+  for (x = 0; x < w; x += 5) tft.drawFastVLine(x, 0, h, color2);
 
   return micros() - start;
 }
@@ -258,9 +258,9 @@ unsigned long testRects(uint16_t color) {
   tft.fillScreen(BLACK);
   n     = min(tft.width(), tft.height());
   start = micros();
-  for(i=2; i<n; i+=6) {
+  for (i = 2; i < n; i += 6) {
     i2 = i / 2;
-    tft.drawRect(cx-i2, cy-i2, i, i, color);
+    tft.drawRect(cx - i2, cy - i2, i, i, color);
   }
 
   return micros() - start;
@@ -274,13 +274,13 @@ unsigned long testFilledRects(uint16_t color1, uint16_t color2) {
 
   tft.fillScreen(BLACK);
   n = min(tft.width(), tft.height());
-  for(i=n; i>0; i-=6) {
+  for (i = n; i > 0; i -= 6) {
     i2    = i / 2;
     start = micros();
-    tft.fillRect(cx-i2, cy-i2, i, i, color1);
+    tft.fillRect(cx - i2, cy - i2, i, i, color1);
     t    += micros() - start;
     // Outlines are not included in timing results
-    tft.drawRect(cx-i2, cy-i2, i, i, color2);
+    tft.drawRect(cx - i2, cy - i2, i, i, color2);
   }
 
   return t;
@@ -292,8 +292,8 @@ unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
 
   tft.fillScreen(BLACK);
   start = micros();
-  for(x=radius; x<w; x+=r2) {
-    for(y=radius; y<h; y+=r2) {
+  for (x = radius; x < w; x += r2) {
+    for (y = radius; y < h; y += r2) {
       tft.fillCircle(x, y, radius, color);
     }
   }
@@ -304,14 +304,14 @@ unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
 unsigned long testCircles(uint8_t radius, uint16_t color) {
   unsigned long start;
   int           x, y, r2 = radius * 2,
-                w = tft.width()  + radius,
-                h = tft.height() + radius;
+                      w = tft.width()  + radius,
+                      h = tft.height() + radius;
 
   // Screen is not cleared for this one -- this is
   // intentional and does not affect the reported time.
   start = micros();
-  for(x=0; x<w; x+=r2) {
-    for(y=0; y<h; y+=r2) {
+  for (x = 0; x < w; x += r2) {
+    for (y = 0; y < h; y += r2) {
       tft.drawCircle(x, y, radius, color);
     }
   }
@@ -327,7 +327,7 @@ unsigned long testTriangles() {
   tft.fillScreen(BLACK);
   n     = min(cx, cy);
   start = micros();
-  for(i=0; i<n; i+=5) {
+  for (i = 0; i < n; i += 5) {
     tft.drawTriangle(
       cx    , cy - i, // peak
       cx - i, cy + i, // bottom left
@@ -345,13 +345,13 @@ unsigned long testFilledTriangles() {
 
   tft.fillScreen(BLACK);
   start = micros();
-  for(i=min(cx,cy); i>10; i-=5) {
+  for (i = min(cx, cy); i > 10; i -= 5) {
     start = micros();
     tft.fillTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
-      tft.color565(0, i, i));
+                     tft.color565(0, i, i));
     t += micros() - start;
     tft.drawTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
-      tft.color565(i, i, 0));
+                     tft.color565(i, i, 0));
   }
 
   return t;
@@ -366,9 +366,9 @@ unsigned long testRoundRects() {
   tft.fillScreen(BLACK);
   w     = min(tft.width(), tft.height());
   start = micros();
-  for(i=0; i<w; i+=6) {
+  for (i = 0; i < w; i += 6) {
     i2 = i / 2;
-    tft.drawRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(i, 0, 0));
+    tft.drawRoundRect(cx - i2, cy - i2, i, i, i / 8, tft.color565(i, 0, 0));
   }
 
   return micros() - start;
@@ -382,9 +382,9 @@ unsigned long testFilledRoundRects() {
 
   tft.fillScreen(BLACK);
   start = micros();
-  for(i=min(tft.width(), tft.height()); i>20; i-=6) {
+  for (i = min(tft.width(), tft.height()); i > 20; i -= 6) {
     i2 = i / 2;
-    tft.fillRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(0, i, 0));
+    tft.fillRoundRect(cx - i2, cy - i2, i, i, i / 8, tft.color565(0, i, 0));
   }
 
   return micros() - start;

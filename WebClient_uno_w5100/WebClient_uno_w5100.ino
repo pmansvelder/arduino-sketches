@@ -19,14 +19,14 @@
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x05, 0x0B};
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
 //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
 char server[] = "www.google.com";    // name address for Google (using DNS)
 
 // Set the static IP address to use if the DHCP fails to assign
-IPAddress ip(192, 168, 178, 177);
+//IPAddress ip(192, 168, 178, 175);
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server
@@ -34,6 +34,8 @@ IPAddress ip(192, 168, 178, 177);
 EthernetClient client;
 
 void setup() {
+//  pinMode(D4, HIGH);
+  digitalWrite(D4, HIGH);
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
@@ -44,7 +46,7 @@ void setup() {
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
     // try to congifure using IP address instead of DHCP:
-    Ethernet.begin(mac, ip);
+//    Ethernet.begin(mac, ip);
   }
   // give the Ethernet shield a second to initialize:
   delay(1000);
@@ -61,6 +63,7 @@ void setup() {
   } else {
     // if you didn't get a connection to the server:
     Serial.println("connection failed");
+    Serial.println(Ethernet.localIP());
   }
 }
 
@@ -82,4 +85,3 @@ void loop() {
     while (true);
   }
 }
-

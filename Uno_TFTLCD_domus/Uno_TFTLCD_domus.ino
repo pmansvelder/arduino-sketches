@@ -8,7 +8,7 @@
 #include <Adafruit_TFTLCD.h> // Hardware-specific library
 
 // The control pins for the LCD can be assigned to any digital or
-// analog pins...but we'll use the analog pins as this allows us to       
+// analog pins...but we'll use the analog pins as this allows us to     
 // double up the pins with the touch screen (see the TFT paint example).
 
 #define LCD_CS A3 // Chip Select goes to Analog 3
@@ -41,10 +41,12 @@
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
 
+#define USE_ADAFRUIT_SHIELD_PINOUT
+
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 // If using the shield, all control and data lines are fixed, and
 // a simpler declaration can optionally be used:
-// Adafruit_TFTLCD tft;
+//Adafruit_TFTLCD tft;
 
 byte RECTSIZE;
 
@@ -102,7 +104,7 @@ void setup(void) {
   // For the mcufriend shield, the 0x9341 identifier must be selected
   // To Do: find out why the ReadID function does not work...  ==> Done: just use a delay before readID..
 
-  //  identifier = 0x9341;
+    identifier = 0x9341;
   tft.begin(identifier);
 
   //  Serial.println(F("Benchmark                Time (microseconds)"));

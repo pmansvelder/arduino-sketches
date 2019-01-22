@@ -75,8 +75,9 @@
 */
 // parameters to tune memory use
 //#define BMP280 0 // use BMP280 sensor
-//#define DHT_present 0 // use DHT sensor
-//#define DEBUG 1 // Zet debug mode aan
+#define DHT_present 1 // use DHT sensor
+#define MQ_present 1 // MQ-x gas sensor
+#define DEBUG 1 // Zet debug mode aan
 
 //#include <Ethernet.h>           // Ethernet.h library
 #include <WiFiNINA.h>
@@ -85,7 +86,6 @@
 #include "secrets.h"
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
-//#include <DHT.h>                // Library for DHT-11/22 sensors
 //#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
 #define BUFFERSIZE 100          // default 100
@@ -94,6 +94,10 @@
 #include <DHT.h>
 #define DHT_PIN 3 // Vul hier de pin in van de DHT11 sensor
 DHT dht(DHT_PIN, DHT22);
+#endif
+
+#if defined(MQ_present)
+#define MQ_PIN A3 // Vul hier de pin in van de DHT11 sensor
 #endif
 
 #if defined(BMP280)
@@ -123,10 +127,18 @@ const char* topic_out = "domus/hobby/uit";
 //const char* topic_out_smoke = "domus/hobby/uit/rook";
 //const char* topic_out_light = "domus/hobby/uit/licht";
 //const char* topic_out_door = "domus/hobby/uit/deur";
+
+#if defined(DHT_present)
 const char* topic_out_temp = "domus/hobby/uit/temp";
 const char* topic_out_hum = "domus/hobby/uit/vocht";
 const char* topic_out_heat = "domus/hobby/uit/warmte";
+#endif
+
 const char* topic_out_pir = "domus/hobby/uit/pir";
+
+#if defined(MQ_present)
+const char* topic_out_gas = "domus/hobby/uit/gas";
+#endif
 
 #if defined(BMP280)
 const char* topic_out_bmptemp = "domus/hobby/uit/b_temp";
@@ -223,6 +235,14 @@ void processButtonDigital( int buttonId )
 void reconnect() {
   // Loop until we're reconnected
   set_rgb_led(64, 0, 0);  // RED
+  status = WiFi.begin(ssid, pass);
+  while ( status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+  }
+  set_rgb_led(0, 64, 0); // GREEN
   while (!mqttClient.connected()) {
     ShowDebug("Attempting MQTT connection...");
     // Attempt to connect
@@ -274,6 +294,14 @@ void sendData() {
     sendMessage(String(p), topic_out_pressure);
   }
 #endif
+
+#if defined(MQ_present)
+  analogWrite(MQ_PIN, HIGH);
+//  delay(50);
+  byte g = analogRead(MQ_PIN);
+  sendMessage(String(g), topic_out_gas);
+#endif
+
   // Send status of relays
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
@@ -339,7 +367,11 @@ void callback(char* topic, byte * payload, byte length) {
 
     // Alle relais aan
     for (byte i = 0 ; i < NumberOfRelays; i++) {
-      digitalWrite(RelayPins[i], HIGH);
+      if (RelayInitialState[i] == LOW) {
+        digitalWrite(RelayPins[i], HIGH);
+      } else {
+        digitalWrite(RelayPins[i], LOW);
+      }
       report_state(i);
     }
   }
@@ -348,7 +380,7 @@ void callback(char* topic, byte * payload, byte length) {
 
     // Alle relais uit
     for (byte i = 0 ; i < NumberOfRelays; i++) {
-      digitalWrite(RelayPins[i], LOW);
+      digitalWrite(RelayPins[i], RelayInitialState[i]);
       report_state(i);
     }
   }
@@ -399,11 +431,10 @@ void setup() {
   WiFiDrv::pinMode(25, OUTPUT);  //RED
   WiFiDrv::pinMode(26, OUTPUT);  //GREEN
   WiFiDrv::pinMode(27, OUTPUT);  //BLUE
-  set_rgb_led(255, 255, 255); // Set Wifi Status LED to WHITE
+  set_rgb_led(64, 64, 64); // Set Wifi Status LED to WHITE
 
   if (debug) {
     Serial.begin(9600);
-
     ShowDebug(F("MQTT Arduino Domus Test"));
     ShowDebug(hostname);
     ShowDebug("");
@@ -440,6 +471,18 @@ void setup() {
   dht.begin();
 #endif
 
+#if defined(MQ_present)
+  ShowDebug("Setting up pin " + String(MQ_PIN) + " as MQ gas sensor");
+  analogWrite(MQ_PIN, HIGH);
+  ShowDebug("Heating up for 60 seconds...");
+  delay(60000);
+  // now reducing the heating power: turn the heater to approx 1,4V
+  ShowDebug("Reducing voltage to 1,4V and heat for 90 seconds...");
+  analogWrite(MQ_PIN, 71.4);// 255x1400/5000
+  delay(90000);
+  ShowDebug("MQ-7 sensor setup done");
+#endif
+
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
@@ -463,7 +506,7 @@ void setup() {
   // setup mqtt client
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
-  set_rgb_led(32, 64, 0);
+  set_rgb_led(32, 64, 0);  // Set status LED
   mqttClient.setCallback(callback);
   ShowDebug("");
   ShowDebug(F("Ready to send data"));
@@ -508,8 +551,6 @@ void loop() {
       processButtonDigital(id);
     }
   }
-
-
 
   // and loop.
   mqttClient.loop();
