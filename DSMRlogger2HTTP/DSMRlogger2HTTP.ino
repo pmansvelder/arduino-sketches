@@ -77,7 +77,6 @@ PubSubClient mqttClient;
 
 // end additions by P.M.
 
-
 //#define HAS_NO_METER       // define if No Meter is attached
 
 #ifdef ARDUINO_ESP8266_NODEMCU
@@ -360,6 +359,9 @@ void printData() {
   
 } // printData()
 
+
+// Addition by PM
+
 //===========================================================================================
 void publishData() {
 //===========================================================================================
@@ -396,6 +398,7 @@ void publishData() {
   
 } // publishData()
 
+// End Addition by PM
 
 //===========================================================================================
 void processData(MyData DSMRdata) {
@@ -595,6 +598,8 @@ void processData(MyData DSMRdata) {
    
 } // processData()
 
+// Addition by PM
+
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
@@ -610,6 +615,7 @@ void reconnect() {
   }
 }  // reconnect()
 
+// End Addition by PM
 
 //===========================================================================================
 void setup() {
@@ -753,9 +759,13 @@ void loop () {
   ftpSrv.handleFTP();
   handleKeyInput();
 
+// Additions PM
+
   if (!mqttClient.connected()) {
     reconnect();
   }
+
+// End Additions PM
 
   if (!showRaw) {
     reader.loop();
@@ -854,7 +864,13 @@ void loop () {
         if (reader.parse(&DSMRdata, &DSMRerror)) {  // Parse succesful, print result
           digitalWrite(BUILTIN_LED, LED_OFF);
           processData(DSMRdata);
+
+// Additions PM
+          
           publishData(); // publish Data on MQTT
+
+// End Additions PM
+          
           if (Verbose) {
             DSMRdata.applyEach(showValues());
             printData();
