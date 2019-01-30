@@ -1,9 +1,19 @@
-#define LED_PIN 13
-#define LED_PWM_PIN 11
+// For Arduino UNO
 
-#define EN_PIN_A 12
-#define EN_PIN_B 8
-#define BTN_PIN 4
+//#define LED_PIN 13
+//#define LED_PWM_PIN 11
+//
+//#define EN_PIN_A 12
+//#define EN_PIN_B 8
+//#define BTN_PIN 4
+
+// For ESP8266
+#define LED_PIN 0
+#define LED_PWM_PIN 16
+
+#define EN_PIN_A 5
+#define EN_PIN_B 4
+#define BTN_PIN 0
 
 
 unsigned char encoder_A;
@@ -25,6 +35,7 @@ void setup() {
   analogWrite(LED_PWM_PIN, 0);
 
   Serial.begin( 115200 );
+  delay(100);
   Serial.println( "START" );
 }
 
@@ -36,8 +47,10 @@ void loop() {
     if ( btn == LOW && last_button_state ) { //Detect the transitions from HIGH to LOW
       if ( led_power == 255 ) {
         led_power = 0;
+        Serial.println( "L: " + String(led_power) );
       } else {
         led_power = 255;
+        Serial.println( "L: " + String(led_power) );
       }
       analogWrite(LED_PWM_PIN, led_power);
     }
@@ -60,7 +73,7 @@ void loop() {
 
       if ( led_power < 0 ) led_power = 0;
       if ( led_power >= 255 ) led_power = 255;
-
+      
       if ( led_power >= 0 && led_power <= 10 ) {
         power_step = 1;
       } else if ( led_power > 10 && led_power <= 20 ) {
@@ -70,7 +83,6 @@ void loop() {
       } else if ( led_power > 30 ) {
         power_step = 10;
       }
-
       analogWrite(LED_PWM_PIN, led_power);
     }
 
@@ -80,4 +92,3 @@ void loop() {
     loop_time = current_time;
   }
 }
-
