@@ -488,6 +488,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Cover commando: open
     ShowDebug("Cover command : Open");
     byte CoverPort = strPayload[1] - 48;
+    // 2nd char is # of cover
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
