@@ -11,12 +11,17 @@
   The dimmer uses MQTT to listen for commands:
   topic_in for incoming commands (OFF, ON or brightness)
   topic_out for state (ON, OFF) and startup state
-  topic_out_brightness for brightness value (0..255)
+  topic_out_brightness for brightness value (0..MAXRANGE)
 
 */
 #include <ESP8266WiFi.h>
 #include "secrets.h"
 #include "PubSubClient.h"
+
+#define MAXRANGE 1023 // max pwm value
+#define STEP1 40
+#define STEP2 80
+#define STEP3 120
 
 const char* ssid     = SECRET_SSID;
 const char* password = SECRET_PASS;
@@ -62,7 +67,7 @@ unsigned char encoder_B;
 unsigned char last_encoder_A;
 unsigned char last_encoder_B;
 int led_power = 0;
-int last_led_power = 255;
+int last_led_power = MAXRANGE;
 int power_step = 1;
 long loop_time;
 
@@ -123,7 +128,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   // However, if you want to send full word commands, uncomment the next line and use for string comparison
   payload[length] = '\0'; // terminate string with 0
   String strPayload = String((char*)payload);  // convert to string
-  
+
   ShowDebug(strPayload);
   ShowDebug("Message arrived");
   ShowDebug(topic);
@@ -147,8 +152,8 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   else {
     led_power = strPayload.substring(0).toInt();
-    if (led_power > 255) {
-      led_power = 255;
+    if (led_power > MAXRANGE) {
+      led_power = MAXRANGE;
     }
     analogWrite(LED_PWM_PIN, led_power);
     report_state();
@@ -172,7 +177,7 @@ void processButtonDigital( int buttonId )
       LongPressActive[buttonId] = true;
       ShowDebug( "Button" + String(buttonId) + " long pressed" );
       if ( led_power == 0 ) {                            // If light is off, set brightness to max
-        led_power = 255;
+        led_power = MAXRANGE;
         Serial.println( "L: " + String(led_power) );
       } else {                                           // if light is on, save brightness and turn light off
         last_led_power = led_power;
@@ -209,6 +214,8 @@ void processButtonDigital( int buttonId )
 }
 
 void setup() {
+
+  analogWriteRange(MAXRANGE);
 
   Serial.begin( 115200 );
 
@@ -281,15 +288,15 @@ void loop() {
       }
 
       if ( led_power < 0 ) led_power = 0;
-      if ( led_power >= 255 ) led_power = 255;
+      if ( led_power >= MAXRANGE ) led_power = MAXRANGE;
 
-      if ( led_power >= 0 && led_power <= 10 ) {
+      if ( led_power >= 0 && led_power <= STEP1 ) {
         power_step = 1;
-      } else if ( led_power > 10 && led_power <= 20 ) {
+      } else if ( led_power > STEP1 && led_power <= STEP2 ) {
         power_step = 2;
-      } else if ( led_power > 20 && led_power <= 30 ) {
+      } else if ( led_power > STEP2 && led_power <= STEP3 ) {
         power_step = 5;
-      } else if ( led_power > 30 ) {
+      } else if ( led_power > STEP3 ) {
         power_step = 10;
       }
       analogWrite(LED_PWM_PIN, led_power);
