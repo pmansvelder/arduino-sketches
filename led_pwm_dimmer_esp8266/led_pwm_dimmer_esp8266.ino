@@ -32,7 +32,6 @@ const char* password = SECRET_PASS;
 String hostname = CLIENT_ID;
 
 bool debug = true;
-bool startsend = HIGH; // flag for sending at startup
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/esp/in";
@@ -145,22 +144,30 @@ void callback(char* topic, byte * payload, unsigned int length) {
     analogWrite(LED_PWM_PIN, led_power);
     report_state();
   }
+  else if (strPayload == "STAT")  {
+    report_state();
+  }
   else if (strPayload == "IP")  {
     // 'Show IP' commando
     mqttClient.publish(topic_out, ip.c_str()); // publish IP nr
     mqttClient.publish(topic_out, hostname.c_str()); // publish hostname
   }
   else {
-    led_power = strPayload.substring(0).toInt();
-    if (led_power > MAXRANGE) {
-      led_power = MAXRANGE;
+    if ((strPayload.substring(0).toInt() == 0) and (strPayload != "0")) {
+      mqttClient.publish(topic_out, "Unknown Command"); // unknown command
     }
-    analogWrite(LED_PWM_PIN, led_power);
-    report_state();
+    else {
+      led_power = strPayload.substring(0).toInt();
+      if (led_power > MAXRANGE) {
+        led_power = MAXRANGE;
+      }
+      analogWrite(LED_PWM_PIN, led_power);
+      report_state();
+    }
   }
 }
 
-void processButtonDigital( int buttonId )
+void processButtonDigital( int buttonId )  // routine to check for short or long press, and act accordingly
 {
   int sensorReading = digitalRead( ButtonPins[buttonId] );
   if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
@@ -215,11 +222,19 @@ void processButtonDigital( int buttonId )
 
 void setup() {
 
+  // set up PWM range
+
   analogWriteRange(MAXRANGE);
+
+  // set up serial comms
 
   Serial.begin( 115200 );
 
+  // wait a bit
+
   delay(100);
+
+  // and send some output
 
   ShowDebug("Domus LED PWM dimmer START");
   ShowDebug("Connecting to ");
@@ -245,6 +260,7 @@ void setup() {
   }
 
   //convert ip Array into String
+  
   ip = String (WiFi.localIP()[0]);
   ip = ip + ".";
   ip = ip + String (WiFi.localIP()[1]);
@@ -259,38 +275,38 @@ void setup() {
   ShowDebug("Gateway: " + String(WiFi.gatewayIP()));
 
   // setup mqtt client
+  
   mqttClient.setClient(espClient);
   mqttClient.setServer( MQTTSERVER, MQTTPORT ); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
+
+  // and enable blue led to show connected status
+  
   digitalWrite(LED_BLUE, LOW);
 }
 
 void loop() {
-  if (!mqttClient.connected()) {
+  if (!mqttClient.connected()) {          // check MQTT connection status and reconnect if connection lost
     ShowDebug("Not Connected!");
     reconnect();
   }
-  long current_time = millis(); //millis() - Returns the number of milliseconds since the Arduino board began running the current program.
-
-  processButtonDigital(0);
-  if ( current_time - loop_time >= 5 ) {
-    encoder_A = digitalRead(EN_PIN_A);  //Read encoder pin A
-    encoder_B = digitalRead(EN_PIN_B);  //Read encoder pin B
-
-    if ( !encoder_A && last_encoder_A ) {
+  long current_time = millis();           // millis() - Returns the number of milliseconds since the Arduino board began running the current program.
+  processButtonDigital(0);                // check if the pushbutton is pressed
+  if ( current_time - loop_time >= 5 ) {  // check every 5 ms for encoder rotation
+    encoder_A = digitalRead(EN_PIN_A);    // Read encoder pin A
+    encoder_B = digitalRead(EN_PIN_B);    // Read encoder pin B
+    if ( !encoder_A && last_encoder_A ) { // if encoder has moved CCW, lower led brightness
       if ( encoder_B ) {
         Serial.println( "L: " + String(led_power) );
         led_power = led_power - power_step;
-      } else {
+      } else {                            // if encoder has moved CW, inrease led brightness
         Serial.println( "R: " + String(led_power) );
         led_power = led_power + power_step;
       }
-
-      if ( led_power < 0 ) led_power = 0;
+      if ( led_power < 0 ) led_power = 0; // keep led power within range
       if ( led_power >= MAXRANGE ) led_power = MAXRANGE;
-
-      if ( led_power >= 0 && led_power <= STEP1 ) {
+      if ( led_power >= 0 && led_power <= STEP1 ) {             // use different steps for different values
         power_step = 1;
       } else if ( led_power > STEP1 && led_power <= STEP2 ) {
         power_step = 2;
@@ -299,13 +315,11 @@ void loop() {
       } else if ( led_power > STEP3 ) {
         power_step = 10;
       }
-      analogWrite(LED_PWM_PIN, led_power);
-      report_state();
+      analogWrite(LED_PWM_PIN, led_power);  // and write to the PWM output
+      report_state();                       // report back on the MQTT topic
     }
-
-    last_encoder_A = encoder_A;
+    last_encoder_A = encoder_A;             // save encoder positions
     last_encoder_B = encoder_B;
-
     loop_time = current_time;
   }
   mqttClient.loop();
