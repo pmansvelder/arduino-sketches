@@ -1,6 +1,6 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
-          Locatie: Meterkast
+          Location: Meterkast
           Macadres: 00:01:02:03:04:0B
           Pins used:
           2: PWM voor LEDs
@@ -10,16 +10,18 @@
           6: Relay 1 (not connected)
           7: Relay 2/PulseRelay 1 (Pulse, Voordeuropener)
           8: PulseRelay 0 (Pulse, Haldeuropener)
-          9:  Button 2 (keuken)
+          9: Button 2 (keuken)
           10: <in gebruik voor W5100>
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
           13:
+          21: PIR Hal
           22: Relay screen 1
           23: Pulserelay screen 1
           24: Relay screen 2
           25: Pulserelay screen 2
           28: PIR Keuken
+          29: Magneetcontact voordeur
           30: Relay 3: SSR Relais voor keukenlamp
           31: Relay 4: SSR Relais voor plafondlamp huiskamer
 
@@ -80,7 +82,7 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
-// Vul hier de pin in van de DHT11 sensor
+// Pin for DHT11 sensor
 #define DHT_PIN 3
 // DHT dht(DHT_PIN, DHT11);
 
@@ -247,7 +249,7 @@ void setup() {
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
   //  mqttClient.publish(topic_out, ip.c_str());
-}
+} // setup
 
 void processButtonDigital( int buttonId )
 {
@@ -465,18 +467,26 @@ void callback(char* topic, byte * payload, unsigned int length) {
   }
   else if (strPayload[0] == 'P') {  // PULSE RELAY
     int PulseRelayPort = strPayload[1] - 48;
-    // Pulserelais aan
-    ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
-    digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    String messageString = "P" + String(PulseRelayPort) + "1";
-    messageString.toCharArray(messageBuffer, messageString.length() + 1);
-    mqttClient.publish(topic_out_pulse, messageBuffer);
-    PulseActivityTimes[PulseRelayPort] = millis();
+    if (strPayload[2] == '1') {  // Pulserelay on
+      ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
+      digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+      String messageString = "P" + String(PulseRelayPort) + "1";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
+      PulseActivityTimes[PulseRelayPort] = millis();
+    }
+    else { // Pulserelay forced off
+      ShowDebug("Disabling pulse relay " + String(PulseRelayPort) + ".");
+      String messageString = "P" + String(PulseRelayPort) + "0";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
+      digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
+    }
   }
   else if (strPayload[0] == 'L') {  // LED PWM
     analogWrite(PWMoutput, strPayload.substring(1).toInt());
   }
-  //
+  // *** Control for screen covers ****
   // Command: O + cover number [+ pulse duration in ms]
   //  opens cover:
   //    - sets direction relay: open = inverse state
@@ -637,4 +647,4 @@ void loop() {
 
   // and loop.
   mqttClient.loop();
-}
+} // loop

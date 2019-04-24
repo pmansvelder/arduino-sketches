@@ -1,30 +1,34 @@
 /*
-          <========Arduino Sketch for Arduino Uno Wifi=========>
+          <========Arduino Sketch for Arduino Uno =========>
           Locatie: Hobbykamer
 
           Pins used:
-          1: PIR Sensor
-          2: Door Sensor
+          0: Serial
+          1: Serial
+          2: PIR Sensor
           3: DHT-22 sensor
-          4: Output for MQ-7 state transistor
-          5:
-          6:
-          7:
-          8: Reset for W5100
-          9:
+          4: <in gebruik voor W5100>
+          5: Output for MQ-7 state transistor
+          6: Button #1
+          7: Button #1
+          8: Button #1
+          9: Button #1
           10: <in gebruik voor W5100>
           11: <in gebruik voor W5100>
           12: <in gebruik voor W5100>
           13: <in gebruik voor W5100>
 
-          A3: MQ-7 Sensor
-          A4:
-
+          A0: MQ-7 Sensor
+          A1: Relay #1
+          A2: Relay #2
+          A3: Relay #3
+          A4: Relay #1
+          A5: Magneetcontact achterdeur
 
           incoming topic: domus/hobby/in
 
-          Arduino Uno Wifi rev2 used as MQTT client
-          It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
+          Arduino Uno with W5100 ethernet shield used as MQTT client
+          It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hobby/uit" for outgoing messages and
           "domus/hobby/in" for incoming messages.
           As the available memory of a UNO  with Ethernetcard is limited,
@@ -83,16 +87,12 @@
 #define MQ_present 1 // MQ-x gas sensor
 #define DEBUG 1 // Zet debug mode aan
 
-//#include <Ethernet.h>           // Ethernet.h library
-#include <WiFiNINA.h>
-#include <utility/wifi_drv.h>
-
-#include "secrets.h"
+#include <Ethernet.h>           // Ethernet.h library
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
 //#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
-#define BUFFERSIZE 100          // default 100
+#define BUFFERSIZE 40          // default 100
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -100,14 +100,8 @@
 DHT dht(DHT_PIN, DHT22);
 #endif
 
-#if defined(BMP280)
-#include <Adafruit_BMP280.h>
-Adafruit_BMP280 bmp; // I2C
-bool bmp_present = true;
-#endif
-
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_hobby"
+#define CLIENT_ID  "domus_hobby_test"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 5000 // that is 5 seconds interval
@@ -115,9 +109,9 @@ bool bmp_present = true;
 String hostname = CLIENT_ID;
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 1;
-int PirSensors[] = {1};
-int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
+byte NumberOfPirs = 2;
+int PirSensors[] = {2, A5};
+int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/hobby/in";
@@ -138,25 +132,21 @@ const char* topic_out_pir = "domus/hobby/uit/pir";
 
 #if defined(MQ_present)
 const char* topic_out_gas = "domus/hobby/uit/gas";
-byte mq_state = 0;  // present state of MQ sensor: 0=preheat, 1=measure
-byte mq_state_pin = 4;
+byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
+byte mq_state_pin = 5;
 byte mq_sensor_pin = A0;
 byte mq_value = 0;
 long mq_millis;
 float co_value = 0;
 const long mq_heat_interval = 60000;
 const long mq_measure_interval = 90000;
-#endif
-
-#if defined(BMP280)
-const char* topic_out_bmptemp = "domus/hobby/uit/b_temp";
-const char* topic_out_pressure = "domus/hobby/uit/druk";
+const long mq_startup = 3000;
 #endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfRelays = 4;
-const byte RelayPins[] = {10, 11, 12, 13};
-PinStatus RelayInitialState[] = {LOW, LOW, LOW, LOW};
+const byte RelayPins[] = {A1, A2, A3, A4};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
 
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
@@ -168,16 +158,10 @@ bool debug = true;
 bool debug = false;
 #endif
 
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-/////// Wifi Settings ///////
-char ssid[] = SECRET_SSID;
-char pass[] = SECRET_PASS;
-
-int status = WL_IDLE_STATUS;      // the Wifi radio's status
-
-WiFiClient wifi;
-
-PubSubClient mqttClient(wifi);
+// Vul hier het macadres in
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x4B};
+EthernetClient ethClient;
+PubSubClient mqttClient;
 
 long previousMillis;
 
@@ -240,32 +224,49 @@ void processButtonDigital( int buttonId )
   }
 }
 
+float raw_value_to_CO_ppm(float value)
+{
+  float reference_resistor_kOhm = 10.0;
+
+  float sensor_reading_100_ppm_CO = -1;
+  float sensor_reading_clean_air = 675;
+
+  float sensor_100ppm_CO_resistance_kOhm;
+  float sensor_base_resistance_kOhm;
+
+  if (value < 1) return -1; //wrong input value
+  sensor_base_resistance_kOhm = reference_resistor_kOhm * 1023 / sensor_reading_clean_air - reference_resistor_kOhm;
+  if (sensor_reading_100_ppm_CO > 0)
+  {
+    sensor_100ppm_CO_resistance_kOhm = reference_resistor_kOhm * 1023 / sensor_reading_100_ppm_CO - reference_resistor_kOhm;
+  }
+  else
+  {
+    sensor_100ppm_CO_resistance_kOhm = sensor_base_resistance_kOhm * 0.25;
+    //UPDATED: when checked on a CO meter, it seems that sensor corresponds to
+    //the datasheet pretty well
+  }
+  float sensor_R_kOhm = reference_resistor_kOhm * 1023 / value - reference_resistor_kOhm;
+  float R_relation = sensor_100ppm_CO_resistance_kOhm / sensor_R_kOhm;
+  float CO_ppm = 134 * R_relation - 35;
+  if (CO_ppm < 0) CO_ppm = 0;
+  return CO_ppm;
+}
+
 void reconnect() {
   // Loop until we're reconnected
-  set_rgb_led(64, 0, 0);  // RED
-  status = WiFi.begin(ssid, pass);
-  while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to WPA SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network:
-    status = WiFi.begin(ssid, pass);
-  }
-  set_rgb_led(0, 64, 0); // GREEN
   while (!mqttClient.connected()) {
     ShowDebug("Attempting MQTT connection...");
     // Attempt to connect
     if (mqttClient.connect(CLIENT_ID)) {
       ShowDebug("connected");
-      set_rgb_led(0, 0, 64);  // BLUE
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "MQTT Arduino Domus Test connected");
+      mqttClient.publish(topic_out, "hello world");
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
-      set_rgb_led(64, 0, 0);  // RED
       ShowDebug("failed, rc=" + String(mqttClient.state()));
-      ShowDebug(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
     }
@@ -285,15 +286,15 @@ void sendData() {
   float hic = dht.computeHeatIndex(t, h, false);
 
   //  Send Temperature sensor
-  ShowDebug("Temperature: " + String(t));
+  ShowDebug("T: " + String(t));
   sendMessage(String(t), topic_out_temp);
 
   //  Send Humidity sensor
-  ShowDebug("Humidity: " + String(h));
+  ShowDebug("H: " + String(h));
   sendMessage(String(h), topic_out_hum);
 
   //  Send Heat index sensor
-  ShowDebug("Heat: " + String(hic));
+  ShowDebug("HI: " + String(hic));
   sendMessage(String(hic), topic_out_heat);
 #endif
 
@@ -307,21 +308,17 @@ void sendData() {
 #endif
 
 #if defined(MQ_present)
-  ShowDebug("CO Value: " + String(co_value));
-  sendMessage(String(co_value), topic_out_gas);
+  ShowDebug("CO: " + String(raw_value_to_CO_ppm(co_value)));
+  sendMessage(String(raw_value_to_CO_ppm(co_value)), topic_out_gas);
+  ShowDebug(String(millis()));
+  ShowDebug(String(mq_millis));
+  ShowDebug(String(mq_state));
 #endif
 
   // Send status of relays
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
   }
-}
-
-void set_rgb_led(byte red, byte green, byte blue)
-{
-  WiFiDrv::analogWrite(25, red);  // for configurable brightness
-  WiFiDrv::analogWrite(26, green);  // for configurable brightness
-  WiFiDrv::analogWrite(27, blue);  // for configurable brightness
 }
 
 void report_state(byte outputport)
@@ -331,7 +328,7 @@ void report_state(byte outputport)
 }
 
 void callback(char* topic, byte * payload, byte length) {
-  char msgBuffer[20];
+  char msgBuffer[BUFFERSIZE];
   // I am only using one ascii character as command, so do not need to take an entire word as payload
   // However, if you want to send full word commands, uncomment the next line and use for string comparison
   payload[length] = '\0'; // terminate string with 0
@@ -347,14 +344,14 @@ void callback(char* topic, byte * payload, byte length) {
   if (strPayload[0] == 'R') {
 
     // Relais commando
-    ShowDebug("Relay command");
+    ShowDebug("Relay:");
 
     RelayPort = strPayload[1] - 48;
     if (RelayPort > 16) RelayPort -= 3;
     RelayValue = strPayload[2] - 48;
 
     if (RelayValue == 40) {
-      ShowDebug("Toggling relaypin " + String (RelayPins[RelayPort]));
+      ShowDebug("Relay " + String (RelayPins[RelayPort]));
       if (digitalRead(RelayPins[RelayPort]) == LOW) {
         digitalWrite(RelayPins[RelayPort], HIGH);
         ShowDebug("...to HIGH");
@@ -400,7 +397,7 @@ void callback(char* topic, byte * payload, byte length) {
   else if (strPayload == "#RESET") {
     ShowDebug("Reset command received, resetting in one second...");
     delay(1000);
-    resetFunc();
+    //    resetFunc();
   }
   else {
     // Onbekend commando
@@ -414,7 +411,7 @@ void check_pir(byte pirid)
   // ...read out the PIR sensors...
   if (digitalRead(PirSensors[pirid]) == HIGH) {
     if (!PreviousDetects[pirid]) {
-      ShowDebug("Detecting movement on pir " + String(pirid) + ".");
+      ShowDebug("Pir " + String(pirid) + " on.");
       String messageString = "pir" + String(pirid) + "on";
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
       mqttClient.publish(topic_out_pir, messageBuffer);
@@ -423,7 +420,7 @@ void check_pir(byte pirid)
   }
   else {
     if (PreviousDetects[pirid]) {
-      ShowDebug("No more movement on pir " + String(pirid) + ".");
+      ShowDebug("Pir " + String(pirid) + " off.");
       String messageString = "pir" + String(pirid) + "off";
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
       mqttClient.publish(topic_out_pir, messageBuffer);
@@ -434,43 +431,20 @@ void check_pir(byte pirid)
 
 void setup() {
 
-  WiFiDrv::pinMode(25, OUTPUT);  //RED
-  WiFiDrv::pinMode(26, OUTPUT);  //GREEN
-  WiFiDrv::pinMode(27, OUTPUT);  //BLUE
-  set_rgb_led(64, 64, 64); // Set Wifi Status LED to WHITE
-
   if (debug) {
     Serial.begin(9600);
-    ShowDebug(F("MQTT Arduino Domus Test"));
+    ShowDebug(CLIENT_ID);
     ShowDebug(hostname);
-    ShowDebug("");
-  }
-  ShowDebug("Starting up...");
-  // attempt to connect to Wifi network:
-
-  while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to WPA SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network:
-    status = WiFi.begin(ssid, pass);
-  }
-  set_rgb_led(0, 64, 0); // GREEN
-
-  if (debug) {
-    // you're connected now, so print out the data:
-    Serial.print("You're connected to the network IP = ");
-    IPAddress ip = WiFi.localIP();
-    Serial.println(ip);
   }
 
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    ShowDebug("Enabling Relay pin " + String(RelayPins[thisPin]));
+    ShowDebug("Relay: " + String(RelayPins[thisPin]));
     pinMode(RelayPins[thisPin], OUTPUT);
     digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
-    ShowDebug("Enabling button pin " + String(ButtonPins[thisButton]));
+    ShowDebug("Button: " + String(ButtonPins[thisButton]));
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
 
@@ -483,45 +457,45 @@ void setup() {
   //  pinMode(LightSensor, INPUT);
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
-    ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT);
+    ShowDebug("Pir: " + String(PirSensors[pirid]));
+    pinMode(PirSensors[pirid], INPUT_PULLUP);
   }
 
-  // setup serial communication
+  ShowDebug("Network...");
+  // attempt to connect to network:
 
-  //convert ip Array into String
-  ip = String (WiFi.localIP()[0]);
+  //   setup ethernet communication using DHCP
+  if (Ethernet.begin(mac) == 0) {
+
+    ShowDebug(F("No DHCP"));
+    for (;;);
+  }
+  ShowDebug(F("Ethernet via DHCP"));
+  ShowDebug("IP address: ");
+  ip = String (Ethernet.localIP()[0]);
   ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[1]);
+  ip = ip + String (Ethernet.localIP()[1]);
   ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[2]);
+  ip = ip + String (Ethernet.localIP()[2]);
   ip = ip + ".";
-  ip = ip + String (WiFi.localIP()[3]);
+  ip = ip + String (Ethernet.localIP()[3]);
+  ShowDebug(ip);
+  ShowDebug("");
 
   // setup mqtt client
+  mqttClient.setClient(ethClient);
   mqttClient.setServer( "majordomo", 1883); // or local broker
-  ShowDebug(F("MQTT client configured"));
-  set_rgb_led(32, 64, 0);  // Set status LED
+  ShowDebug("MQTT set up");
   mqttClient.setCallback(callback);
-  ShowDebug("");
-  ShowDebug(F("Ready to send data"));
+  ShowDebug("Ready to send data");
   previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
-#if defined(BMP280)
-  if (!bmp.begin()) {
-    ShowDebug("Could not find a valid BMP280 sensor, check wiring!");
-    bmp_present = false;
-  }
-#endif
-
 #if defined(MQ_present)
   mq_millis = millis();
-  ShowDebug("Setting up pin " + String(mq_sensor_pin) + " as MQ gas sensor");
+  ShowDebug("Pin " + String(mq_sensor_pin) + " is MQ sensor");
 #endif
 }
 
 void loop() {
-
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
@@ -545,19 +519,25 @@ void loop() {
   // ...process the MQ-7 sensor...
   if (mq_state == 0) {
     digitalWrite(mq_state_pin, HIGH);
-    if (mq_millis - millis() > mq_heat_interval) {
+    if ( mq_millis < millis() ) {
+      ShowDebug("MQ-7 measure...");
       mq_state = 1;
-      mq_millis = millis();
+      mq_millis = millis() + mq_measure_interval;
     }
-    else {
-      mq_value = analogRead(mq_sensor_pin);
+  }
+  else {
+    digitalWrite(mq_state_pin, LOW);
+    int mq_value = analogRead(mq_sensor_pin);
+    //    ShowDebug("Value: "+String(mq_value));
+    if ( (mq_millis + mq_startup - mq_measure_interval) < millis() )
+    {
       co_value *= 0.999;
-      co_value += 0.001 * analogRead(mq_sensor_pin);
-      co_value = mq_value;  // for debug
-      if (mq_millis - millis() > mq_measure_interval) {
-        mq_state = 0;
-        mq_millis = millis();
-      }
+      co_value += 0.001 * mq_value;
+    }
+    if ( mq_millis < millis() ) {
+      ShowDebug("MQ-7 heatup...");
+      mq_state = 0;
+      mq_millis = millis() + mq_heat_interval;
     }
   }
 #endif

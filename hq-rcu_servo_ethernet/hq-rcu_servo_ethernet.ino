@@ -1,7 +1,6 @@
 // Sketch to control 2 servo's using custom print (HQ/PM/RCU)
 
 #include <EEPROM.h>
-// #include <Servo.h>
 #include "VarSpeedServo.h"
 #include "EEPROMAnything.h"
 
