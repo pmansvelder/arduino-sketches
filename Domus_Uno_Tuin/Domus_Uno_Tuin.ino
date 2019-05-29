@@ -4,7 +4,7 @@
           Macadres: 00:01:02:03:04:0A
           Pins used:
           2:
-          3: DHT-22 sensor
+          3: db18b20 temperature sensor
           4: PIR Sensor
           5: Relay 0 (SSR)
           6: Relay 1 (SSR)
@@ -20,7 +20,7 @@
           incoming topic: domus/tuin/in
 
           Arduino Uno with W5100 Module used as MQTT client
-          It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
+          It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/tuin/uit" for outgoing messages and
           "domus/tuin/in" for incoming messages.
           As the available memory of a UNO  with Ethernetcard is limited,
@@ -34,7 +34,7 @@
           domus/tuin/uit/temp   // DHT-22 temperatuursensor
           domus/tuin/uit/warmte // DHT-22 gevoelstemperatuur
           domus/tuin/uit/vocht  // DHT-22 luchtvochtigheid
-          
+
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
@@ -75,7 +75,8 @@
 */
 // parameters to tune memory use
 //#define BMP280 1 // use BMP280 sensor
-#define DHT_present 1 // use DHT sensor
+//#define DHT_present 1 // use DHT sensor
+#define DS18B20_present 1 // Use OneWire temperature sensor
 #define DEBUG 1 // Zet debug mode aan
 
 #include <Ethernet.h>           // Ethernet.h library
@@ -92,6 +93,13 @@
 DHT dht(DHT_PIN, DHT22);
 #endif
 
+#if defined(DS18B20_present)
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 3
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+#endif
 
 #if defined(BMP280)
 #include <Adafruit_BMP280.h>
@@ -119,9 +127,17 @@ const char* topic_out = "domus/tuin/uit";
 //const char* topic_out_smoke = "domus/tuin/uit/rook";
 //const char* topic_out_light = "domus/tuin/uit/licht";
 //const char* topic_out_door = "domus/tuin/uit/deur";
+
+#if defined(DHT_present)
 const char* topic_out_temp = "domus/tuin/uit/temp";
 const char* topic_out_hum = "domus/tuin/uit/vocht";
 const char* topic_out_heat = "domus/tuin/uit/warmte";
+#endif
+
+#if defined(DS18B20_present)
+const char* topic_out_temp = "domus/tuin/uit/temp";
+#endif
+
 const char* topic_out_pir = "domus/tuin/uit/pir";
 
 #if defined(BMP280)
@@ -130,8 +146,8 @@ const char* topic_out_pressure = "domus/tuin/uit/druk";
 #endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const PROGMEM byte NumberOfRelays = 2;
-const PROGMEM byte RelayPins[] = {5, 6};
+const byte NumberOfRelays = 2;
+const byte RelayPins[] = {5, 6};
 bool RelayInitialState[] = {LOW, LOW};
 
 char messageBuffer[BUFFERSIZE];
@@ -145,7 +161,8 @@ bool debug = false;
 #endif
 
 // Vul hier het macadres in
-const PROGMEM uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
+//const PROGMEM uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
+const uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -169,10 +186,15 @@ void setup() {
   dht.begin();
 #endif
 
+#if defined(DS18B20_present)
+  sensors.begin();
+  sensors.requestTemperatures();
+#endif
+
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
-  
+
   pinMode(PirSensor, INPUT);
 
   // setup serial communication
@@ -185,7 +207,7 @@ void setup() {
     ShowDebug(hostname);
     ShowDebug("");
   }
-  
+  delay(750);//<--important for W5100 module
   // setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
 
@@ -268,6 +290,14 @@ void sendData() {
   sendMessage(String(hic), topic_out_heat);
 #endif
 
+#if defined(DS18B20_present)
+  float t = sensors.getTempCByIndex(0);
+  //  Send Temperature sensor
+  ShowDebug("Temp: " + String(t));
+  sendMessage(String(t), topic_out_temp);
+  sensors.requestTemperatures();
+#endif
+
 #if defined(BMP280)
   if (bmp_present) {
     float t = bmp.readTemperature();
@@ -311,15 +341,15 @@ void callback(char* topic, byte * payload, byte length) {
     if (RelayPort > 16) RelayPort -= 3;
     RelayValue = strPayload[2] - 48;
 
-    ShowDebug(String(RelayPort));
-    ShowDebug(String(RelayValue));
-    ShowDebug(String(HIGH));
+    ShowDebug("Port " + String(RelayPort) + " Value: " + String(RelayValue));
 
     if (RelayValue == 40) {
       ShowDebug("Toggling relay...");
       digitalWrite(RelayPins[RelayPort], !digitalRead(RelayPins[RelayPort]));
+      ShowDebug("Toggling Port "+ String(RelayPins[RelayPort]));
     } else {
       digitalWrite(RelayPins[RelayPort], RelayValue);
+      ShowDebug("Setting Port "+ String(RelayPins[RelayPort]));
     }
     report_state(RelayPort);
   } else if (strPayload == "IP")  {
