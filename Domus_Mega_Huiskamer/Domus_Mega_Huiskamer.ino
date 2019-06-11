@@ -216,6 +216,7 @@ void setup() {
 
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
+    ShowDebug("Enabling button pin " + String(ButtonPins[thisButton]));
   }
 
   dht.begin();
@@ -517,7 +518,7 @@ void loop() {
     startsend = false;
   }
   // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
+  for (int id = 0; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
   }
 
@@ -527,7 +528,7 @@ void loop() {
     sendData();
   }
   else {
-    for (int id; id < NumberOfButtons; id++) {
+    for (int id = 0; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }
