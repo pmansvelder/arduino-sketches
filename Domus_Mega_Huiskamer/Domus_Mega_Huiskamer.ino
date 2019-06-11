@@ -83,6 +83,10 @@
           2     LED for button hallway
           8     Relay port R1: 12v relay for lamp living room
           9     Relay port R0: 12v relay for lamp living room
+          14    Relay port R6: SSR Tuin 1
+          15    Relay port R7: SSR Tuin 2
+          16    OneWire 18B20 sensor
+          17    PIR sensor tuin
           22    Relay port R4: SSR for lamp bed chamber
           23    Button bed chamber
           24    DHT22 living room
@@ -97,10 +101,21 @@
 
 */
 
+#define DS18B20_present 1 // Use OneWire temperature sensor
+
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
+
+// DS18B20 sensor
+#if defined(DS18B20_present)
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 16
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+#endif
 
 // Vul hier de pin in van de DHT22 sensor
 #define DHT_PIN 24
@@ -128,12 +143,13 @@ const char* topic_out_temp = "domus/hk/uit/temp";
 const char* topic_out_hum = "domus/hk/uit/vocht";
 const char* topic_out_heat = "domus/hk/uit/warmte";
 const char* topic_out_pir = "domus/hk/uit/pir";
+const char* topic_out_temp_tuin = "domus/tuin/uit/temp";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 // Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
-int NumberOfRelays = 6;
-int RelayPins[] = {9, 8, 36, 37, 22, 25};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW};
+int NumberOfRelays = 8;
+int RelayPins[] = {9, 8, 36, 37, 22, 25, 14, 15};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 2;
@@ -161,15 +177,15 @@ int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 // Vul hier de pin in van de lichtsensor
 int LightSensor = A10;
 
-// Vul hier de pin in van de PIR
-int PirSensor = 38;
-int PreviousDetect = false; // Statusvariabele PIR sensor
+// Vul hier de data in van de PIRs
+byte NumberOfPirs = 2;
+int PirSensors[] = {38, 17};
+int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
 
 char messageBuffer[100];
 char topicBuffer[100];
 String ip = "";
 
-bool pir = LOW;
 bool startsend = HIGH; // flag for sending at startup
 bool debug = true; // true for debug messages
 
@@ -207,7 +223,11 @@ void setup() {
   pinMode(SmokeSensor, INPUT);
   // pinMode(PWMoutput, OUTPUT);
   pinMode(LightSensor, INPUT);
-  pinMode(PirSensor, INPUT);
+
+  for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
+    ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
+    pinMode(PirSensors[pirid], INPUT_PULLUP);
+  }
 
   // setup serial communication
 
@@ -306,6 +326,29 @@ void ProcessPulseRelays(int PulseRelayId) {
   }
 }
 
+void check_pir(byte pirid)
+{
+  // ...read out the PIR sensors...
+  if (digitalRead(PirSensors[pirid]) == HIGH) {
+    if (!PreviousDetects[pirid]) {
+      ShowDebug("Detecting movement on pir " + String(pirid) + ".");
+      String messageString = "pir" + String(pirid) + "on";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+      PreviousDetects[pirid] = true;
+    }
+  }
+  else {
+    if (PreviousDetects[pirid]) {
+      ShowDebug("No more movement on pir " + String(pirid) + ".");
+      String messageString = "pir" + String(pirid) + "off";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pir, messageBuffer);
+    }
+    PreviousDetects[pirid] = false;
+  }
+}
+
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
@@ -327,40 +370,41 @@ void reconnect() {
   }
 }
 
-void sendData() {
+void sendMessage(String m, char* topic) {
+  m.toCharArray(messageBuffer, m.length() + 1);
+  mqttClient.publish(topic, messageBuffer);
+}
 
-  String messageString;
+void sendData() {
 
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   float hic = dht.computeHeatIndex(t, h, false);
 
   // Send Temperature sensor
-  messageString = String(t);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_temp, messageBuffer);
+  sendMessage(String(t), topic_out_temp);
 
   // Send Humidity sensor
-  messageString = String(h);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_hum, messageBuffer);
+  sendMessage(String(h), topic_out_hum);
 
   // Send Heat index sensor
-  messageString = String(hic);
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_heat, messageBuffer);
+  sendMessage(String(hic), topic_out_heat);
 
   // Send smoke sensor
   int smoke = analogRead(SmokeSensor);
-  messageString = String(map(smoke, 0, 1023, 0, 100));
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_smoke, messageBuffer);
+  sendMessage(String(map(smoke, 0, 1023, 0, 100)), topic_out_smoke);
 
   // Send light sensor
   int light = analogRead(LightSensor);
-  messageString = String(map(light, 0, 1023, 0, 100));
-  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  mqttClient.publish(topic_out_light, messageBuffer);
+  sendMessage(String(map(light, 0, 1023, 0, 100)), topic_out_light);
+
+#if defined(DS18B20_present)
+  float t2 = sensors.getTempCByIndex(0);
+  //  Send Temperature sensor
+  ShowDebug("Temp tuin: " + String(t2));
+  sendMessage(String(t2), topic_out_temp_tuin);
+  sensors.requestTemperatures();
+#endif
 }
 
 void report_state(int outputport)
@@ -488,23 +532,9 @@ void loop() {
     }
   }
 
-  // ...read out the PIR sensor...
-  if (digitalRead(PirSensor) == HIGH) {
-    if (!PreviousDetect) {
-      ShowDebug("Detecting movement.");
-      String messageString = "on";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-      PreviousDetect = true;
-    }
-  }
-  else {
-    if (PreviousDetect) {
-      String messageString = "off";
-      messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out_pir, messageBuffer);
-    }
-    PreviousDetect = false;
+  // ...read out the PIR sensors...
+  for (int id = 0; id < NumberOfPirs; id++) {
+    check_pir(id);
   }
 
   mqttClient.loop();
