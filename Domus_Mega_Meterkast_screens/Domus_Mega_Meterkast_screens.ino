@@ -4,7 +4,7 @@
           Macadres: 00:01:02:03:04:0B
           Pins used:
           2: PWM voor LEDs
-          3: DHT sensor
+          3: Temperatuursensor (DHT of 18b20)
           4: <in gebruik voor W5100>
           5: Relay 0 (not connected)
           6: Relay 1 (not connected)
@@ -77,14 +77,28 @@
 
 */
 
+// parameters to tune memory use
+//#define BMP280 1 // use BMP280 sensor
+//#define DHT_present 1 // use DHT sensor
+//#define DS18B20_present 1 // Use OneWire temperature sensor
+
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
 
-// Pin for DHT11 sensor
-#define DHT_PIN 3
-// DHT dht(DHT_PIN, DHT11);
+#if defined(DHT_present)
+#include <DHT.h>
+#include <Adafruit_Sensor.h>
+#define DHT_PIN 3 // Vul hier de pin in van de DHT11 sensor
+DHT dht(DHT_PIN, DHT22);
+#endif
+
+#if defined(DS18B20_present)
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 3
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+#endif
 
 // Vul hier de data in van de PIRs
 byte NumberOfPirs = 3;
@@ -119,9 +133,16 @@ const char* topic_out = "domus/mk/uit";               // Relaisuitgangen: R<rela
 const char* topic_out_smoke = "domus/mk/uit/rook";    // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
 const char* topic_out_light = "domus/mk/uit/licht";   // LDR-melder: 0=licht, 1=donker
 const char* topic_out_pulse = "domus/mk/uit/deur";    // Pulserelais t.b.v. deuropener
+#if defined(DHT_present)
 const char* topic_out_temp = "domus/mk/uit/temp";     // DHT-22 temperatuursensor
 const char* topic_out_hum = "domus/mk/uit/vocht";     // DHT-22 luchtvochtigheid
 const char* topic_out_heat = "domus/mk/uit/warmte";   // DHT-22 gevoelstemperatuur
+#endif
+
+#if defined(DS18B20_present)
+const char* topic_out_temp = "domus/mk/uit/temp";     // 18b20 1-wiretemperatuursensor
+#endif
+
 const char* topic_out_pir = "domus/mk/uit/pir";       // PIR sensors
 const char* topic_out_screen = "domus/mk/uit/screen"; // Screens (zonwering)
 
@@ -179,6 +200,8 @@ void ShowDebug(String tekst) {
   }
 }
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 void setup() {
 
   if (debug) {
@@ -207,7 +230,9 @@ void setup() {
     pinMode(ButtonPins[thisButton], INPUT_PULLUP);
   }
 
-  // dht.begin();
+#if defined(DHT_present)
+  dht.begin();
+#endif
 
   //  pinMode(SmokeSensor, INPUT);
   //  pinMode(PWMoutput, OUTPUT);
@@ -318,9 +343,10 @@ void reconnect() {
       mqttClient.subscribe(topic_in);
     } else {
       ShowDebug("failed, rc=" + String(mqttClient.state()));
-      ShowDebug(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
+      ShowDebug(" reset in 5 seconds");
+      // Wait 5 seconds before resetting
       delay(5000);
+      resetFunc();
     }
   }
 }
@@ -330,24 +356,34 @@ void sendData() {
   //  bool light = digitalRead(LightSensor);
   String messageString;
 
-  //  float h = dht.readHumidity();
-  //  float t = dht.readTemperature();
-  //  float hic = dht.computeHeatIndex(t, h, false);
+#if defined(DHT_present)
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float hic = dht.computeHeatIndex(t, h, false);
 
   // Send Temperature sensor
-  //  messageString = String(t);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_temp, messageBuffer);
+  messageString = String(t);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_temp, messageBuffer);
 
   // Send Humidity sensor
-  //  messageString = String(h);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_hum, messageBuffer);
+  messageString = String(h);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_hum, messageBuffer);
 
   // Send Heat index sensor
-  //  messageString = String(hic);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_heat, messageBuffer);
+  messageString = String(hic);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_heat, messageBuffer);
+#endif
+
+#if defined(DS18B20_present)
+  float t2 = sensors.getTempCByIndex(0);
+  //  Send Temperature sensor
+  ShowDebug("Temperatuur: " + String(t2));
+  sendMessage(String(t2), topic_out_temp);
+  sensors.requestTemperatures();
+#endif
 
   // Send smoke sensor
   //  messageString = String(map(smoke, 0, 1023, 0, 100));
@@ -602,7 +638,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
     }
   }
   else {
-
     // Onbekend commando
     ShowDebug("Unknown value");
     mqttClient.publish(topic_out, "Unknown command");
