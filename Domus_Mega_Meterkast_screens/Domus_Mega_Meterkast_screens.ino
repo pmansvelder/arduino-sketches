@@ -14,8 +14,9 @@
           10: <in gebruik voor W5100>
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
-          13:
-          21: PIR Hal
+          19: PIR Hal
+          20: SDA
+          21: SCL
           22: Relay screen 1
           23: Pulserelay screen 1
           24: Relay screen 2
@@ -82,8 +83,42 @@
 //#define DHT_present 1 // use DHT sensor
 //#define DS18B20_present 1 // Use OneWire temperature sensor
 
+// setup for oled display on i2c
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define LOGO_HEIGHT   16
+#define LOGO_WIDTH    16
+static const unsigned char PROGMEM logo_bmp[] =
+{ B00000000, B11000000,
+  B00000001, B11000000,
+  B00000001, B11000000,
+  B00000011, B11100000,
+  B11110011, B11100000,
+  B11111110, B11111000,
+  B01111110, B11111111,
+  B00110011, B10011111,
+  B00011111, B11111100,
+  B00001101, B01110000,
+  B00011011, B10100000,
+  B00111111, B11100000,
+  B00111111, B11110000,
+  B01111100, B11110000,
+  B01110000, B01110000,
+  B00000000, B00110000
+};
+
+// setup for ethernet
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
+#define MQTT_SERVER "majordomo"
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -102,7 +137,7 @@ DallasTemperature sensors(&oneWire);
 
 // Vul hier de data in van de PIRs
 byte NumberOfPirs = 3;
-int PirSensors[] = {28, 29, 21};
+int PirSensors[] = {28, 29, 19};
 int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
 
 // Vul hier de gegevens in van de motorsturing voor de screens:
@@ -119,7 +154,7 @@ byte CoverState[] = {false, false}; // false = open, true = closed
 #define CLIENT_ID  "domus_meterkast_screens"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
-#define PUBLISH_DELAY 5000 // that is 5 seconds interval
+#define PUBLISH_DELAY 1000 // that is 5 seconds interval
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
 
@@ -202,6 +237,21 @@ void ShowDebug(String tekst) {
 
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
+void displayMessage(String text) {
+  display.fillRect(0, 24, 131, 31, BLACK);
+  display.setCursor(0, 24);
+  display.println(text);
+  display.display();
+}
+
+void displayTime() {
+  display.fillRect(0, 0, 131, 7, BLACK);
+  display.setCursor(0, 0);
+  display.print("Time:");
+  display.println(TimeToString(millis() / 1000));
+  display.display();
+}
+
 void setup() {
 
   if (debug) {
@@ -213,17 +263,43 @@ void setup() {
     ShowDebug("");
   }
 
+  // setup oled display
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+  }
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.display();
+  delay(1000);
+  display.clearDisplay();
+  display.display();
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(WHITE); // Draw white text
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.cp437(true);
+  display.println(F("meterkast_screens"));
+
+  displayMessage("Setup relay pins");
+
+  // setup relay pins
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     pinMode(RelayPins[thisPin], OUTPUT);
     ShowDebug("Enabling relay pin " + String(RelayPins[thisPin]));
     digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
   }
 
+  // set up pulse relay pins.
+  displayMessage("Setup pulse relay pins");
+
   for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
     pinMode(PulseRelayPins[thisPin], OUTPUT);
     ShowDebug("Enabling pulse relay pin " + String(PulseRelayPins[thisPin]));
     digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
   }
+  // set up buttons
+
+  displayMessage("Setup button pins");
 
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     ShowDebug("Enabling button pin " + String(ButtonPins[thisButton]));
@@ -238,12 +314,17 @@ void setup() {
   //  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
 
+  // set up pirs
+  displayMessage("Setup pir pins");
+
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Enabling pir pin " + String(PirSensors[pirid]));
     pinMode(PirSensors[pirid], INPUT_PULLUP);
   }
 
   //   setup ethernet communication using DHCP
+  displayMessage("Setup ethernet");
+
   if (Ethernet.begin(mac) == 0) {
 
     ShowDebug(F("Unable to configure Ethernet using DHCP"));
@@ -266,14 +347,17 @@ void setup() {
   ShowDebug("");
 
   // setup mqtt client
+  displayMessage("Setup MQTT");
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer( MQTT_SERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
   //  mqttClient.publish(topic_out, ip.c_str());
+
+  displayMessage("Setup done.");
 } // setup
 
 void processButtonDigital( int buttonId )
@@ -351,6 +435,18 @@ void reconnect() {
   }
 }
 
+// t is time in seconds = millis()/1000;
+char * TimeToString(unsigned long t)
+{
+  static char str[12];
+  long h = t / 3600;
+  t = t % 3600;
+  int m = t / 60;
+  int s = t % 60;
+  sprintf(str, "%04ld:%02d:%02d", h, m, s);
+  return str;
+}
+
 void sendData() {
   //  int smoke = analogRead(SmokeSensor);
   //  bool light = digitalRead(LightSensor);
@@ -396,9 +492,19 @@ void sendData() {
   //  mqttClient.publish(topic_out_light, messageBuffer);
 
   // Send status of relays
+  display.fillRect(0, 10, 131, 14, BLACK);
+  display.setCursor(0, 12);
+  display.print("R:");
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
   }
+  display.print("/C:");
+  // send status of screens
+  for (int cover = 1; cover <= NumberOfCovers; cover++) {
+    report_state_cover(cover);
+  }
+  display.display();
+  displayTime();
 }
 
 void check_pir(byte pirid)
@@ -430,6 +536,25 @@ void report_state(int outputport)
   String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
   messageString.toCharArray(messageBuffer, messageString.length() + 1);
   mqttClient.publish(topic_out, messageBuffer);
+  display.print(String(digitalRead(RelayPins[outputport])));
+}
+
+void report_state_cover(int CoverPort)
+{
+  // report state of screen
+  String messageString = "";
+  if (CoverState[CoverPort - 1])
+  {
+    messageString = "C" + String(CoverPort);
+  }
+  else
+  {
+    messageString = "O" + String(CoverPort);
+  }
+  ShowDebug("Cover" + String(CoverPort) + CoverState[CoverPort - 1]);
+  messageString.toCharArray(messageBuffer, messageString.length() + 1);
+  mqttClient.publish(topic_out_screen, messageBuffer);
+  display.print(messageString);
 }
 
 void callback(char* topic, byte * payload, unsigned int length) {
@@ -457,6 +582,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   ShowDebug("Message arrived");
   ShowDebug(topic);
   ShowDebug(strPayload);
+  displayMessage("Incoming:" + strPayload);
 
   int RelayPort;
   int RelayValue;
@@ -489,7 +615,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
       report_state(i);
     }
   }
-
   else if (strPayload == "AOF") {
     // Alle relais uit
     for (int i = 0 ; i < NumberOfRelays; i++) {
@@ -540,6 +665,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
       // Check if another command is already running
       if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
+        ShowDebug("Opening cover number " + String(CoverPort));
         // allow for custom pulse time
         long PulseTime = strPayload.substring(2).toInt();
         if (PulseTime == 0) PulseTime = COVERDELAYTIME;
@@ -553,12 +679,15 @@ void callback(char* topic, byte * payload, unsigned int length) {
         mqttClient.publish(topic_out_pulse, messageBuffer);
         PulseActivityTimes[PulseRelayPort] = millis();
         // report state of screen
-        messageString = "O" + String(CoverPort);
-        messageString.toCharArray(messageBuffer, messageString.length() + 1);
-        mqttClient.publish(topic_out_screen, messageBuffer);
+        CoverState[CoverPort - 1] = false; // false is open
+        report_state_cover(CoverPort);
+        //        messageString = "O" + String(CoverPort);
+        //        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        //        mqttClient.publish(topic_out_screen, messageBuffer);
       }
       else {
         // Commmand given while cover moving, Stop pulse
+        ShowDebug("Stopping cover number " + String(CoverPort));
         digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
         String messageString = "P" + String(PulseRelayPort) + "0";
         messageString.toCharArray(messageBuffer, messageString.length() + 1);
@@ -586,6 +715,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
       int PulseRelayPort = CoverPulse[CoverPort - 1];
       // Check if another command is already running
       if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
+        ShowDebug("Closing cover number " + String(CoverPort));
         // allow for custom pulse time
         long PulseTime = strPayload.substring(2).toInt();
         if (PulseTime == 0) PulseTime = COVERDELAYTIME;
@@ -599,11 +729,14 @@ void callback(char* topic, byte * payload, unsigned int length) {
         mqttClient.publish(topic_out_pulse, messageBuffer);
         PulseActivityTimes[PulseRelayPort] = millis();
         // report state of screen
-        messageString = "C" + String(CoverPort);
-        messageString.toCharArray(messageBuffer, messageString.length() + 1);
-        mqttClient.publish(topic_out_screen, messageBuffer);
+        CoverState[CoverPort - 1] = true;
+        report_state_cover(CoverPort);
+        //        messageString = "C" + String(CoverPort);
+        //        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        //        mqttClient.publish(topic_out_screen, messageBuffer);
       }
       else {
+        ShowDebug("Stopping cover number " + String(CoverPort));
         // Commmand given while cover moving, Stop pulse
         digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
         String messageString = "P" + String(PulseRelayPort) + "0";

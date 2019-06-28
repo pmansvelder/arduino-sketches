@@ -71,7 +71,7 @@ void setup() {
   display.clearDisplay();
 
   // Draw a single pixel in white
-  display.drawPixel(10, 10, WHITE);
+  //  display.drawPixel(10, 10, WHITE);
 
   // Show the display buffer on the screen. You MUST call display() after
   // drawing commands to make them visible on screen!
@@ -81,7 +81,7 @@ void setup() {
   // unless that's what you want...rather, you can batch up a bunch of
   // drawing operations and then update the screen all at once by calling
   // display.display(). These examples demonstrate both approaches...
-
+  Serial.println(F("starting test..."));
   testHomeAssistant();
 
   //  testdrawline();      // Draw many lines
@@ -116,10 +116,14 @@ void setup() {
   display.invertDisplay(false);
   delay(1000);
 
-  testanimate(logo_bmp, LOGO_WIDTH, LOGO_HEIGHT); // Animate bitmaps
+//  testanimate(logo_bmp, LOGO_WIDTH, LOGO_HEIGHT); // Animate bitmaps
 }
 
 void loop() {
+  display.fillRect(0, 17, 128, 16, 0);
+  display.setCursor(0, 17);
+  display.println(TimeToString(millis() / 1000));
+  display.display();
 }
 
 void testdrawline() {
@@ -320,12 +324,12 @@ void testHomeAssistant(void) {
 
   display.println(F("meterkast_screens"));
   display.println(F("domus/mk/in"));
-  while (true) {
-    display.fillRect(0, 17, 128, 16, 0);
-    display.setCursor(0, 17);
-    display.println(TimeToString(millis()/1000));
-    display.display();
-  }
+//  while (true) {
+//    display.fillRect(0, 17, 128, 16, 0);
+//    display.setCursor(0, 17);
+//    display.println(TimeToString(millis() / 1000));
+//    display.display();
+//  }
   display.display();
 }
 
