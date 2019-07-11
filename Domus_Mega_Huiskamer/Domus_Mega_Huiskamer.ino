@@ -197,6 +197,8 @@ PubSubClient mqttClient;
 
 long previousMillis;
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
@@ -359,7 +361,7 @@ void reconnect() {
       ShowDebug("connected");
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, CLIENT_ID);
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -478,6 +480,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
     for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
       report_state(thisPin);
     }
+  }
+  else if (strPayload == "#RESET") {
+    ShowDebug("Reset command received, resetting in one second...");
+    delay(1000);
+    resetFunc();
   }
   else if (strPayload[0] == 'P') {
 
