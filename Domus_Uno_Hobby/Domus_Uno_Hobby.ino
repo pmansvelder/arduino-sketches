@@ -262,7 +262,7 @@ void reconnect() {
       ShowDebug("connected");
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, CLIENT_ID);
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -397,7 +397,7 @@ void callback(char* topic, byte * payload, byte length) {
   else if (strPayload == "#RESET") {
     ShowDebug("Reset command received, resetting in one second...");
     delay(1000);
-    //    resetFunc();
+    resetFunc();
   }
   else {
     // Onbekend commando

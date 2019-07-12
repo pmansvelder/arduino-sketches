@@ -196,6 +196,8 @@ PubSubClient mqttClient;
 
 long previousMillis;
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 // General variables
 void ShowDebug(String tekst) {
   if (debug) {
@@ -339,7 +341,7 @@ void reconnect() {
       ShowDebug("connected");
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, CLIENT_ID);
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -509,6 +511,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Status van alle sensors and relais
     sendData();
   }
+  else if (strPayload == "#RESET") {
+    ShowDebug("Reset command received, resetting in one second...");
+    delay(1000);
+    resetFunc();
+  }
   else if (strPayload[0] == 'P') {
 
     int PulseRelayPort = strPayload[1] - 48;
@@ -549,11 +556,11 @@ void loop() {
   }
 
   // ...handle the PulseRelays, ...
-  for (int id; id < NumberOfPulseRelays; id++) {
+  for (int id = 0; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
   }
 
-  for (int id; id < NumberOfPirs; id++) {
+  for (int id = 0; id < NumberOfPirs; id++) {
     check_pir(id);
   }
 
@@ -563,7 +570,7 @@ void loop() {
     sendData();
   }
   else {
-    for (int id; id < NumberOfButtons; id++) {
+    for (int id = 0; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }

@@ -228,14 +228,14 @@ PubSubClient mqttClient;
 
 long previousMillis;
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 // General variables
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
   }
 }
-
-void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
 void displayMessage(String text) {
   display.fillRect(0, 24, 131, 31, BLACK);
@@ -422,7 +422,7 @@ void reconnect() {
       ShowDebug("connected");
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "hello world");
+      mqttClient.publish(topic_out, CLIENT_ID);
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -625,6 +625,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
   else if (strPayload == "STAT") {
     // Status van alle sensors and relais
     sendData();
+  }
+  else if (strPayload == "#RESET") {
+    ShowDebug("Reset command received, resetting in one second...");
+    delay(1000);
+    resetFunc();
   }
   else if (strPayload[0] == 'P') {  // PULSE RELAY
     int PulseRelayPort = strPayload[1] - 48;
