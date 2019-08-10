@@ -5,7 +5,7 @@
           Pins used:
           0:
           1:
-          2: PWM output for leds
+          2:
           3: DHT-22
           4: <in gebruik voor W5100>
           5: Relais 0
@@ -34,8 +34,9 @@
           27:
           28:
           29:
-          30:
-          31:
+          30: Button0
+          31: Button1
+          32: PWM output for leds
 
           A0: MQ7 CO Carbon Monoxide Gas Sensor
           A1:
@@ -164,17 +165,17 @@ bool PulseRelayInitialStates[] = {HIGH};
 const int PulseRelayTimes[] = {2500};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 0;
-int ButtonPins[] = {11, 12, 9};
-static byte lastButtonStates[] = {0, 0, 0};
-long lastActivityTimes[] = {0, 0, 0};
-long LongPressActive[] = {0, 0, 0};
+int NumberOfButtons = 2;
+int ButtonPins[] = {30, 31};
+static byte lastButtonStates[] = {0, 0};
+long lastActivityTimes[] = {0, 0};
+long LongPressActive[] = {0, 0};
 
 // Vul hier de pin in van de rooksensor
 int SmokeSensor = A0;
 
 // Vul hier de pwm outputpin in voor de Ledverlichting van de knoppen
-int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
+int PWMoutput = 32; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 
 // Vul hier de pin in van de lichtsensor
 int LightSensor = A1;
@@ -236,7 +237,7 @@ void setup() {
   dht.begin();
 
   //  pinMode(SmokeSensor, INPUT);
-  //  pinMode(PWMoutput, OUTPUT);
+  pinMode(PWMoutput, OUTPUT);
   //  pinMode(LightSensor, INPUT);
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
@@ -391,32 +392,6 @@ void sendData() {
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     report_state(thisPin);
   }
-  //send meter data to MQTT
-  //  messageString = String(Voltage);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_voltage, messageBuffer);
-  //  messageString = String(Tariff);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_tariff, messageBuffer);
-  //  messageString = String(mEVLT);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_low, messageBuffer);
-  //  messageString = String(mEVHT);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_high, messageBuffer);
-  //  messageString = String(mEAV);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_power, messageBuffer);
-  //  messageString = String(mG);
-  //  messageString.toCharArray(messageBuffer, messageString.length() + 1);
-  //  mqttClient.publish(topic_out_meter_gas, messageBuffer);
-  //  //Reset variables to zero for next run
-  //  Voltage = 0;
-  //  Tariff = 0;
-  //  mEVLT = 0;
-  //  mEVHT = 0;
-  //  mEAV = 0;
-  //  mG = 0;
 }
 
 void check_pir(byte pirid)
@@ -456,6 +431,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   // However, if you want to send full word commands, uncomment the next line and use for string comparison
   payload[length] = '\0'; // terminate string with 0
   String strPayload = String((char*)payload);  // convert to string
+  String messageString;
   ShowDebug(strPayload);
   ShowDebug("Message arrived");
   ShowDebug(topic);
@@ -523,7 +499,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
     // Pulserelais aan
     ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
     digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    String messageString = "P" + String(PulseRelayPort) + "1";
+    messageString = "P" + String(PulseRelayPort) + "1";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_door, messageBuffer);
     PulseActivityTimes[PulseRelayPort] = millis();
@@ -536,7 +512,9 @@ void callback(char* topic, byte * payload, unsigned int length) {
 
     // Onbekend commando
     ShowDebug("Unknown value");
-    mqttClient.publish(topic_out, "Unknown command");
+    messageString = strPayload + " : Unknown command";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out, messageBuffer);
   }
 }
 
