@@ -3,9 +3,10 @@
  */
  
 #include <ESP8266WiFi.h>
+#include "secrets.h"
  
-const char* ssid     = "LoggerMans";
-const char* password = "jukulapikkie";
+const char* ssid     = SECRET_SSID;
+const char* password = SECRET_SSID;
  
 const char* host = "wifitest.adafruit.com";
  
