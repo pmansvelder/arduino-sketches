@@ -1,4 +1,5 @@
 // Sketch to control 2 servo's using custom print (HQ/PM/RCU)
+// production version 1.0, september 2019
 
 #include <EEPROM.h>
 // #include <Servo.h>
@@ -22,7 +23,7 @@ const int Left2 = A2;
 const int Right1 = A1;
 const int Right2 = A3;
 
-int testspeed = 16;
+int testspeed = 250;
 
 // Create Servo objects
 

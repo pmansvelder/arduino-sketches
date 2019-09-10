@@ -87,6 +87,8 @@
           15    Relay port R7: SSR Tuin 2
           16    OneWire 18B20 sensor
           17    PIR sensor tuin
+          20    I2c SDA
+          21    I2c SCL
           22    Relay port R4: SSR for lamp bed chamber
           23    Button bed chamber
           24    DHT22 living room
@@ -102,7 +104,6 @@
 */
 
 #define DS18B20_present 1 // Use OneWire temperature sensor
-
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
@@ -115,6 +116,7 @@
 #define ONE_WIRE_BUS 16
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+float last_temp = 0;
 #endif
 
 // Vul hier de pin in van de DHT22 sensor
@@ -403,6 +405,12 @@ void sendData() {
 
 #if defined(DS18B20_present)
   float t2 = sensors.getTempCByIndex(0);
+  if (t2 < -100) { // fix for anomalous readings
+    t2 = last_temp;
+  }
+  else {
+    last_temp = t2;
+  }
   //  Send Temperature sensor
   ShowDebug("Temp tuin: " + String(t2));
   sendMessage(String(t2), topic_out_temp_tuin);
