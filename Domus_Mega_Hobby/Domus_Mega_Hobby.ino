@@ -2,13 +2,17 @@
           <========Arduino Sketch for Arduino Mega =========>
           Locatie: Hobbykamer
 
+          Aansluiting via UTP kabel:
+          - 5V : bruin
+          - GND: wit
+
           Pins used:
           0: Serial
           1: Serial
-          2: PIR Sensor
-          3: DHT-22 sensor
+          2: PIR Sensor                         - UTP kabel : groen
+          3: DHT-22 sensor                      - UTP kabel : wit
           4: <in gebruik voor W5100>
-          5: Output for MQ-7 state transistor
+          5: Output for MQ-7 state transistor   - UTP kabel : blauw
           6: Button #1
           7: Button #1
           8: Button #1
@@ -19,12 +23,12 @@
           52: <in gebruik voor W5100>
           53: <in gebruik voor W5100>
 
-          A0: MQ-7 Sensor
+          A0: MQ-7 Sensor                       - UTP kabel : oranje
           A1: Relay #1
           A2: Relay #2
           A3: Relay #3
           A4: Relay #1
-          A5: Magneetcontact achterdeur
+          A5: Magneetcontact achterdeur         - telefoonkabel (andere ader op GND)
 
           incoming topic: domus/hobby/in
 
@@ -68,16 +72,6 @@
           3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
           ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
-
-          ToDo:
-          - add extra button on input A5(19) => done
-          - use output 17 as a PWM channel for the button LEDs => done, used A9
-          - implement short/long press for buttons => done
-
-          Adapted 24-02-2018 by Peter Mansvelder:
-          - added sensors for light and smoke (MQ-2), reporting on output topics
-          - added alarm function for smoke with buzzer
-          - added pulse relay
 
 */
 // parameters to tune memory use
