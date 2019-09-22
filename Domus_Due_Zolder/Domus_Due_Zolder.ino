@@ -176,7 +176,11 @@ void ShowDebug(String tekst) {
   }
 }
 
-void(* resetFunc) (void) = 0; //declare reset function @ address 0
+//void(* resetFunc) (void) = 0; //declare reset function @ address 0  // does not work for Due
+
+void resetFunc() {
+  rstc_start_software_reset(RSTC);
+}
 
 void setup() {
 
