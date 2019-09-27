@@ -17,6 +17,11 @@
           7: Button #1
           8: Button #1
           9: Button #1
+          30
+          32
+          34
+          36
+          
           10: <in gebruik voor W5100>
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
@@ -137,9 +142,9 @@ const long mq_startup = 3000;
 #endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
-const byte RelayPins[] = {A1, A2, A3, A4};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
+const byte NumberOfRelays = 8;
+const byte RelayPins[] = {A1, A2, A3, A4, 30, 32, 34, 36};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, HIGH, HIGH, HIGH, HIGH};
 
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
