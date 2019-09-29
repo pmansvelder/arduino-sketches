@@ -17,11 +17,11 @@
           7: Button #1
           8: Button #1
           9: Button #1
-          30
-          32
-          34
-          36
-          
+          30: Relay #5
+          32: Relay #6
+          34: Relay #7
+          36: Relay #8
+
           10: <in gebruik voor W5100>
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
