@@ -123,27 +123,27 @@ const char* topic_out_pir = "domus/zolder/uit/pir";       // PIR sensors
 const char* topic_out_screen = "domus/zolder/uit/screen"; // Screens (zonwering)
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-int NumberOfRelays = 2;
-int RelayPins[] = {5, 6, 7, 30, 31, 22, 23, 24, 25};
-bool RelayInitialState[] = {HIGH, HIGH, HIGH, LOW, LOW, HIGH, HIGH, HIGH, HIGH};
+int NumberOfRelays = 0;
+int RelayPins[] = {};
+bool RelayInitialState[] = {};
 
 // Vul hier het aantal pulsrelais in
 int NumberOfPulseRelays = 0; // 0 = haldeur, 1 = voordeur, 2 = screen keuken, 3 = screen huiskamer
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {8, 7, 22, 24};
-long PulseActivityTimes[] = {0, 0, 0, 0};
+int PulseRelayPins[] = {};
+long PulseActivityTimes[] = {};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
 bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
-long int PulseRelayTimes[] = {2000, 250, COVERDELAYTIME, COVERDELAYTIME};
+long int PulseRelayTimes[] = {};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 3;
-int ButtonPins[] = {11, 12, 9};
-static byte lastButtonStates[] = {0, 0, 0};
-long lastActivityTimes[] = {0, 0, 0};
-long LongPressActive[] = {0, 0, 0};
+int NumberOfButtons = 0;
+int ButtonPins[] = {};
+static byte lastButtonStates[] = {};
+long lastActivityTimes[] = {};
+long LongPressActive[] = {};
 
 // Vul hier de pin in van de rooksensor
 int SmokeSensor = A0;
@@ -176,11 +176,8 @@ void ShowDebug(String tekst) {
   }
 }
 
-//void(* resetFunc) (void) = 0; //declare reset function @ address 0  // does not work for Due
+void(* resetFunc) (void) = 0; //declare reset function @ address 0  // does not work for Due
 
-void resetFunc() {
-  rstc_start_software_reset(RSTC);
-}
 
 void setup() {
 
@@ -196,6 +193,9 @@ void setup() {
   if (!bme.begin()) {
     Serial.println("Could not find a valid BMP280 sensor, check wiring!");
     while (1);
+  }
+  else {
+    Serial.println("Found valid BMP280 sensor!");
   }
 
   for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
@@ -233,10 +233,10 @@ void setup() {
     for (;;);
   }
 
-  ShowDebug(F("Ethernet configured via DHCP"));
-  ShowDebug("IP address: ");
-
-  //convert ip Array into String
+  //  ShowDebug(F("Ethernet configured via DHCP"));
+  //  ShowDebug("IP address: ");
+  //
+  //  //convert ip Array into String
   ip = String (Ethernet.localIP()[0]);
   ip = ip + ".";
   ip = ip + String (Ethernet.localIP()[1]);
@@ -244,11 +244,11 @@ void setup() {
   ip = ip + String (Ethernet.localIP()[2]);
   ip = ip + ".";
   ip = ip + String (Ethernet.localIP()[3]);
-
+  //
   ShowDebug(ip);
   ShowDebug("");
-
-  // setup mqtt client
+  //
+  //  // setup mqtt client
   mqttClient.setClient(ethClient);
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
@@ -369,6 +369,9 @@ void sendData() {
 
   float t = bme.readTemperature();
   float p = bme.readPressure() / 100;
+
+  ShowDebug(String(t));
+  ShowDebug(String(p));
 
   // Send temperature sensor
   messageString = String(t);
@@ -621,7 +624,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
     resetFunc();
   }
   else {
-
     // Onbekend commando
     ShowDebug("Unknown value");
     mqttClient.publish(topic_out, "Unknown command");
