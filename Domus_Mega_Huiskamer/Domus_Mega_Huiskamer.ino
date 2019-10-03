@@ -214,7 +214,7 @@ void ShowDebug(String tekst) {
 }
 
 void pingCheck() {
-  ICMPEchoReply echoReply = ping(pingAddr, 4);
+  ICMPEchoReply echoReply = ping(pingAddr, 20);
   if (echoReply.status != SUCCESS)
   {
     ShowDebug("Ping command failed, resetting in one second...");
