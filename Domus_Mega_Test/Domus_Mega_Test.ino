@@ -1,28 +1,28 @@
 /*
           <========Arduino Sketch for Arduino Mega with Ethernet shield W5100=========>
           Locatie: Huiskamer
-          Macadres: 00:01:02:03:04:06
+          Macadres: 12:34:56:78:90:FF
 
           Arduino Mega with W5100 Ethernetshield used as MQTT client
           It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
-          The topics have the format "domus/hk/uit" for outgoing messages and
-          "domus/hk/in" for incoming messages.
+          The topics have the format "domus/test/uit" for outgoing messages and
+          "domus/test/in" for incoming messages.
 
           The outgoing topics are
 
-          domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
-          domus/hk/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
-          domus/hk/uit/licht  // LDR-melder: 0=licht, 1=donker
-          domus/hk/uit/temp   // DHT-22 temperatuursensor
-          domus/hk/uit/warmte // DHT-22 gevoelstemperatuur
-          domus/hk/uit/vocht  // DHT-22 luchtvochtigheid
+          domus/test/uit        // Relaisuitgangen: R<relaisnummer><status>
+          domus/test/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
+          domus/test/uit/licht  // LDR-melder: 0=licht, 1=donker
+          domus/test/uit/temp   // DHT-22 temperatuursensor
+          domus/test/uit/warmte // DHT-22 gevoelstemperatuur
+          domus/test/uit/vocht  // DHT-22 luchtvochtigheid
           domus/ex/uit/deur   // Pulserelais t.b.v. deuropener
 
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
           There is only one incoming topic:
-          domus/hk/in
+          domus/test/in
           The payload here determines the action:
           STAT - Report the status of all relays (0-9)
           AON - turn all the relays on
@@ -103,7 +103,9 @@
 
 */
 
-#define DS18B20_present 1 // Use OneWire temperature sensor
+//#define DS18B20_present 1 // Use OneWire temperature sensor
+//#define DHT_present 1 // Use DHT sensor
+
 #include <Ethernet.h>// Ethernet.h library
 
 #include <ICMPPing.h> //Ping - https://playground.arduino.cc/Code/ICMPPing
@@ -113,7 +115,10 @@ ICMPPing ping(pingSocket, (uint16_t)random(0, 255));
 
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
+
+#if defined(DHT_present)
 #include <DHT.h>
+#endif
 
 // DS18B20 sensor
 #if defined(DS18B20_present)
@@ -126,11 +131,14 @@ float last_temp = 0;
 #endif
 
 // Vul hier de pin in van de DHT22 sensor
+
+#if defined(DHT_present)
 #define DHT_PIN 24
 DHT dht(DHT_PIN, DHT22);
+#endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_huiskamer"
+#define CLIENT_ID  "domus_mega_test"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 3000 // that is 3 seconds interval
@@ -140,17 +148,17 @@ DHT dht(DHT_PIN, DHT22);
 String hostname = CLIENT_ID;
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/hk/in";
+const char* topic_in = "domus/test/in";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/hk/uit";
-const char* topic_out_smoke = "domus/hk/uit/rook";
-const char* topic_out_light = "domus/hk/uit/licht";
+const char* topic_out = "domus/test/uit";
+const char* topic_out_smoke = "domus/test/uit/rook";
+const char* topic_out_light = "domus/test/uit/licht";
 const char* topic_out_door = "domus/ex/uit/deur";
-const char* topic_out_temp = "domus/hk/uit/temp";
-const char* topic_out_hum = "domus/hk/uit/vocht";
-const char* topic_out_heat = "domus/hk/uit/warmte";
-const char* topic_out_pir = "domus/hk/uit/pir";
+const char* topic_out_temp = "domus/test/uit/temp";
+const char* topic_out_hum = "domus/test/uit/vocht";
+const char* topic_out_heat = "domus/test/uit/warmte";
+const char* topic_out_pir = "domus/test/uit/pir";
 const char* topic_out_temp_tuin = "domus/tuin/uit/temp";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
@@ -160,7 +168,7 @@ int RelayPins[] = {9, 8, 36, 37, 22, 25, 14, 15};
 bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 2;
+int NumberOfButtons = 0;
 int ButtonPins[] = {35, 23};
 static byte lastButtonStates[] = {0, 0};
 long lastActivityTimes[] = {0, 0};
@@ -186,7 +194,7 @@ int PWMoutput = 2; // Uno: 3, 5, 6, 9, 10, and 11, Mega: 2 - 13 and 44 - 46
 int LightSensor = A10;
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 2;
+byte NumberOfPirs = 0;
 int PirSensors[] = {38, 17};
 int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
 
@@ -198,7 +206,7 @@ bool startsend = HIGH; // flag for sending at startup
 bool debug = true; // true for debug messages
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
+uint8_t mac[6] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xFF};
 
 EthernetClient ethClient;
 PubSubClient mqttClient;
@@ -239,7 +247,9 @@ void setup() {
     ShowDebug("Enabling button pin " + String(ButtonPins[thisButton]));
   }
 
+#if defined(DHT_present)
   dht.begin();
+#endif
 
   pinMode(SmokeSensor, INPUT);
   // pinMode(PWMoutput, OUTPUT);
@@ -284,7 +294,6 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
   mqttClient.setServer( "majordomo", 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
@@ -397,19 +406,19 @@ void sendMessage(String m, char* topic) {
 }
 
 void sendData() {
-
+  ShowDebug("sending data...");
+  
+#if defined(DHT_present)
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   float hic = dht.computeHeatIndex(t, h, false);
-
   // Send Temperature sensor
   sendMessage(String(t), topic_out_temp);
-
   // Send Humidity sensor
   sendMessage(String(h), topic_out_hum);
-
   // Send Heat index sensor
   sendMessage(String(hic), topic_out_heat);
+#endif
 
   // Send smoke sensor
   int smoke = analogRead(SmokeSensor);
@@ -418,6 +427,9 @@ void sendData() {
   // Send light sensor
   int light = analogRead(LightSensor);
   sendMessage(String(map(light, 0, 1023, 0, 100)), topic_out_light);
+
+  // test message
+  sendMessage("Still here...", topic_out);
 
 #if defined(DS18B20_present)
   float t2 = sensors.getTempCByIndex(0);
@@ -432,6 +444,11 @@ void sendData() {
   sendMessage(String(t2), topic_out_temp_tuin);
   sensors.requestTemperatures();
 #endif
+
+  ShowDebug("Sending relay port status...");
+  for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
+    report_state(thisPin);
+  }
 }
 
 void report_state(int outputport)
@@ -541,13 +558,6 @@ void loop() {
     reconnect();
   }
 
-  // ... then send all relay stats when we've just started up....
-  if (startsend) {
-    for (int thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      report_state(thisPin);
-    }
-    startsend = false;
-  }
   // ...handle the PulseRelays, ...
   for (int id = 0; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
@@ -555,8 +565,8 @@ void loop() {
 
   // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
-    previousMillis = millis();
     pingCheck(); // check if we're still connected, otherwise reset
+    previousMillis = millis();
     sendData();
   }
   else {
