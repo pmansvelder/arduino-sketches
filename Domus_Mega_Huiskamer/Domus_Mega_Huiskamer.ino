@@ -107,7 +107,7 @@
 #include <Ethernet.h>// Ethernet.h library
 
 #include <ICMPPing.h> //Ping - https://playground.arduino.cc/Code/ICMPPing
-IPAddress pingAddr(192, 168, 178, 1); // ip address to ping
+IPAddress pingAddr(192, 168, 178, 201); // ip address to ping
 SOCKET pingSocket = 1;
 ICMPPing ping(pingSocket, (uint16_t)random(0, 255));
 
@@ -217,9 +217,13 @@ void pingCheck() {
   ICMPEchoReply echoReply = ping(pingAddr, 20);
   if (echoReply.status != SUCCESS)
   {
-    ShowDebug("Ping command failed, resetting in one second...");
-    delay(3000);
-    resetFunc();
+    Ethernet.maintain();
+    ICMPEchoReply echoReply = ping(pingAddr, 10);
+    if (echoReply.status != SUCCESS) {
+      ShowDebug("Ping command failed, resetting in 3 seconds...");
+      delay(3000);
+      resetFunc();
+    }
   }
 }
 
@@ -255,14 +259,12 @@ void setup() {
   if (debug) {
     Serial.begin(9600);
     while (!Serial) {};
-
     ShowDebug(F("MQTT Arduino Domus"));
     ShowDebug(hostname);
     ShowDebug("");
   }
   // setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
-
     ShowDebug(F("Unable to configure Ethernet using DHCP"));
     for (;;);
   }
