@@ -103,11 +103,12 @@
 
 */
 
+#include "secrets.h"
 #define DS18B20_present 1 // Use OneWire temperature sensor
 #include <Ethernet.h>// Ethernet.h library
 
 #include <ICMPPing.h> //Ping - https://playground.arduino.cc/Code/ICMPPing
-IPAddress pingAddr(192, 168, 178, 201); // ip address to ping
+IPAddress pingAddr(192, 168, 178, 205); // ip address to ping
 SOCKET pingSocket = 1;
 ICMPPing ping(pingSocket, (uint16_t)random(0, 255));
 
@@ -155,9 +156,9 @@ const char* topic_out_temp_tuin = "domus/tuin/uit/temp";
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 // Schakelbaar met commando: Rxy (x = nummer relais, y = 0 of 1)
-int NumberOfRelays = 8;
-int RelayPins[] = {9, 8, 36, 37, 22, 25, 14, 15};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
+int NumberOfRelays = 16;
+int RelayPins[] = {9, 8, 36, 37, 22, 25, 14, 15, 3, 5, 6, 7, A0, A1, A2, A3};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
 int NumberOfButtons = 2;
@@ -261,12 +262,12 @@ void setup() {
     while (!Serial) {};
     ShowDebug(F("MQTT Arduino Domus"));
     ShowDebug(hostname);
-    ShowDebug("");
   }
   // setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
-    ShowDebug(F("Unable to configure Ethernet using DHCP"));
-    for (;;);
+    ShowDebug(F("Unable to configure Ethernet using DHCP, resetting..."));
+    delay(1000);
+    resetFunc();
   }
 
   ShowDebug(F("Ethernet configured via DHCP"));
@@ -282,18 +283,14 @@ void setup() {
   ip = ip + String (Ethernet.localIP()[3]);
 
   ShowDebug(ip);
-  ShowDebug("");
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  //  mqttClient.setServer( "192.168.178.37", 1883); // or local broker
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
-  ShowDebug("");
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
 }
 
 void processButtonDigital( int buttonId )
@@ -438,7 +435,9 @@ void sendData() {
 
 void report_state(int outputport)
 {
-  String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
+  String s = String(outputport, HEX);
+  s.toUpperCase();
+  String messageString = "R" + s + String(digitalRead(RelayPins[outputport]));
   messageString.toCharArray(messageBuffer, messageString.length() + 1);
   mqttClient.publish(topic_out, messageBuffer);
 }
@@ -463,7 +462,8 @@ void callback(char* topic, byte * payload, unsigned int length) {
     ShowDebug("Relay command");
 
     RelayPort = strPayload[1] - 48;
-    if (RelayPort > 16) RelayPort -= 3;
+    //    if (RelayPort > 16) RelayPort -= 3;
+    if (RelayPort > 16) RelayPort -= 7;
     RelayValue = strPayload[2] - 48;
 
     ShowDebug(String(RelayPort));
@@ -557,8 +557,8 @@ void loop() {
 
   // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
+    //    pingCheck();
     previousMillis = millis();
-    pingCheck(); // check if we're still connected, otherwise reset
     sendData();
   }
   else {
