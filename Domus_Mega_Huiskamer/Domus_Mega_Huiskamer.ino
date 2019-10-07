@@ -79,10 +79,11 @@
 
           Pins in use:
 
-
           2     LED for button hallway
+          3     Relay port R8: 12v relay for TV
+          5     Relay port R9: 12v relay for stereo
           8     Relay port R1: 12v relay for lamp living room
-          9     Relay port R0: 12v relay for lamp living room
+          9     Relay port R0: 12v relay for radiator valve
           14    Relay port R6: SSR Tuin 1
           15    Relay port R7: SSR Tuin 2
           16    OneWire 18B20 sensor
