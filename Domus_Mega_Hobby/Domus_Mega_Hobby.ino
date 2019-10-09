@@ -79,6 +79,9 @@
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
 */
+
+#include "secrets.h"
+
 // parameters to tune memory use
 //#define BMP280 1 // use BMP280 sensor
 #define DHT_present 1 // use DHT sensor
@@ -481,7 +484,7 @@ void setup() {
 
   // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug("MQTT set up");
   mqttClient.setCallback(callback);
   ShowDebug("Ready to send data");

@@ -78,6 +78,8 @@
 
 */
 
+#include "secrets.h"
+
 // parameters to tune memory use
 //#define BMP280 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
@@ -117,8 +119,7 @@ static const unsigned char PROGMEM logo_bmp[] =
 
 // setup for ethernet
 #include <Ethernet.h>// Ethernet.h library
-#include "PubSubClient.h" //PubSubClient.h Library from Knolleary
-#define MQTT_SERVER "majordomo"
+#include "PubSubClient.h" //PubSubClient.h Library from Knolleary#define MQTT_SERVER "majordomo"
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -349,7 +350,7 @@ void setup() {
   // setup mqtt client
   displayMessage("Setup MQTT");
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( MQTT_SERVER, 1883); // or local broker
+  mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");

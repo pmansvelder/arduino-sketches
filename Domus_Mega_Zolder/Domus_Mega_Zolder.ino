@@ -64,6 +64,7 @@
 
 */
 
+#include "secrets.h"
 #include <Ethernet.h>// Ethernet.h library
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
@@ -250,7 +251,7 @@ void setup() {
   //
   //  // setup mqtt client
   mqttClient.setClient(ethClient);
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
   ShowDebug("");
