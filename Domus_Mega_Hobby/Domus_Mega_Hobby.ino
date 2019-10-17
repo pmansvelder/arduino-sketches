@@ -468,7 +468,8 @@ void setup() {
   if (Ethernet.begin(mac) == 0) {
 
     ShowDebug(F("No DHCP"));
-    for (;;);
+    delay(1000);
+    resetFunc();
   }
   ShowDebug(F("Ethernet via DHCP"));
   ShowDebug("IP address: ");

@@ -329,7 +329,8 @@ void setup() {
   if (Ethernet.begin(mac) == 0) {
 
     ShowDebug(F("Unable to configure Ethernet using DHCP"));
-    for (;;);
+    delay(1000);
+    resetFunc();
   }
 
   ShowDebug(F("Ethernet configured via DHCP"));
@@ -345,7 +346,6 @@ void setup() {
   ip = ip + String (Ethernet.localIP()[3]);
 
   ShowDebug(ip);
-  ShowDebug("");
 
   // setup mqtt client
   displayMessage("Setup MQTT");
@@ -353,10 +353,8 @@ void setup() {
   mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   mqttClient.setCallback(callback);
-  ShowDebug("");
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
 
   displayMessage("Setup done.");
 } // setup
