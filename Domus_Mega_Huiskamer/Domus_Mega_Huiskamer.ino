@@ -421,7 +421,10 @@ void sendData() {
 
 #if defined(DS18B20_present)
   float t2 = sensors.getTempCByIndex(0);
-  if (t2 < -100) { // fix for anomalous readings
+  if (t2 < -50) { // fix for anomalous readings
+    t2 = last_temp;
+  }
+  else if (t2 > 50) { // fix for anomalous readings
     t2 = last_temp;
   }
   else {
