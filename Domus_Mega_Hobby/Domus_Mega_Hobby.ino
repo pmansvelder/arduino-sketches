@@ -279,12 +279,17 @@ void sendMessage(String m, char* topic) {
   mqttClient.publish(topic, messageBuffer);
 }
 
+float CheckIsNan(float value, float defaultvalue) {
+  if (isnan(value)) value = defaultvalue;
+  return value;
+}
+
 void sendData() {
 
 #if defined(DHT_present)
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  float hic = dht.computeHeatIndex(t, h, false);
+  float h = CheckIsNan(dht.readHumidity(),0);
+  float t = CheckIsNan(dht.readTemperature(),0);
+  float hic = CheckIsNan(dht.computeHeatIndex(t, h, false),-99);
 
   //  Send Temperature sensor
   ShowDebug("T: " + String(t));

@@ -24,9 +24,6 @@
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hk/uit" for outgoing messages and
           "domus/hk/in" for incoming messages.
-          As the available memory of a UNO  with Ethernetcard is limited,
-          I have kept the topics short
-          Also, the payloads  are kept short
           The outgoing topics are
 
           domus/hk/uit        // Relaisuitgangen: R<relaisnummer><status>
@@ -77,6 +74,23 @@
           Adapted 22-07-2018 by Peter Mansvelder
           - added smart meter P1 input
 
+  Arduino-IDE settings for ESP01 (black):
+
+    - Board: "Generic ESP8266 Module"
+    - Flash mode: "DOUT"
+    - Flash size: "1M (128K SPIFFS)"
+    - Debug port: "Disabled"
+    - Debug Level: "None"
+    - IwIP Variant: "v2 Lower Memory"
+    - Reset Method: "nodemcu"   // but will depend on the programmer!
+    - Crystal Frequency: "26 MHz"
+    - VTables: "Flash"
+    - Flash Frequency: "40MHz"
+    - CPU Frequency: "80 MHz"
+    - Buildin Led: "1"  // GPIO01 !! for ESP-01S USE "2"! Also the "S" has no red led
+    - Upload Speed: "115200"
+    - Erase Flash: "Only Sketch"
+    - Port: "ESP01-DSMR at <-- IP address -->"
 */
 
 #include <ESP8266WiFi.h>
@@ -91,6 +105,8 @@
 #define PUBLISH_DELAY 5000 // that is 3 seconds interval
 #define DEBOUNCE_DELAY 150
 #define LONGPRESS_TIME 450
+#define LED_ON            LOW
+#define LED_OFF           HIGH
 
 //DSMR stuff
 using MyData = ParsedData <
@@ -169,11 +185,9 @@ const char* topic_out_meter_gas = "domus/espmk/uit/meter/gas";
 bool statusKD = HIGH;
 bool statusBD = HIGH;
 bool statusGD = HIGH;
-bool relaystate1 = LOW;
-bool pir = LOW;
+
 bool startsend = HIGH;// flag for sending at startup
 bool debug = true;
-int lichtstatus; //contains LDR reading
 
 const char* ssid     = SECRET_SSID;
 const char* password = SECRET_PASS;
@@ -223,6 +237,12 @@ void callback(char* topic, byte * payload, unsigned int length) {
 
 void setup() {
   Serial.begin(115200, SERIAL_8N1);
+  pinMode(BUILTIN_LED, OUTPUT);
+  for (int I = 0; I < 5; I++) {
+    digitalWrite(BUILTIN_LED, !digitalRead(BUILTIN_LED));
+    delay(2000);
+  }
+  digitalWrite(BUILTIN_LED, LED_OFF);  // HIGH is OFF
 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -290,13 +310,6 @@ void sendData() {
   messageString = String(mG);
   messageString.toCharArray(messageBuffer, messageString.length() + 1);
   mqttClient.publish(topic_out_meter_gas, messageBuffer);
-  //Reset variables to zero for next run
-  Voltage = 0;
-  Tariff = 0;
-  mEVLT = 0;
-  mEVHT = 0;
-  mEAV = 0;
-  mG = 0;
 }
 
 void reconnect() {
@@ -315,8 +328,6 @@ void reconnect() {
     }
   }
 }
-
-
 
 void loop() {
   // Main loop, where we check if we're connected to MQTT...

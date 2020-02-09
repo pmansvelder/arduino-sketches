@@ -119,6 +119,7 @@ DallasTemperature sensors(&oneWire);
 // Vul hier de data in van de PIRs
 byte NumberOfPirs = 3;
 int PirSensors[] = {28, 29, 19};
+int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
 int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
 
 // Vul hier de gegevens in van de motorsturing voor de screens:
@@ -314,7 +315,7 @@ void setup() {
 
   ShowDebug(F("Ethernet configured via DHCP"));
   ShowDebug("IP address: ");
-  
+
   displayMessage("Ethernet setup done.");
 
   //convert ip Array into String
@@ -501,7 +502,7 @@ void check_pir(byte pirid)
       PreviousDetects[pirid] = true;
     }
   }
-  else {
+  else { // PIR is low
     if (PreviousDetects[pirid]) {
       ShowDebug("No more movement on pir " + String(pirid) + ".");
       String messageString = "pir" + String(pirid) + "off";
