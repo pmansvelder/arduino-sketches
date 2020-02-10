@@ -106,16 +106,13 @@
 
 #include "secrets.h"
 #define DS18B20_present 1 // Use OneWire temperature sensor
+#define DHT_present 1 // use DHT sensor
+#define MQ_present 1 // MQ-x gas sensor
+#define DEBUG 1 // Zet debug mode aan
 #include <Ethernet.h>// Ethernet.h library
-
-#include <ICMPPing.h> //Ping - https://playground.arduino.cc/Code/ICMPPing
-IPAddress pingAddr(192, 168, 178, 205); // ip address to ping
-SOCKET pingSocket = 1;
-ICMPPing ping(pingSocket, (uint16_t)random(0, 255));
 
 #include "PubSubClient.h" //PubSubClient.h Library from Knolleary
 #include <Adafruit_Sensor.h>
-#include <DHT.h>
 
 // DS18B20 sensor
 #if defined(DS18B20_present)
@@ -127,9 +124,12 @@ DallasTemperature sensors(&oneWire);
 float last_temp = 0;
 #endif
 
+#if defined(DHT_present)
 // Vul hier de pin in van de DHT22 sensor
+#include <DHT.h>
 #define DHT_PIN 24
 DHT dht(DHT_PIN, DHT22);
+#endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_huiskamer"
@@ -197,8 +197,11 @@ char topicBuffer[100];
 String ip = "";
 
 bool startsend = HIGH; // flag for sending at startup
-bool debug = true; // true for debug messages
-
+#if defined (DEBUG)
+bool debug = true;
+#else
+bool debug = false;
+#endif
 // Vul hier het macadres in
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x06};
 
@@ -212,20 +215,6 @@ void(* resetFunc) (void) = 0; //declare reset function @ address 0
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
-  }
-}
-
-void pingCheck() {
-  ICMPEchoReply echoReply = ping(pingAddr, 20);
-  if (echoReply.status != SUCCESS)
-  {
-    Ethernet.maintain();
-    ICMPEchoReply echoReply = ping(pingAddr, 10);
-    if (echoReply.status != SUCCESS) {
-      ShowDebug("Ping command failed, resetting in 3 seconds...");
-      delay(3000);
-      resetFunc();
-    }
   }
 }
 
@@ -396,11 +385,16 @@ void sendMessage(String m, char* topic) {
   mqttClient.publish(topic, messageBuffer);
 }
 
+float CheckIsNan(float value, float defaultvalue) {
+  if (isnan(value)) value = defaultvalue;
+  return value;
+}
+
 void sendData() {
 
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  float hic = dht.computeHeatIndex(t, h, false);
+  float h = CheckIsNan(dht.readHumidity(),0);
+  float t = CheckIsNan(dht.readTemperature(),0);
+  float hic = CheckIsNan(dht.computeHeatIndex(t, h, false),-99);
 
   // Send Temperature sensor
   sendMessage(String(t), topic_out_temp);
@@ -561,7 +555,6 @@ void loop() {
 
   // ...see if it's time to send new data, ....
   if (millis() - previousMillis > PUBLISH_DELAY) {
-    //    pingCheck();
     previousMillis = millis();
     sendData();
   }
