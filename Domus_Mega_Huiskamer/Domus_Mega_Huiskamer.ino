@@ -392,9 +392,9 @@ float CheckIsNan(float value, float defaultvalue) {
 
 void sendData() {
 
-  float h = CheckIsNan(dht.readHumidity(),0);
-  float t = CheckIsNan(dht.readTemperature(),0);
-  float hic = CheckIsNan(dht.computeHeatIndex(t, h, false),-99);
+  float h = CheckIsNan(dht.readHumidity(), 0);
+  float t = CheckIsNan(dht.readTemperature(), 0);
+  float hic = CheckIsNan(dht.computeHeatIndex(t, h, false), -99);
 
   // Send Temperature sensor
   sendMessage(String(t), topic_out_temp);
