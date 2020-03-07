@@ -84,9 +84,8 @@
 #define DEBUG 1 // Zet debug mode aan
 
 #include <Ethernet.h>           // Ethernet.h library
-#define MQTT_MAX_PACKET_SIZE 512
-#include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
-#define MQTT_MAX_PACKET_SIZE 512
+#include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
+
 //#include <Adafruit_Sensor.h>
 //#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
@@ -103,9 +102,11 @@ DHT dht(DHT_PIN, DHT22);
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
 #define CLIENT_ID  "domus_test_json"
+// Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
+#define DISCOVERY_ID  "Domus Mega Test"
 
-// Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
-#define PUBLISH_DELAY 5000 // that is 5 seconds interval
+// Vul hier het interval in waarmee switch en sensorgegevens worden verstuurd op MQTT
+#define PUBLISH_DELAY 60000 // that is 60 seconds interval
 
 String hostname = CLIENT_ID;
 
@@ -116,12 +117,6 @@ int PreviousDetects[] = {}; // Statusvariabele PIR sensor
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/test/in";
-
-// Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/test/uit";
-const char* topic_relays = "homeassistant/switch/jsontest";
-const char* state_topic_relays = "homeassistant/switch/jsontest/state";
-const char* config_topic_relays = "homeassistant/switch/jsontest/config";
 
 #if defined(DHT_present)
 const char* topic_out_temp = "domus/test/uit/temp";
@@ -148,6 +143,13 @@ const long mq_startup = 3000;
 const byte NumberOfRelays = 4;
 const byte RelayPins[] = {5, 6, 7, 8};
 bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
+
+// Vul hier de uitgaande MQTT topics in
+const char* topic_out = "domus/test/uit";
+const char* topic_relays = "homeassistant/switch/jsontest";
+const char* state_topic_relays = "homeassistant/switch/jsontest/state";
+const String config_topic_base = "homeassistant/switch/jsontest";
+char* config_topic_relays = "homeassistant/switch/jsontest/config";
 
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
@@ -320,17 +322,39 @@ void sendData() {
   ShowDebug(String(mq_millis));
   ShowDebug(String(mq_state));
 #endif
-
-  // Send status of relays
-  for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    report_state(thisPin);
-  }
+  report_state();
 }
 
-void report_state(byte outputport)
+void report_state()
 {
-  String messageString = "R" + String(outputport) + String(digitalRead(RelayPins[outputport]));
-  sendMessage(String(messageString), topic_out);
+  // send state data for MQTT discovery
+  doc.clear();
+  for (int i = 0; i < NumberOfRelays; i++) {
+    if (digitalRead(RelayPins[i]) == HIGH) {
+      doc["POWER" + String(i)] = "off";
+    }
+    else {
+      doc["POWER" + String(i)] = "on";
+    }
+    serializeJson(doc, messageBuffer);
+  }
+  ShowDebug("Sending MQTT state...");
+  ShowDebug(messageBuffer);
+  ShowDebug(topic_relays);
+  mqttClient.publish(state_topic_relays, messageBuffer);
+  // end send state data for MQTT discovery
+}
+
+String mac2String(byte ar[]) {
+  String s;
+  for (byte i = 0; i < 6; ++i)
+  {
+    char buf[3];
+    sprintf(buf, "%02X", ar[i]);
+    s += buf;
+    if (i < 5) s += ':';
+  }
+  return s;
 }
 
 void callback(char* topic, byte * payload, byte length) {
@@ -369,21 +393,7 @@ void callback(char* topic, byte * payload, byte length) {
     } else {
       digitalWrite(RelayPins[RelayPort], RelayValue);
     }
-    // send state data for MQTT discovery
-    doc.clear();
-    if (digitalRead(RelayPins[0]) == HIGH) {
-      doc["POWER"] = "off";
-    }
-    else {
-      doc["POWER"] = "on";
-    }
-    serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT state...");
-    ShowDebug(messageBuffer);
-    ShowDebug(topic_relays);
-    mqttClient.publish(state_topic_relays, messageBuffer);
-    // end send state data for MQTT discovery
-    report_state(RelayPort);
+    report_state();
   } else if (strPayload == "IP")  {
 
     // 'Show IP' commando
@@ -398,16 +408,16 @@ void callback(char* topic, byte * payload, byte length) {
       } else {
         digitalWrite(RelayPins[i], LOW);
       }
-      report_state(i);
     }
+    report_state();
   }
 
   else if (strPayload == "AOF") {
     // Alle relais uit
     for (byte i = 0 ; i < NumberOfRelays; i++) {
       digitalWrite(RelayPins[i], RelayInitialState[i]);
-      report_state(i);
     }
+    report_state();
   }
   else if (strPayload == "STAT") {
 
@@ -454,6 +464,7 @@ void setup() {
   if (debug) {
     Serial.begin(115200);
     ShowDebug(CLIENT_ID);
+    ShowDebug(String(MQTT_MAX_PACKET_SIZE));
   }
 
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
@@ -525,29 +536,40 @@ void loop() {
 
   // ... then send all relay stats when we've just started up....
   if (startsend) {
-    for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-      report_state(thisPin);
-    }
-    // send config data for MQTT discovery
-    doc.clear();
-    doc["name"] = "JSON";
-    doc["unique_id"] = "json_test";
-    doc["stat_t"] = state_topic_relays;
-    doc["cmd_t"] = topic_in;
-    doc["pl_on"] = "R00";
-    doc["pl_off"] = "R01";
-    doc["stat_on"] = "on";
-    doc["stat_off"] = "off";
-    doc["val_tpl"] = "{{value_json.POWER}}";
-    size_t n = serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT config...");
-    ShowDebug(config_topic_relays);
-    ShowDebug(messageBuffer);
-    if (mqttClient.publish(config_topic_relays, messageBuffer, n)) {
-      ShowDebug("...MQTT config sent.");
-    }
-    else {
-      ShowDebug("...publish failed, either connection lost, or message too large.");
+    report_state();
+    for (int i = 0; i < NumberOfRelays ; i++) {
+      doc.clear();
+      doc["name"] = "JSON relay" + String(i);
+      doc["unique_id"] = "json_test" + String(i);
+      doc["stat_t"] = state_topic_relays;
+      doc["cmd_t"] = topic_in;
+      doc["pl_on"] = "R" + String(i) + "0";
+      doc["pl_off"] = "R" + String(i) + "1";
+      doc["stat_on"] = "on";
+      doc["stat_off"] = "off";
+      doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
+      JsonObject device = doc.createNestedObject("device");
+      JsonArray identifiers = device.createNestedArray("identifiers");
+      identifiers.add(CLIENT_ID);
+      //      JsonArray connections = device.createNestedArray("connections");
+      //      connections.add("ip");
+      //      connections.add(ip.c_str());
+      //      connections.add("mac");
+      //      connections.add(mac2String(mac));
+      ShowDebug(mac2String(mac));
+      device["name"] = DISCOVERY_ID;
+      device["model"] = "Mega";
+      device["manufacturer"] = "Arduino";
+      size_t n = serializeJson(doc, messageBuffer);
+      ShowDebug("Sending MQTT config...");
+      ShowDebug((config_topic_base + String(i) + "/config").c_str());
+      ShowDebug(messageBuffer);
+      if (mqttClient.publish((config_topic_base + String(i) + "/config").c_str(), messageBuffer, n)) {
+        ShowDebug("...MQTT config sent.");
+      }
+      else {
+        ShowDebug("...publish failed, either connection lost, or message too large.");
+      }
     }
     // end send config data for MQTT discovery
     startsend = false;
