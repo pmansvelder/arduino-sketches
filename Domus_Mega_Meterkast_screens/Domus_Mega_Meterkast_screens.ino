@@ -3,6 +3,8 @@
           Location: Meterkast
           Macadres: 00:01:02:03:04:0B
           Pins used:
+          0:
+          1:
           2: PWM voor LEDs
           3: Temperatuursensor (DHT of 18b20)
           4: <in gebruik voor W5100>

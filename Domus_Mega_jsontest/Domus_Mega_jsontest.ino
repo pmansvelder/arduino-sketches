@@ -17,12 +17,14 @@
           7: LED 3
           8: LED 4
           9:
+          10: <in gebruik voor W5100>
+          11:
+          12:
           30:
           32:
           34:
           36:
 
-          10: <in gebruik voor W5100>
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
           52: <in gebruik voor W5100>
@@ -81,6 +83,9 @@
 #define DISCOVERY_ID  "Domus Mega Test"
 #define MODEL_ID  "Mega 2560"
 #define MANUFACTURER_ID  "Arduino"
+
+// base for Home Assistant MQTT discovery (must be configured in configuration.yaml)
+const String config_topic_base = "homeassistant";
 
 #include "secrets.h"
 
@@ -141,11 +146,14 @@ const long mq_measure_interval = 90000;
 const long mq_startup = 3000;
 #endif
 
+// MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfRelays = 4;
 const byte RelayPins[] = {5, 6, 7, 8};
 bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
+const char* state_topic_relays = "homeassistant/switch/jsontest/state";
 
+// MQTT Discovery covers
 // Vul hier de gegevens in van de motorsturing voor de screens:
 // 2 relais per motor: 1 x richting, 1 x motorpuls
 // hiervoor gebruik ik de pulserelais en de normale relais
@@ -156,28 +164,29 @@ byte CoverPulse[NumberOfCovers] = {0, 1}; // relay numbers for motor pulses
 byte CoverState[NumberOfCovers] = {0, 0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing
 byte CoverPos[NumberOfCovers] = {100, 100}; // position 100 = open
 #define COVERDELAYTIME 30000 // time to wait for full open or close
+const char* topic_out_screen = "domus/test/uit/screen"; // Screens (zonwering)
+
+// MQTT Discovery locks
+const byte NumberOfLocks = 2;
+byte LockPulse[NumberOfCovers] = {2, 3}; // relay numbers for lock pulses (index on PulseRelayPins)
+byte LockState[NumberOfCovers] = {1, 1};  // status of locks: 0 = unlocked, 1 = locked
+#define LOCKPULSETIME 3000 // pulse time for locks
+const char* topic_out_lock = "domus/test/uit/locks"; // Locks (sloten)
 
 // Vul hier het aantal pulsrelais in
-const int NumberOfPulseRelays = 2; // 0 = haldeur, 1 = voordeur, 2 = screen keuken, 3 = screen huiskamer
+const int NumberOfPulseRelays = 4; // 0 = haldeur, 1 = voordeur, 2 = screen keuken, 3 = screen huiskamer
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {5, 7};
-long PulseActivityTimes[] = {0, 0};
+int PulseRelayPins[NumberOfPulseRelays] = {5, 7, 9, 11};
+long PulseActivityTimes[NumberOfPulseRelays] = {0, 0, 0, 0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
-bool PulseRelayInitialStates[] = {HIGH, HIGH};
+bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
-long int PulseRelayTimes[] = {COVERDELAYTIME, COVERDELAYTIME};
+long int PulseRelayTimes[NumberOfPulseRelays] = {COVERDELAYTIME, COVERDELAYTIME, LOCKPULSETIME, LOCKPULSETIME};
+const char* topic_out_pulse = "domus/test/uit/pulse";    // Pulserelais t.b.v. deuropener
 
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/test/uit";
-const char* topic_relays = "homeassistant/switch/jsontest";
-const char* state_topic_relays = "homeassistant/switch/jsontest/state";
-const char* topic_out_pulse = "domus/test/uit/pulse";    // Pulserelais t.b.v. deuropener
-const char* topic_out_screen = "domus/test/uit/screen"; // Screens (zonwering)
-
-//char* config_topic_relays = "homeassistant/switch/jsontest/config";
-
-const String config_topic_base = "homeassistant";
 
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
@@ -226,6 +235,7 @@ void ProcessPulseRelays(int PulseRelayId) {
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
       mqttClient.publish(topic_out_pulse, messageBuffer);
       digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
+      // Update end position of covers
       for (int i = 0 ; i < NumberOfCovers ; i++) {
         if (CoverPulse[i] == PulseRelayId) {
           if (CoverState[i] == 1) {   // 1 = opening
@@ -239,9 +249,19 @@ void ProcessPulseRelays(int PulseRelayId) {
           ShowDebug("Setting cover position:");
           ShowDebug(String(CoverPos[i]));
         }
-      }
+      } // end update covers
+      // Update lock status
+      for (int i = 0 ; i < NumberOfLocks ; i++) {
+        if (LockPulse[i] == PulseRelayId) {
+          if (LockState[i] == 0) {   // 0 = unlocked
+            LockState[i] = 1;
+            report_state_lock();
+          }
+        }
+      } // end update lock status
     }
     else {
+      // Update current position of covers
       for (int i = 0 ; i < NumberOfCovers ; i++) {
         if (CoverPulse[i] == PulseRelayId) {
           CoverPos[i] = int(100 * (millis() - PulseActivityTimes[PulseRelayId]) / PulseRelayTimes[PulseRelayId]);
@@ -249,7 +269,7 @@ void ProcessPulseRelays(int PulseRelayId) {
             CoverPos[i] = 100 - CoverPos[i] ;
           }
         }
-      }
+      } // end update covers
     }
   }
 }
@@ -407,14 +427,16 @@ void report_state()
   }
   ShowDebug("Sending MQTT state for relays...");
   ShowDebug(messageBuffer);
-  ShowDebug(topic_relays);
+  ShowDebug(state_topic_relays);
   mqttClient.publish(state_topic_relays, messageBuffer);
   // send data for covers
-  report_state_cover(1);
+  report_state_cover();
+  // send data for locks
+  report_state_lock();
   // end send state data for MQTT discovery
 }
 
-void report_state_cover(int CoverPort)
+void report_state_cover()
 {
   doc.clear();
   for (byte i = 0; i < NumberOfCovers ; i++) {
@@ -437,6 +459,24 @@ void report_state_cover(int CoverPort)
   ShowDebug(messageBuffer);
   ShowDebug(topic_out_screen);
   mqttClient.publish(topic_out_screen, messageBuffer);
+}
+
+void report_state_lock()
+{
+  doc.clear();
+  for (byte i = 0; i < NumberOfLocks ; i++) {
+    if (LockState[i] == 0) {
+      doc["LOCK" + String(i + 1)] = "UNLOCKED";
+    }
+    else {
+      doc["LOCK" + String(i + 1)] = "LOCKED";
+    }
+  }
+  serializeJson(doc, messageBuffer);
+  ShowDebug("Sending MQTT state for covers...");
+  ShowDebug(messageBuffer);
+  ShowDebug(topic_out_lock);
+  mqttClient.publish(topic_out_lock, messageBuffer);
 }
 
 String mac2String(byte ar[]) {
@@ -547,7 +587,6 @@ void callback(char* topic, byte * payload, byte length) {
       ShowDebug("No such pulserelay defined!");
     }
   }
-
   // *** Control for screen covers ****
   // Command: O + cover number [+ pulse duration in ms]
   //  opens cover:
@@ -584,10 +623,7 @@ void callback(char* topic, byte * payload, byte length) {
         PulseActivityTimes[PulseRelayPort] = millis();
         // report state of screen
         CoverState[CoverPort - 1] = 1; // 1 is opening
-        report_state_cover(CoverPort);
-        //        messageString = "O" + String(CoverPort);
-        //        messageString.toCharArray(messageBuffer, messageString.length() + 1);
-        //        mqttClient.publish(topic_out_screen, messageBuffer);
+        report_state_cover();
       }
       else {
         // Commmand given while cover moving, Stop pulse
@@ -599,9 +635,9 @@ void callback(char* topic, byte * payload, byte length) {
       }
     }
     else {
-      ShowDebug("No such cover defined.");
+      ShowDebug("No such cover defined: " + String(CoverPort));
     }
-  }
+  } // End of Cover commando: open
   //
   // Command: C + cover number [+ pulse duration in ms]
   //  closes cover:
@@ -634,10 +670,7 @@ void callback(char* topic, byte * payload, byte length) {
         PulseActivityTimes[PulseRelayPort] = millis();
         // report state of screen
         CoverState[CoverPort - 1] = 3;  // 3 is closing
-        report_state_cover(CoverPort);
-        //        messageString = "C" + String(CoverPort);
-        //        messageString.toCharArray(messageBuffer, messageString.length() + 1);
-        //        mqttClient.publish(topic_out_screen, messageBuffer);
+        report_state_cover();
       }
       else {
         ShowDebug("Stopping cover number " + String(CoverPort));
@@ -648,32 +681,11 @@ void callback(char* topic, byte * payload, byte length) {
         mqttClient.publish(topic_out_pulse, messageBuffer);
       }
     }
-    //
-    // Command: S + cover number
-    //  stops cover movement:
-    //    - closes motor relay, stops pulse
-    //
-    else if (strPayload[0] == 'S') {
-      // Cover commando: stop
-      ShowDebug("Cover command : Stop");
-      byte CoverPort = strPayload[1] - 48;
-      ShowDebug("Cover number " + String(CoverPort));
-      if (CoverPort <= NumberOfCovers) {
-        int PulseRelayPort = CoverPulse[CoverPort - 1];
-        // Stop pulse
-        digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
-        String messageString = "P" + String(PulseRelayPort) + "0";
-        messageString.toCharArray(messageBuffer, messageString.length() + 1);
-        mqttClient.publish(topic_out_pulse, messageBuffer);
-      }
-      else {
-        ShowDebug("No such cover defined.");
-      }
-    }
     else {
-      ShowDebug("No such cover defined.");
+      ShowDebug("No such cover defined: " + String(CoverPort));
     }
   }
+
   //
   // Command: S + cover number
   //  stops cover movement:
@@ -693,7 +705,47 @@ void callback(char* topic, byte * payload, byte length) {
       mqttClient.publish(topic_out_pulse, messageBuffer);
     }
     else {
-      ShowDebug("No such cover defined.");
+      ShowDebug("No such cover defined: " + String(CoverPort));
+    }
+  }
+  // MQTT Discovery Lock commands
+  else if (strPayload[0] == 'L') {
+    // Lock commando: lock
+    ShowDebug("Lock command : lock");
+    byte LockPort = strPayload[1] - 48;
+    ShowDebug("Lock number " + String(LockPort));
+    int PulseRelayPort = LockPulse[LockPort - 1];
+    if (LockPort <= NumberOfLocks) {
+      // End opening pulse
+      digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
+      String messageString = "P" + String(PulseRelayPort) + "0";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
+      LockState[LockPort - 1] = 1;
+      report_state_lock();
+    }
+    else {
+      ShowDebug("No such lock defined: " + String(LockPort));
+    }
+  }
+  else if (strPayload[0] == 'U') {
+    // Lock commando: unlock
+    ShowDebug("Lock command : unlock");
+    byte LockPort = strPayload[1] - 48;
+    ShowDebug("Lock number " + String(LockPort));
+    int PulseRelayPort = LockPulse[LockPort - 1];
+    if (LockPort <= NumberOfLocks) {
+      // Set opening pulse
+      digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
+      String messageString = "P" + String(PulseRelayPort) + "1";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
+      PulseActivityTimes[PulseRelayPort] = millis();
+      LockState[LockPort - 1] = 0;
+      report_state_lock();
+    }
+    else {
+      ShowDebug("No such lock defined: " + String(LockPort));
     }
   }
   else {
@@ -784,6 +836,20 @@ void reportMQTTdisco() {
     //    doc["val_tpl"] = "{{value_json.COVER" + String(i + 1) + "}}";
     doc["val_tpl"] = "{{value_json.POSITION" + String(i + 1) + "}}";
     setDeviceInfo((config_topic_base + "/cover/jsoncover" + String(i + 1) + "/config").c_str());
+  }
+  // discovery data for locks
+  for (int i = 0; i < NumberOfLocks ; i++ ) {
+    doc.clear();
+    doc["name"] = "JSON lock" + String(i + 1);
+    doc["uniq_id"] = "json_lock" + String(i + 1);
+    doc["stat_t"] = topic_out_lock;
+    doc["cmd_t"] = topic_in;
+    doc["pl_lock"] = "L" + String(i + 1);
+    doc["pl_unlk"] = "U" + String(i + 1);
+    doc["state_locked"] = "LOCKED";
+    doc["state_unlocked"] = "UNLOCKED";
+    doc["val_tpl"] = "{{value_json.LOCK" + String(i + 1) + "}}";
+    setDeviceInfo((config_topic_base + "/lock/jsonlock" + String(i + 1) + "/config").c_str());
   }
   // end send config data for MQTT discovery
 }
