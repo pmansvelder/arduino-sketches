@@ -92,6 +92,9 @@
 
 */
 
+
+#define BUFFERSIZE 512          // default 100
+
 #include <Ethernet.h>           // Ethernet.h library
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include "ArduinoJson.h"        // Arduino JSON library, to serialize/deserialize JSON messages
@@ -125,8 +128,6 @@ const char* item_prefix = "test";
 #define DEBUG 1 // Zet debug mode aan
 
 StaticJsonDocument<256> doc;
-
-#define BUFFERSIZE 512          // default 100
 
 #if defined(DHT_present)
 #include <DHT.h>
