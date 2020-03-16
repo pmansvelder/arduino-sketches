@@ -117,7 +117,7 @@ const String item_prefix = "mk";
 //#define BMP280 1 // use BMP280 sensor
 //#define DHT_present 0 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
-#define DEBUG 1 // Zet debug mode aan
+//#define DEBUG 1 // Zet debug mode aan
 
 #define BUFFERSIZE 512          // default 100
 #define MQTT_MAX_PACKET_SIZE 512
