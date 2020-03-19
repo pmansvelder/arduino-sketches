@@ -83,8 +83,10 @@
           3     Relay port R8: 12v relay for TV
           4     < reserved for Ethernet Shield >
           5     Relay port R9: 12v relay for stereo
+          6
+          7
           8     Relay port R1: 12v relay for lamp living room
-          9     Relay port R0: 12v relay for radiator valve
+          9     Relay port R0: 12v relay for sierlamp
           10    < reserved for Ethernet Shield >
           11
           12
