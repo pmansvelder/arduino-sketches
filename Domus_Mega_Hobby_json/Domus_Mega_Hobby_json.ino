@@ -1,7 +1,7 @@
 /*
           <========Arduino Sketch for Arduino Mega =========>
-          Locatie: Test
-
+          Locatie: Hobbykamer
+          Macadres: 00:01:02:03:04:4B
           Aansluiting via UTP kabel:
           - 5V : bruin
           - GND: wit
@@ -9,60 +9,48 @@
           Pins used:
           0: Serial
           1: Serial
-          2: PWM voor LEDs
-          3: DHT-22 sensor
+          2: PIR Sensor                         - UTP kabel : groen
+          3: DHT-22 sensor                      - UTP kabel : wit
           4: <in gebruik voor W5100>
-          5: Relay 0 (not connected)
-          6: Relay 1 (not connected)
-          7: PulseRelay 1 (Pulse, Voordeuropener)
-          8: PulseRelay 0 (Pulse, Haldeuropener)
-          9: Button 2 (keuken)
-          10: <in gebruik voor W5100>
-          11: Button 0 (huiskamer)
-          12: Button 1 (huiskamer)
-          14: MQ7 sensor output pin
-          19: PIR Hal
-          20: SDA - i2c
-          21: SCL - i2c
-          22: Pulserelay screen 1
-          23: Relay screen 1
-          24: Pulserelay screen 2
-          25: Relay screen 2
-          28: PIR Keuken
-          29: Magneetcontact voordeur
-          30: Relay 3: SSR Relais voor keukenlamp
-          31: Relay 4: SSR Relais voor plafondlamp huiskamer
+          5: Output for MQ-7 state transistor   - UTP kabel : blauw
+          6: Button #1
+          7: Button #1
+          8: Button #1
+          9: Button #1
+          30: Relay #5
+          32: Relay #6
+          34: Relay #7
+          36: Relay #8
 
+          10: <in gebruik voor W5100>
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
           52: <in gebruik voor W5100>
           53: <in gebruik voor W5100>
 
-          A0: MQ7 sensor input pin
-          A1:
-          A2:
-          A3:
-          A4:
-          A5:
-          A9: MQ2 sensor input
-          A10: LDR
+          A0: MQ-7 Sensor                       - UTP kabel : oranje
+          A1: Relay #1
+          A2: Relay #2
+          A3: Relay #3
+          A4: Relay #1
+          A5: Magneetcontact achterdeur         - telefoonkabel (andere ader op GND)
 
-          incoming topic: domus/test/in
+          incoming topic: domus/hobby/in
 
           Arduino Mega with W5100 ethernet shield used as MQTT client
           It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hobby/uit" for outgoing messages and
-          "domus/test/in" for incoming messages.
+          "domus/hobby/in" for incoming messages.
 
           The outgoing topics are
 
-          domus/test/uit        // Relaisuitgangen: R<relaisnummer><status>
+          domus/hobby/uit        // Relaisuitgangen: R<relaisnummer><status>
 
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
           There is only one incoming topic:
-          domus/test/in
+          domus/hobby/in
           The payload here determines the action:
           STAT - Report the status of all relays (0-9)
           AON - turn all the leds on
@@ -86,15 +74,14 @@
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
           N.B.: changes to be made if sketch is used in production:
-          - Change CLIENT_ID
-          - change Mac Address
-          - change DISCOVERY ID
-          - Change topic base from domus/hobby with find/replace
-          - Change item names
-          - Change pin numbers for relays, buttons, pirs
+          - Change CLIENT_ID -> done
+          - change Mac Address -> done
+          - change DISCOVERY ID -> done
+          - Change topic base from domus/hobby with find/replace -> done
+          - Change item names -> done
+          - Change pin numbers for relays, buttons, pirs -> done
           - Change pin numbers for sensors
-          - item_prefix variable
-
+          - item_prefix variable -> done
 
 */
 
@@ -110,13 +97,13 @@ StaticJsonDocument<512> doc;
 #include "secrets.h"
 
 // parameters to tune memory use
-#define BMP_present 1 // use BMP280 sensor
+//#define BMP_present 1 // use BMP280 sensor
 #define DHT_present 1 // use DHT sensor
-#define MQ_present 0 // MQ-x gas sensor
-//#define MQ7_present 0 // MQ-7 CO sensor
-#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
-#define LDR_present 1 // LDR sensor
-#define DEBUG 1 // Zet debug mode aan
+//#define MQ_present 0 // MQ-x gas sensor
+#define MQ7_present 0 // MQ-7 CO sensor
+//#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
+//#define LDR_present 1 // LDR sensor
+//#define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -150,19 +137,19 @@ int SmokeSensor = A9;
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
-#define CLIENT_ID  "domus_test_json"
+#define CLIENT_ID  "domus_hobbykamer"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
-#define DISCOVERY_ID  "Domus Mega Test"
+#define DISCOVERY_ID  "Domus Hobbykamer"
 #define MODEL_ID  "Mega 2560"
 #define MANUFACTURER_ID  "Arduino"
 String hostname = CLIENT_ID;
 // base for Home Assistant MQTT discovery (must be configured in configuration.yaml)
 const String config_topic_base = "homeassistant";
 // prefix for inidvidual items
-const String item_prefix = "test";
+const String item_prefix = "hobby";
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0xF0, 0x01, 0x02, 0x03, 0x04, 0x4B};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x4B};
 EthernetClient ethClient;
 PubSubClient mqttClient;
 
@@ -174,11 +161,11 @@ long lastPublishTime;
 long lastReportTime;
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/test/in";
+const char* topic_in = "domus/hobby/in";
 
 #if defined(MQ7_present)
 byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
-byte mq_state_pin = 14;
+byte mq_state_pin = 5;
 byte mq_sensor_pin = A0;
 byte mq_value = 0;
 long mq_millis;
@@ -190,11 +177,11 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
-const byte RelayPins[] = {5, 6, 23, 25};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
-String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel", "*Screen keuken", "*Screen Huiskamer"};
-char* state_topic_relays = "domus/test/stat/relay";
+const byte NumberOfRelays = 8;
+const byte RelayPins[] = {A1, A2, A3, A4, 30, 32, 34, 36};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, HIGH};
+String SwitchNames[] = {"Relais 1", "Relais 2", "Relais 3", "Relais 4", "Radiator Hobbykamer", "Radiator Badkamer", "Relaispoort 6", "Buitenkraan"};
+char* state_topic_relays = "domus/hobby/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
@@ -204,8 +191,8 @@ bool LightInitialState[] = {HIGH, HIGH, HIGH};
 bool LightBrightness[] = {false, false, true};
 byte LightValue[] = {0, 0, 0};
 String LightNames[] = {"*Keuken", "*Plafondlamp", "*Buttonleds"};
-const char* state_topic_lights = "domus/test/stat/light";
-const char* cmd_topic_lights = "domus/test/cmd/light";
+const char* state_topic_lights = "domus/hobby/stat/light";
+const char* cmd_topic_lights = "domus/hobby/cmd/light";
 
 // MQTT Discovery covers
 // Vul hier de gegevens in van de motorsturing voor de screens:
@@ -221,7 +208,7 @@ int CoverStart[] = {100, 100 }; // start position
 byte CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
 long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
-const char* state_topic_covers = "domus/test/uit/screen"; // Screens (zonwering)
+const char* state_topic_covers = "domus/hobby/uit/screen"; // Screens (zonwering)
 
 // MQTT Discovery locks
 const byte NumberOfLocks = 0;
@@ -229,34 +216,34 @@ byte LockPulse[] = {0, 1}; // relay numbers for lock pulses (index on PulseRelay
 byte LockState[] = {1, 1};  // status of locks: 0 = unlocked, 1 = locked
 String LockNames[] = {"*Haldeurslot", "*VoordeurSlot"};
 long LockDelay[] = {2000, 250}; // pulse time for locks
-const char* state_topic_locks = "domus/test/stat/lock"; // Locks (sloten)
+const char* state_topic_locks = "domus/hobby/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 0;
-int PirSensors[] = {19, 28, 29};
-int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
-int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
-byte PirState[] = {0, 0, 0};
-String PirNames[] = {"*PIR Hal", "*PIR Keuken", "*Voordeur"};
-String PirClasses[] = {"motion", "motion", "door"};
-const char* state_topic_pirs = "domus/test/uit/pir";
+const byte NumberOfPirs = 2;
+int PirSensors[] = {2, A5};
+int PirDebounce[] = {0, 0}; // debounce time for pir or door sensor
+int PreviousDetects[] = {false, false}; // Statusvariabele PIR sensor
+byte PirState[] = {0, 0};
+String PirNames[] = {"PIR Hobbykamer", "Achterdeur"};
+String PirClasses[] = {"motion", "door"};
+const char* state_topic_pirs = "domus/hobby/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
-const int NumberOfButtons = 3;
-int ButtonPins[] = {11, 12, 9};
-static byte lastButtonStates[] = {0, 0, 0};
-long lastActivityTimes[] = {0, 0, 0};
-long LongPressActive[] = {0, 0, 0};
-String ButtonNames[] = {"*Knop Keuken", "*Keuken", "*Voordeur"};
-const char* state_topic_buttons = "domus/test/uit/button";
+const int NumberOfButtons = 4;
+int ButtonPins[] = {6, 7, 8, 9};
+static byte lastButtonStates[] = {0, 0, 0, 0};
+long lastActivityTimes[] = {0, 0, 0, 0};
+long LongPressActive[] = {0, 0, 0, 0};
+String ButtonNames[] = {"Hobbykamer buton 1", "Hobbykamer buton 2", "Hobbykamer buton 3", "Hobbykamer buton 4"};
+const char* state_topic_buttons = "domus/hobby/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 7;
-String SensorNames[] = {"*Temperatuur test", "*Luchtvochtigheid test", "*Gevoelstemperatuur test", "*Temperatuur BMP test", "*Lichtsterkte test", "*Tijd sinds opstart", "*Luchtdruk test"};
-String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "BMP-T", "LDR", "TIME", "BMP-P"};
-String SensorClasses[] = {"temperature", "humidity", "temperature", "temperature", "illuminance", "timestamp", "pressure"};
-String SensorUnits[] = {"°C", "%", "°C", "°C", "lux", "s", "mbar"};
-const char* state_topic_sensors = "domus/test/uit/sensor";
+const int NumberOfSensors = 5;
+String SensorNames[] = {"Temperatuur hobbykamer", "Luchtvochtigheid hobbykamer", "GevoelsTemperatuur hobbykamer", "CO sensor hobbykamer", "Runtime hobbykamer"};
+String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "MQ7", "TIME"};
+String SensorClasses[] = {"temperature", "humidity", "temperature", "", "timestamp"};
+String SensorUnits[] = {"°C", "%", "°C", "ppm", "s"};
+const char* state_topic_sensors = "domus/hobby/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
 const int NumberOfPulseRelays = 0; // 0 = haldeurslot, 1 = voordeurslot, 2 = screen keuken, 3 = screen huiskamer
@@ -268,10 +255,10 @@ long PulseActivityTimes[] = {0, 0, 0, 0};
 bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = {LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1]};
-const char* topic_out_pulse = "domus/test/uit/pulse";    // Pulserelais t.b.v. deuropener
+const char* topic_out_pulse = "domus/hobby/uit/pulse";    // Pulserelais t.b.v. deuropener
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/test/uit";
+const char* topic_out = "domus/hobby/uit";
 
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
@@ -816,9 +803,6 @@ void callback(char* topic, byte * payload, byte length) {
     }
     else {
       SetLightState(index - 1, doc["state"]);
-      if (LightBrightness[index - 1]) {
-        LightValue[index - 1] = 255;
-      }
     }
     //    SendTrigger(1); // future expansion: send device triggers
   }
