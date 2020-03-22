@@ -81,12 +81,15 @@
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
           N.B.: changes to be made if sketch is used in production:
-          - change CLIENT_ID -> done
-          - change Mac Address -> done
-          - change DISCOVERY ID -> done
-          - Change topic base from domus/hk with find/replace -> done
-          - Change item names -> done
-          - item_prefix variable -> done
+          - Change CLIENT_ID
+          - change Mac Address
+          - change DISCOVERY ID
+          - Change topic base from domus/hobby with find/replace
+          - Change item names
+          - Change pin numbers for relays, buttons, pirs
+          - Change pin numbers for sensors
+          - item_prefix variable
+
 
 */
 
@@ -108,7 +111,7 @@ StaticJsonDocument<512> doc;
 //#define MQ7_present 0 // MQ-7 CO sensor
 #define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 #define LDR_present 1 // LDR sensor
-#define DEBUG 1 // Zet debug mode aan
+//#define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -807,9 +810,11 @@ void callback(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["brightness"]);
     }
     else {
+      if (LightBrightness[index - 1]) {
+        LightValue[index - 1] = 255;
+      }
       SetLightState(index - 1, doc["state"]);
     }
-    //    SendTrigger(1); // future expansion: send device triggers
   }
   else if (strPayload[0] == '{') {
     // json message
@@ -1269,6 +1274,7 @@ void loop() {
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
+    startsend = true;
   }
 
   // ... then send all relay stats and discovery info when we've just started up....

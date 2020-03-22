@@ -51,7 +51,7 @@
 
           Arduino Mega with W5100 ethernet shield used as MQTT client
           It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
-          The topics have the format "domus/hobby/uit" for outgoing messages and
+          The topics have the format "domus/test/uit" for outgoing messages and
           "domus/test/in" for incoming messages.
 
           The outgoing topics are
@@ -89,7 +89,7 @@
           - Change CLIENT_ID
           - change Mac Address
           - change DISCOVERY ID
-          - Change topic base from domus/hobby with find/replace
+          - Change topic base from domus/test with find/replace
           - Change item names
           - Change pin numbers for relays, buttons, pirs
           - Change pin numbers for sensors
@@ -815,12 +815,11 @@ void callback(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["brightness"]);
     }
     else {
-      SetLightState(index - 1, doc["state"]);
       if (LightBrightness[index - 1]) {
         LightValue[index - 1] = 255;
       }
+      SetLightState(index - 1, doc["state"]);
     }
-    //    SendTrigger(1); // future expansion: send device triggers
   }
   else if (strPayload[0] == '{') {
     // json message
@@ -1280,6 +1279,7 @@ void loop() {
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
+    startsend = true;
   }
 
   // ... then send all relay stats and discovery info when we've just started up....

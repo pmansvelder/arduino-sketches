@@ -60,12 +60,15 @@
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
           N.B.: changes to be made if sketch is used in production:
-          - change CLIENT_ID -> done
+          - Change CLIENT_ID -> done
           - change Mac Address -> done
           - change DISCOVERY ID -> done
-          - Change topic base from domus/zolder with find/replace -> done
+          - Change topic base from domus/hobby with find/replace -> done
           - Change item names -> done
+          - Change pin numbers for relays, buttons, pirs -> done
+          - Change pin numbers for sensors -> done
           - item_prefix variable -> done
+
 
 */
 
@@ -84,6 +87,7 @@ StaticJsonDocument<512> doc;
 #define BMP_present 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
+//#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 //#define DEBUG 1 // Zet debug mode aan
@@ -115,6 +119,10 @@ float last_temp = 0;
 Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 #endif
 
+#if defined(MQ_present)
+int SmokeSensor = A9;
+#endif
+
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
 #define CLIENT_ID  "domus_zolder"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
@@ -142,8 +150,7 @@ long lastReportTime;
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/zolder/in";
 
-#if defined(MQ_present)
-const char* topic_out_gas = "domus/zolder/uit/gas";
+#if defined(MQ7_present)
 byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
 byte mq_state_pin = 5;
 byte mq_sensor_pin = A0;
@@ -187,7 +194,7 @@ int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 byte CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
-#define COVERDELAYTIME 30000 // time to wait for full open or close
+long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/zolder/uit/screen"; // Screens (zonwering)
 
 // MQTT Discovery locks
@@ -195,7 +202,7 @@ const byte NumberOfLocks = 0;
 byte LockPulse[] = {0, 1}; // relay numbers for lock pulses (index on PulseRelayPins)
 byte LockState[] = {1, 1};  // status of locks: 0 = unlocked, 1 = locked
 String LockNames[] = {"*Haldeurslot", "*VoordeurSlot"};
-#define LOCKPULSETIME 3000 // pulse time for locks
+long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/zolder/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
@@ -234,7 +241,7 @@ long PulseActivityTimes[] = {0, 0, 0, 0};
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
 bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
-long int PulseRelayTimes[] = {LOCKPULSETIME, LOCKPULSETIME, COVERDELAYTIME, COVERDELAYTIME};
+long int PulseRelayTimes[] = {LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1]};
 const char* topic_out_pulse = "domus/zolder/uit/pulse";    // Pulserelais t.b.v. deuropener
 
 // Vul hier de uitgaande MQTT topics in
@@ -267,7 +274,7 @@ void report_state_relay()
   if (NumberOfRelays > 0) {
     doc.clear();
     for (int i = 0; i < NumberOfRelays; i++) {
-      if (digitalRead(RelayPins[i]) == HIGH) {
+      if (digitalRead(RelayPins[i]) == RelayInitialState[i]) {
         doc["POWER" + String(i)] = "off";
       }
       else {
@@ -515,6 +522,7 @@ void processButtonDigital( int buttonId )
   }
 }
 
+#if defined(MQ7_present)
 float raw_value_to_CO_ppm(float value)
 {
   float reference_resistor_kOhm = 10.0;
@@ -543,6 +551,7 @@ float raw_value_to_CO_ppm(float value)
   if (CO_ppm < 0) CO_ppm = 0;
   return CO_ppm;
 }
+#endif
 
 void reconnect() {
   // Loop until we're reconnected
@@ -557,7 +566,7 @@ void reconnect() {
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
-      ShowDebug("failed, rc=" + String(mqttClient.state()));
+      ShowDebug("MQTT connection failed, rc=" + String(mqttClient.state()));
       // Wait 5 seconds before retrying
       delay(5000);
     }
@@ -626,19 +635,22 @@ void sendData() {
       doc["sensor" + String(i + 1)] = t;
     }
 #endif
+#if defined(MQ_present)
+    else if (SensorTypes[i] == "MQ2") {
+      doc["sensor" + String(i + 1)] = String(map(analogRead(SmokeSensor), 0, 1023, 0, 100));
+    }
+#endif
+#if defined(MQ7_present)
+    else if (SensorTypes[i] == "MQ7") {
+      doc["sensor" + String(i + 1)] = raw_value_to_CO_ppm(co_value);
+    }
+#endif
   }
   serializeJson(doc, messageBuffer);
   ShowDebug("Sending MQTT state for sensors...");
   ShowDebug(messageBuffer);
   mqttClient.publish(state_topic_sensors, messageBuffer);
 
-#if defined(MQ_present)
-  ShowDebug("CO: " + String(raw_value_to_CO_ppm(co_value)));
-  sendMessage(String(raw_value_to_CO_ppm(co_value)), topic_out_gas);
-  ShowDebug(String(millis()));
-  ShowDebug(String(mq_millis));
-  ShowDebug(String(mq_state));
-#endif
 }
 
 String mac2String(byte ar[]) {
@@ -661,7 +673,6 @@ void OpenCover(int Cover) {
   // Check if another command is already running
   if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
     ShowDebug("Opening cover number " + String(Cover + 1));
-    //    PulseRelayTimes[PulseRelayPort] = COVERDELAYTIME;
     // Set direction relay
     digitalWrite(RelayPins[CoverDir[Cover]], !RelayInitialState[CoverDir[Cover]]);
     // Set opening pulse
@@ -691,7 +702,6 @@ void CloseCover(int Cover) {
   // Check if another command is already running
   if (digitalRead(PulseRelayPins[PulseRelayPort]) == PulseRelayInitialStates[PulseRelayPort]) {
     ShowDebug("Closing cover number " + String(Cover + 1));
-    //    PulseRelayTimes[PulseRelayPort] = COVERDELAYTIME;
     // Set direction relay
     digitalWrite(RelayPins[CoverDir[Cover]], RelayInitialState[CoverDir[Cover]]);
     // Set opening pulse
@@ -779,9 +789,11 @@ void callback(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["brightness"]);
     }
     else {
+      if (LightBrightness[index - 1]) {
+        LightValue[index - 1] = 255;
+      }
       SetLightState(index - 1, doc["state"]);
     }
-    //    SendTrigger(1); // future expansion: send device triggers
   }
   else if (strPayload[0] == '{') {
     // json message
@@ -1043,8 +1055,14 @@ void reportMQTTdisco() {
     doc["uniq_id"] = item_prefix + "_switch" + String(i + 1);
     doc["stat_t"] = state_topic_relays;
     doc["cmd_t"] = topic_in;
-    doc["pl_on"] = "R" + String(i) + "0";
-    doc["pl_off"] = "R" + String(i) + "1";
+    if (!RelayInitialState[i]) {
+      doc["pl_on"] = "R" + String(i) + "1";
+      doc["pl_off"] = "R" + String(i) + "0";
+    }
+    else {
+      doc["pl_on"] = "R" + String(i) + "0";
+      doc["pl_off"] = "R" + String(i) + "1";
+    }
     doc["stat_on"] = "on";
     doc["stat_off"] = "off";
     doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
@@ -1121,7 +1139,9 @@ void reportMQTTdisco() {
     doc["name"] = SensorNames[i];
     doc["uniq_id"] = item_prefix + "_sensor" + String(i + 1);
     doc["stat_t"] = state_topic_sensors;
-    doc["device_class"] = SensorClasses[i];
+    if (SensorClasses[i] != "") {
+      doc["device_class"] = SensorClasses[i];
+    }
     doc["unit_of_meas"] = SensorUnits[i];
     doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + "}}";
     setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str());
@@ -1183,9 +1203,15 @@ void setup() {
   }
 #endif
 
-  //  pinMode(SmokeSensor, INPUT);
-  //  pinMode(PWMoutput, OUTPUT);
-  //  pinMode(LightSensor, INPUT);
+#if defined(MQ_present)
+  pinMode(SmokeSensor, INPUT);
+  ShowDebug("MQ2 sensor: " + String(SmokeSensor));
+#endif
+
+#if defined(MQ7_present)
+  mq_millis = millis();
+  ShowDebug("MQ7 sensor: " + String(mq_sensor_pin));
+#endif
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Pir: " + String(PirSensors[pirid]));
@@ -1194,7 +1220,6 @@ void setup() {
 
   ShowDebug("Network...");
   // attempt to connect to network:
-
   //   setup ethernet communication using DHCP
   if (Ethernet.begin(mac) == 0) {
 
@@ -1221,11 +1246,6 @@ void setup() {
   mqttClient.setCallback(callback);
   ShowDebug("Ready to send data");
   lastPublishTime = millis();
-
-#if defined(MQ_present)
-  mq_millis = millis();
-  ShowDebug("Pin " + String(mq_sensor_pin) + " is MQ sensor");
-#endif
 }
 
 void loop() {
@@ -1233,6 +1253,7 @@ void loop() {
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
+    startsend = true;
   }
 
   // ... then send all relay stats and discovery info when we've just started up....
@@ -1257,7 +1278,7 @@ void loop() {
     check_pir(id);
   }
 
-#if defined(MQ_present)
+#if defined(MQ7_present)
   // ...process the MQ-7 sensor...
   if (mq_state == 0) {
     digitalWrite(mq_state_pin, HIGH);

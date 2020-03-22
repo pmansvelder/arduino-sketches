@@ -802,9 +802,11 @@ void callback(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["brightness"]);
     }
     else {
+      if (LightBrightness[index - 1]) {
+        LightValue[index - 1] = 255;
+      }
       SetLightState(index - 1, doc["state"]);
     }
-    //    SendTrigger(1); // future expansion: send device triggers
   }
   else if (strPayload[0] == '{') {
     // json message
@@ -1264,6 +1266,7 @@ void loop() {
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
+    startsend = true;
   }
 
   // ... then send all relay stats and discovery info when we've just started up....

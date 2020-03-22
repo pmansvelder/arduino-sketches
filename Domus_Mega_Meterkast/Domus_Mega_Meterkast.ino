@@ -88,6 +88,8 @@
           - change DISCOVERY ID
           - Change topic base from domus/test with find/replace
           - Change item names
+          - Change pin numbers for relays, buttons, pirs
+          - Change pin numbers for sensors
           - item_prefix variable
 
 */
@@ -241,7 +243,7 @@ int ButtonPins[] = {11, 12, 9};
 static byte lastButtonStates[] = {0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0};
 long LongPressActive[] = {0, 0, 0};
-String ButtonNames[NumberOfButtons] = {"Knop Keuken", "Keuken", "Voordeur"};
+String ButtonNames[] = {"Knop Keuken", "Keuken", "Voordeur"};
 const char* state_topic_buttons = "domus/mk/uit/button";
 
 // MQTT Discovery sensors (sensors)
@@ -809,9 +811,11 @@ void callback(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["brightness"]);
     }
     else {
+      if (LightBrightness[index - 1]) {
+        LightValue[index - 1] = 255;
+      }
       SetLightState(index - 1, doc["state"]);
     }
-    //    SendTrigger(1); // future expansion: send device triggers
   }
   else if (strPayload[0] == '{') {
     // json message
@@ -1271,6 +1275,7 @@ void loop() {
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
     reconnect();
+    startsend = true;
   }
 
   // ... then send all relay stats and discovery info when we've just started up....
