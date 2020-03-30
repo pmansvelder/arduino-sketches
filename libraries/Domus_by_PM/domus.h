@@ -869,7 +869,7 @@ void reportMQTTdisco() {
       doc["device_class"] = SensorClasses[i];
     }
     doc["unit_of_meas"] = SensorUnits[i];
-    doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + "}}";
+    doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + " | round (1) }}";
     setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str());
   }
   //  end send config data for MQTT discovery

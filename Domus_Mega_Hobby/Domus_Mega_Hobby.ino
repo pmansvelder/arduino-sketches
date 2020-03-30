@@ -218,7 +218,7 @@ long lastActivityTimes[] = {0, 0, 0, 0};
 long LongPressActive[] = {0, 0, 0, 0};
 String ButtonNames[] = {"Hobbykamer buton 1", "Hobbykamer buton 2", "Hobbykamer buton 3", "Hobbykamer buton 4"};
 const char* state_topic_buttons = "domus/hobby/uit/button";
-x
+
 // MQTT Discovery sensors (sensors)
 const int NumberOfSensors = 5;
 String SensorNames[] = {"Temperatuur hobbykamer", "Luchtvochtigheid hobbykamer", "GevoelsTemperatuur hobbykamer", "CO sensor hobbykamer", "Runtime hobbykamer"};
