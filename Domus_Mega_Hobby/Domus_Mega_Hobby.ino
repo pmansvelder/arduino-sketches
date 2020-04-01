@@ -187,7 +187,7 @@ byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
 byte CoverState[] = {0, 0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
 int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
-byte CoverSetPos[] = {255, 255}; // set position (255 = not set)
+int CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
 long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/hobby/uit/screen"; // Screens (zonwering)

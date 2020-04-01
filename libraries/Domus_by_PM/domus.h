@@ -472,10 +472,12 @@ void StopCover(int Cover) {
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_pulse, messageBuffer);
   }
-  if (CoverPos[Cover] == 0) {
+  if (CoverPos[Cover] <= 0) {
+    CoverPos[Cover] = 0;
     CoverState[Cover] = 2;
   }
-  else if (CoverPos[Cover] == 100) {
+  else if (CoverPos[Cover] >= 100) {
+    CoverPos[Cover] = 100;
     CoverState[Cover] = 0;
   }
   else {
@@ -486,11 +488,17 @@ void SetCoverPosition(int cover, int position) {
   CoverSetPos[cover] = position;
   if (CoverPos[cover] < position) {
     ShowDebug("Cover needs to open");
+    if (position == 100) {
+      CoverSetPos[cover] = 120;
+    }
     CoverState[cover] = 1; // opening
     OpenCover(cover);
   }
   else {
     ShowDebug("Cover needs to close");
+    if (position == 0) {
+      CoverSetPos[cover] = -20;
+    }
     CoverState[cover] = 3; // closing
     CloseCover(cover);
   }
