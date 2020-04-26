@@ -216,7 +216,7 @@ int ButtonPins[] = {6, 7, 8, 9};
 static byte lastButtonStates[] = {0, 0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0, 0};
 long LongPressActive[] = {0, 0, 0, 0};
-String ButtonNames[] = {"Hobbykamer buton 1", "Hobbykamer buton 2", "Hobbykamer buton 3", "Hobbykamer buton 4"};
+String ButtonNames[] = {"Hobbykamer button 1", "Hobbykamer button 2", "Hobbykamer button 3", "Hobbykamer button 4"};
 const char* state_topic_buttons = "domus/hobby/uit/button";
 
 // MQTT Discovery sensors (sensors)

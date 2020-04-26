@@ -85,6 +85,8 @@
           ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
+          Port numbers > 100 for input and output are for use with MCP230XX series i2c expander
+
           N.B.: changes to be made if sketch is used in production:
           - Change CLIENT_ID
           - change Mac Address
@@ -106,7 +108,16 @@
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 #define LDR_present 1 // LDR sensor
+#define MCP_present // MCP serie i2c expander
 #define DEBUG 1 // Zet debug mode aan
+
+#if defined(MCP_present)
+#include <Wire.h>
+#include "Adafruit_MCP23017.h"  // define type of MCP expander
+Adafruit_MCP23017 mcp;
+//#include "Adafruit_MCP23008.h"  // define type of MCP expander
+//Adafruit_MCP23008 mcp;
+#endif
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -172,15 +183,15 @@ const long mq_startup = 3000;
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfRelays = 4;
-const byte RelayPins[] = {5, 6, 23, 25};
+const byte RelayPins[] = {5, 6, 100, 101};
 bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
 String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel", "*Screen keuken", "*Screen Huiskamer"};
 char* state_topic_relays = "domus/test/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 0;
-const byte LightPins[] = {30, 31, 2};
+const byte NumberOfLights = 3;
+const byte LightPins[] = {30, 102, 103};
 bool LightInitialState[] = {HIGH, HIGH, HIGH};
 bool LightBrightness[] = {false, false, true};
 byte LightValue[] = {0, 0, 0};
@@ -213,8 +224,8 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/test/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 0;
-int PirSensors[] = {19, 28, 29};
+const byte NumberOfPirs = 3;
+int PirSensors[] = {106, 107, 108};
 int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
 int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
 byte PirState[] = {0, 0, 0};
@@ -224,7 +235,7 @@ const char* state_topic_pirs = "domus/test/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
 const int NumberOfButtons = 3;
-int ButtonPins[] = {11, 12, 9};
+int ButtonPins[] = {11, 104, 105};
 static byte lastButtonStates[] = {0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0};
 long LongPressActive[] = {0, 0, 0};

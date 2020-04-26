@@ -20,6 +20,7 @@
           10: <in gebruik voor W5100>
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
+          14: Deurbel buiten
           19: PIR Hal
           20: SDA
           21: SCL
@@ -210,13 +211,13 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 3;
-int PirSensors[] = {19, 28, 29};
-int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
-int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
-byte PirState[] = {0, 0, 0};
-String PirNames[] = {"PIR Hal", "PIR Keuken", "Voordeur"};
-String PirClasses[] = {"motion", "motion", "door"};
+const byte NumberOfPirs = 4;
+int PirSensors[] = {19, 28, 29, 14};
+int PirDebounce[] = {0, 0, 0, 2000}; // debounce time for pir or door sensor
+int PreviousDetects[] = {false, false, false, false}; // Statusvariabele PIR sensor
+byte PirState[] = {0, 0, 0, 0};
+String PirNames[] = {"PIR Hal", "PIR Keuken", "Voordeur", "Deurbel"};
+String PirClasses[] = {"motion", "motion", "door", "sound"};
 const char* state_topic_pirs = "domus/mk/uit/pir";
 
 // MQTT Discovery buttons (device triggers)

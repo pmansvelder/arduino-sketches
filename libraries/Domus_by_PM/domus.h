@@ -42,10 +42,19 @@ String mac2String(byte ar[]) {
   return s;
 }
 void report_state_relay() {
+  bool relaytest;
   if (NumberOfRelays > 0) {
     doc.clear();
     for (int i = 0; i < NumberOfRelays; i++) {
-      if (digitalRead(RelayPins[i]) == RelayInitialState[i]) {
+      if (RelayPins[i] < 100) {
+        relaytest = (digitalRead(RelayPins[i]) == RelayInitialState[i]);
+      }
+#if defined(MCP_present)
+      else {
+        relaytest = (mcp.digitalRead(RelayPins[i] - 100) == RelayInitialState[i]);
+      }
+#endif
+      if (relaytest) {
         doc["POWER" + String(i)] = "off";
       }
       else {
@@ -890,27 +899,75 @@ void setup() {
     ShowDebug(String(MQTT_MAX_PACKET_SIZE));
   }
 
+#if defined(MCP_present)
+  Wire.setClock(400000);
+  mcp.begin();      // use default address 0 for i2c expander (MCP23017/MCP23008)
+#endif
+
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
     ShowDebug("Relay: " + String(RelayPins[thisPin]));
-    pinMode(RelayPins[thisPin], OUTPUT);
-    digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
+    if (RelayPins[thisPin] < 100) { // pins > 100 are MCP ports
+      pinMode(RelayPins[thisPin], OUTPUT);
+      digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
+    }
+#if defined(MCP_present)
+    else {
+      mcp.pinMode(RelayPins[thisPin] - 100, OUTPUT);
+      mcp.digitalWrite(RelayPins[thisPin] - 100, RelayInitialState[thisPin]);
+    }
+#endif
   }
 
   for (byte thisPin = 0; thisPin < NumberOfLights; thisPin++) {
     ShowDebug("Light: " + String(LightPins[thisPin]));
-    pinMode(LightPins[thisPin], OUTPUT);
-    digitalWrite(LightPins[thisPin], LightInitialState[thisPin]);
+    if (LightPins[thisPin] < 100) { // pins > 100 are MCP ports
+      pinMode(LightPins[thisPin], OUTPUT);
+      digitalWrite(LightPins[thisPin], LightInitialState[thisPin]);
+    }
+#if defined(MCP_present)    
+    else {
+      mcp.pinMode(LightPins[thisPin] - 100, OUTPUT);
+      mcp.digitalWrite(LightPins[thisPin] - 100, LightInitialState[thisPin]);
+    }
+#endif
   }
 
   for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
-    pinMode(PulseRelayPins[thisPin], OUTPUT);
     ShowDebug("Pulse relay: " + String(PulseRelayPins[thisPin]));
-    digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
+    if (PulseRelayPins[thisPin] < 100) { // pins > 100 are MCP ports    
+      pinMode(PulseRelayPins[thisPin], OUTPUT);
+      digitalWrite(PulseRelayPins[thisPin], PulseRelayInitialStates[thisPin]);
+    }
+#if defined(MCP_present)  
+    else {
+      mcp.pinMode(PulseRelayPins[thisPin] - 100, OUTPUT);
+      mcp.digitalWrite(PulseRelayPins[thisPin] - 100, PulseRelayInitialStates[thisPin]);
+    }
+#endif
   }
 
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     ShowDebug("Button: " + String(ButtonPins[thisButton]));
-    pinMode(ButtonPins[thisButton], INPUT_PULLUP);
+    if (ButtonPins[thisButton] < 100) { // pins > 100 are MCP ports 
+      pinMode(ButtonPins[thisButton], INPUT_PULLUP);
+    }
+#if defined(MCP_present)
+    else {
+      mcp.pinMode(ButtonPins[thisButton] - 100, INPUT_PULLUP);
+    } 
+#endif 
+  }
+
+  for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
+    ShowDebug("Pir: " + String(PirSensors[pirid]));
+    if (PirSensors[pirid] < 100) { // pins > 100 are MCP ports 
+      pinMode(PirSensors[pirid], INPUT_PULLUP);
+    }
+#if defined(MCP_present)
+    else {
+      mcp.pinMode(PirSensors[pirid] - 100, INPUT_PULLUP);
+    }
+#endif
   }
 
 #if defined(DHT_present)
@@ -945,11 +1002,6 @@ void setup() {
   mq_millis = millis();
   ShowDebug("MQ7 sensor: " + String(mq_sensor_pin));
 #endif
-
-  for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
-    ShowDebug("Pir: " + String(PirSensors[pirid]));
-    pinMode(PirSensors[pirid], INPUT_PULLUP);
-  }
 
   ShowDebug("Network...");
   // attempt to connect to network:
