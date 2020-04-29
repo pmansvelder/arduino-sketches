@@ -286,6 +286,34 @@ void processButtonDigital( int buttonId ) {
     }
   }
 }
+void check_pir(byte pirid) {
+  // ...read out the PIR sensors...
+  if (digitalRead(PirSensors[pirid]) == !lastPirStates[pirid])
+  {
+    PirLastActivityTimes[pirid] = millis();
+    lastPirStates[pirid] = digitalRead(PirSensors[pirid]);
+  }
+  if (digitalRead(PirSensors[pirid]) == !PirInitialState[pirid]) 
+  {
+    if (!PreviousDetects[pirid]) {
+      if ((millis() - PirLastActivityTimes[pirid]) > PirDebounce[pirid])
+      { 
+          ShowDebug("Pir " + String(pirid) + " on.");
+          PreviousDetects[pirid] = true;
+          PirState[pirid] = 1;
+          report_state_pir();
+      }
+    }
+  }
+  else {
+    if (PreviousDetects[pirid]) {
+      ShowDebug("Pir " + String(pirid) + " off.");
+      PirState[pirid] = 0;
+      report_state_pir();
+    }
+    PreviousDetects[pirid] = false;
+  }
+}
 #if defined(MQ7_present)
 float raw_value_to_CO_ppm(float value) {
   float reference_resistor_kOhm = 10.0;
@@ -740,25 +768,6 @@ void callback(char* topic, byte * payload, byte length) {
     mqttClient.publish(topic_out, "Unknown command");
   }
 }
-void check_pir(byte pirid) {
-  // ...read out the PIR sensors...
-  if (digitalRead(PirSensors[pirid]) == !PirInitialState[pirid]) {
-    if (!PreviousDetects[pirid]) {
-      ShowDebug("Pir " + String(pirid) + " on.");
-      PreviousDetects[pirid] = true;
-      PirState[pirid] = 1;
-      report_state_pir();
-    }
-  }
-  else {
-    if (PreviousDetects[pirid]) {
-      ShowDebug("Pir " + String(pirid) + " off.");
-      PirState[pirid] = 0;
-      report_state_pir();
-    }
-    PreviousDetects[pirid] = false;
-  }
-}
 void setDeviceInfo(char* configtopic) {
   JsonObject device = doc.createNestedObject("dev");
   JsonArray identifiers = device.createNestedArray("ids");
@@ -959,6 +968,7 @@ void setup() {
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Pir: " + String(PirSensors[pirid]));
+    lastPirStates[pirid] = PirInitialState[pirid];
     if (PirSensors[pirid] < 100) { // pins > 100 are MCP ports 
       pinMode(PirSensors[pirid], INPUT_PULLUP);
     }

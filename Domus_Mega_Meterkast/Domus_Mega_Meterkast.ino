@@ -213,7 +213,9 @@ const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 4;
 int PirSensors[] = {19, 28, 29, 14};
-int PirDebounce[] = {0, 0, 0, 450}; // debounce time for pir or door sensor
+int PirDebounce[] = {0, 0, 450, 150}; // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0, 0, 0, 0};
+static byte lastPirStates[] = {0, 0, 0, 0};
 bool PirInitialState[] = {LOW, LOW, LOW, HIGH};
 int PreviousDetects[] = {false, false, false, false}; // Statusvariabele PIR sensor
 byte PirState[] = {0, 0, 0, 0};
