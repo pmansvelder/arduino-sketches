@@ -207,6 +207,7 @@ const char* state_topic_locks = "domus/schuur/stat/lock"; // Locks (sloten)
 const byte NumberOfPirs = 3;
 int PirSensors[] = {22, 23, 24};
 int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
+bool PirInitialState[] = {LOW, LOW, LOW};
 int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
 byte PirState[] = {0, 0, 0};
 String PirNames[] = {"PIR Fietsenhok", "Achterdeur schuur", "PIR Brandgang"};

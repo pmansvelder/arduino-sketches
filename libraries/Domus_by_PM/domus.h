@@ -250,10 +250,9 @@ void ProcessPulseRelays(int PulseRelayId) {
   }
 }
 void processButtonDigital( int buttonId ) {
-  int sensorReading = digitalRead( ButtonPins[buttonId] );
-  if ( sensorReading == LOW ) // Input pulled low to GND. Button pressed.
+  if ( !digitalRead(ButtonPins[buttonId]) ) // Input pulled low to GND. Button pressed.
   {
-    if ( lastButtonStates[buttonId] == LOW )  // The button was previously un-pressed
+    if ( !lastButtonStates[buttonId] )  // The button was previously un-pressed
     {
       if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
       {
@@ -743,7 +742,7 @@ void callback(char* topic, byte * payload, byte length) {
 }
 void check_pir(byte pirid) {
   // ...read out the PIR sensors...
-  if (digitalRead(PirSensors[pirid]) == HIGH) {
+  if (digitalRead(PirSensors[pirid]) == !PirInitialState[pirid]) {
     if (!PreviousDetects[pirid]) {
       ShowDebug("Pir " + String(pirid) + " on.");
       PreviousDetects[pirid] = true;

@@ -172,7 +172,7 @@ const long mq_startup = 3000;
 const byte NumberOfRelays = 4;
 const byte RelayPins[] = {5, 6, 23, 25};
 bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
-String SwitchNames[] = {"Mediaplayer Keuken", "CV-ketel", "Screen keuken", "Screen Huiskamer"};
+String SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer"};
 char* state_topic_relays = "domus/mk/stat/relay";
 
 // MQTT Discovery lights
@@ -213,7 +213,8 @@ const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 4;
 int PirSensors[] = {19, 28, 29, 14};
-int PirDebounce[] = {0, 0, 0, 2000}; // debounce time for pir or door sensor
+int PirDebounce[] = {0, 0, 0, 450}; // debounce time for pir or door sensor
+bool PirInitialState[] = {LOW, LOW, LOW, HIGH};
 int PreviousDetects[] = {false, false, false, false}; // Statusvariabele PIR sensor
 byte PirState[] = {0, 0, 0, 0};
 String PirNames[] = {"PIR Hal", "PIR Keuken", "Voordeur", "Deurbel"};
