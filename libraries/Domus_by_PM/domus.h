@@ -265,7 +265,7 @@ void processButtonDigital( int buttonId ) {
       ShowDebug( "Button" + String(buttonId) + " long pressed" );
       String messageString = "Button" + String(buttonId) + "_long";
       messageString.toCharArray(messageBuffer, messageString.length() + 1);
-      mqttClient.publish(topic_out, messageBuffer);
+      mqttClient.publish(state_topic_buttons, messageBuffer);
     }
     lastButtonStates[buttonId] = HIGH;
   }
@@ -279,7 +279,7 @@ void processButtonDigital( int buttonId ) {
           ShowDebug( "Button" + String(buttonId) + " pressed" );
           String messageString = "Button" + String(buttonId);
           messageString.toCharArray(messageBuffer, messageString.length() + 1);
-          mqttClient.publish(topic_out, messageBuffer);
+          mqttClient.publish(state_topic_buttons, messageBuffer);
         }
       }
       lastButtonStates[buttonId] = LOW;
@@ -875,14 +875,22 @@ void reportMQTTdisco() {
     setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_pir" + String(i + 1) + "/config").c_str());
   }
   // discover data for buttons (triggers)
-  //  for (int i = 0; i < NumberOfButtons ; i++ ) {
-  //    doc.clear();
-  //    doc["automation_type"] = "trigger";
-  //    doc["topic"] = state_topic_buttons;
-  //    doc["type"] = "button_short_press";
-  //    doc["subtype"] = "button_1";
-  //    setDeviceInfo((config_topic_base + "/device_automation/" + ButtonNames[i] + "/config").c_str());
-  //  }
+   for (int i = 0; i < NumberOfButtons ; i++ ) {
+     doc.clear();
+     doc["automation_type"] = "trigger";
+     doc["topic"] = state_topic_buttons;
+     doc["type"] = "button_short_release";
+     doc["subtype"] = "button_" + String(i+1);
+     doc["payload"] = "Button" + String(i);
+     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "/config").c_str());
+     doc.clear();
+     doc["automation_type"] = "trigger";
+     doc["topic"] = state_topic_buttons;
+     doc["type"] = "button_long_press";
+     doc["subtype"] = "button_" + String(i+1);
+     doc["payload"] = "Button" + String(i) + "_long";
+     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "_long" + "/config").c_str());
+   }
   // end send config data for MQTT discovery
   // discover data for sensors (sensors)
   for (int i = 0; i < NumberOfSensors ; i++ ) {

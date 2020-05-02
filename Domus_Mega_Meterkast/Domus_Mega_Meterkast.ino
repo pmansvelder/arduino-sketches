@@ -213,7 +213,7 @@ const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 4;
 int PirSensors[] = {19, 28, 29, 14};
-int PirDebounce[] = {0, 0, 450, 150}; // debounce time for pir or door sensor
+int PirDebounce[] = {0, 0, 450, 300}; // debounce time for pir or door sensor
 long PirLastActivityTimes[] = {0, 0, 0, 0};
 static byte lastPirStates[] = {0, 0, 0, 0};
 bool PirInitialState[] = {LOW, LOW, LOW, HIGH};
@@ -229,7 +229,7 @@ int ButtonPins[] = {11, 12, 9};
 static byte lastButtonStates[] = {0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0};
 long LongPressActive[] = {0, 0, 0};
-String ButtonNames[] = {"Knop Keuken", "Keuken", "Voordeur"};
+String ButtonNames[] = {"Knop 1 Huiskamer", "Knop 2 Huiskamer", "Keuken"};
 const char* state_topic_buttons = "domus/mk/uit/button";
 
 // MQTT Discovery sensors (sensors)
