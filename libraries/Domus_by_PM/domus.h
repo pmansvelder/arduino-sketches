@@ -288,12 +288,13 @@ void processButtonDigital( int buttonId ) {
 }
 void check_pir(byte pirid) {
   // ...read out the PIR sensors...
-  if (digitalRead(PirSensors[pirid]) == !lastPirStates[pirid])
+  bool readPir = digitalRead(PirSensors[pirid]);
+  if (readPir != lastPirStates[pirid])
   {
     PirLastActivityTimes[pirid] = millis();
-    lastPirStates[pirid] = digitalRead(PirSensors[pirid]);
+    lastPirStates[pirid] = readPir;
   }
-  if (digitalRead(PirSensors[pirid]) == !PirInitialState[pirid]) 
+  if (readPir != PirInitialState[pirid]) 
   {
     if (!PreviousDetects[pirid]) {
       if ((millis() - PirLastActivityTimes[pirid]) > PirDebounce[pirid])
