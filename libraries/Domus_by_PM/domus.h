@@ -79,12 +79,27 @@ void report_state_light(int index) {
     }
     outputdoc["brightness"] = LightValue[index];
   }
-  else if (digitalRead(LightPins[index]) == LightInitialState[index]) {
-    outputdoc["state"] = "OFF";
-  }
-  else {
-    outputdoc["state"] = "ON";
-  }
+  else if (LightPins[index] < 100) 
+       {
+          if (digitalRead(LightPins[index]) == LightInitialState[index]) 
+          {
+            outputdoc["state"] = "OFF";
+          }
+          else {
+            outputdoc["state"] = "ON";
+          }
+       }
+#if defined(MCP_present)
+       else {
+          if (mcp.digitalRead(LightPins[index] - 100) == LightInitialState[index]) 
+          {
+            outputdoc["state"] = "OFF";
+          }
+          else {
+            outputdoc["state"] = "ON";
+          }
+       }
+#endif           
   serializeJson(outputdoc, messageBuffer);
   ShowDebug("Sending MQTT state for lights...");
   ShowDebug(messageBuffer);
@@ -169,24 +184,46 @@ void report_state() {
 }
 void SetLightState(int light, String state) {
   if (state == "ON") {
-    ShowDebug("Set relay " + String(LightPins[light]) + " on.");
-    digitalWrite(LightPins[light], !LightInitialState[light]);
+    if (LightPins[light] < 100) {
+        ShowDebug("Set light " + String(LightPins[light]) + " on.");
+        digitalWrite(LightPins[light], !LightInitialState[light]);
+    }
+#if defined(MCP_present)
+    else {
+        ShowDebug("Set light " + String(LightPins[light] - 100) + " on.");
+        mcp.digitalWrite(LightPins[light] - 100, !LightInitialState[light]);
+    }
+#endif    
     report_state_light(light);
   }
   else if (state == "OFF") {
-    ShowDebug("Set relay " + String(LightPins[light]) + " off.");
-    digitalWrite(LightPins[light], LightInitialState[light]);
-    LightValue[light] = 0;
+    if (LightPins[light] < 100) {    
+        ShowDebug("Set light " + String(LightPins[light]) + " off.");
+        digitalWrite(LightPins[light], LightInitialState[light]);
+        LightValue[light] = 0;
+    }
+#if defined(MCP_present)
+    else {
+        ShowDebug("Set light " + String(LightPins[light] - 100) + " off.");
+        mcp.digitalWrite(LightPins[light] - 100, LightInitialState[light]);
+        LightValue[light] = 0;
+    }
+#endif 
     report_state_light(light);
   }
   else {
-    ShowDebug("Setting pwm value " + String(LightValue[light]) + "on pin " + String(LightPins[light]));
-    if (LightInitialState[light]) {
-      analogWrite(LightPins[light], 255 - LightValue[light]);
+    if (LightPins[light] < 100) {    
+        ShowDebug("Setting pwm value " + String(LightValue[light]) + "on pin " + String(LightPins[light]));
+        if (LightInitialState[light]) {
+          analogWrite(LightPins[light], 255 - LightValue[light]);
+        }
+        else {
+          analogWrite(LightPins[light], LightValue[light]);
+        }
     }
-    else {
-      analogWrite(LightPins[light], LightValue[light]);
-    }
+#if defined(MCP_present)
+// dunno how to handle pwm for mcp yet
+#endif 
     report_state_light(light);
   }
 }
@@ -250,7 +287,16 @@ void ProcessPulseRelays(int PulseRelayId) {
   }
 }
 void processButtonDigital( int buttonId ) {
-  if ( !digitalRead(ButtonPins[buttonId]) ) // Input pulled low to GND. Button pressed.
+    bool readButton;
+    if (ButtonPins[buttonId] < 100) {
+        readButton = digitalRead(ButtonPins[buttonId]);
+    }
+#if defined(MCP_present)
+    else {
+        readButton = mcp.digitalRead(ButtonPins[buttonId] - 100);
+    }
+#endif  
+  if ( !readButton ) // Input pulled low to GND. Button pressed.
   {
     if ( !lastButtonStates[buttonId] )  // The button was previously un-pressed
     {
@@ -288,7 +334,15 @@ void processButtonDigital( int buttonId ) {
 }
 void check_pir(byte pirid) {
   // ...read out the PIR sensors...
-  bool readPir = digitalRead(PirSensors[pirid]);
+  bool readPir;
+  if (PirSensors[pirid] < 100) {
+     readPir = digitalRead(PirSensors[pirid]);
+  }
+#if defined(MCP_present)
+  else {
+     readPir = mcp.digitalRead(PirSensors[pirid] - 100);
+  }
+#endif  
   if (readPir != lastPirStates[pirid])
   {
     PirLastActivityTimes[pirid] = millis();
@@ -594,19 +648,43 @@ void callback(char* topic, byte * payload, byte length) {
     if (RelayPort > 16) RelayPort -= 3;
     RelayValue = strPayload[2] - 48;
 
-    if (RelayValue == 40) {
-      ShowDebug("Relay " + String (RelayPins[RelayPort]));
-      if (digitalRead(RelayPins[RelayPort]) == LOW) {
-        digitalWrite(RelayPins[RelayPort], HIGH);
-        ShowDebug("...to HIGH");
+    if (RelayValue == 40) { // toggle
+      if (RelayPins[RelayPort] < 100) {
+          ShowDebug("Relay " + String (RelayPins[RelayPort]));
+      
+          if (digitalRead(RelayPins[RelayPort]) == LOW) {
+            digitalWrite(RelayPins[RelayPort], HIGH);
+            ShowDebug("...to HIGH");
+          }
+          else {
+            digitalWrite(RelayPins[RelayPort], LOW);
+            ShowDebug("...to LOW");
+          }
       }
+#if defined(MCP_present)
       else {
-        digitalWrite(RelayPins[RelayPort], LOW);
-        ShowDebug("...to LOW");
+          ShowDebug("Relay " + String (RelayPins[RelayPort] - 100));     
+          if (mcp.digitalRead(RelayPins[RelayPort] - 100) == LOW) {
+            mcp.digitalWrite(RelayPins[RelayPort] - 100, HIGH);
+            ShowDebug("...to HIGH");
+          }
+          else {
+            mcp.digitalWrite(RelayPins[RelayPort] - 100, LOW);
+            ShowDebug("...to LOW");
+          }
       }
-    } else {
-      digitalWrite(RelayPins[RelayPort], RelayValue);
-    }
+#endif
+    } 
+    else {
+        if (RelayPins[RelayPort] < 100) {
+             digitalWrite(RelayPins[RelayPort], RelayValue);
+          }
+#if defined(MCP_present)
+        else {
+          mcp.digitalWrite(RelayPins[RelayPort] - 100, RelayValue);
+        }
+#endif
+        }
     report_state_relay();
   } 
   else if (strPayload == "IP")  {
@@ -791,14 +869,6 @@ void setDeviceInfo(char* configtopic) {
     ShowDebug("...publish failed, either connection lost, or message too large.");
   }
 }
-//void SendTrigger(int Button) {
-//  doc.clear();
-//  doc["automation_type"] = "trigger";
-//  doc["topic"] = state_topic_buttons;
-//  doc["type"] = "button_short_press";
-//  doc["subtype"] = "button_1";
-//  setDeviceInfo((config_topic_base + "/device_automation/" + ButtonNames[Button] + "/config").c_str());
-//}
 void reportMQTTdisco() {
   // discovery data for relays
   for (int i = 0; i < NumberOfRelays ; i++) {
@@ -970,7 +1040,8 @@ void setup() {
     }
 #if defined(MCP_present)
     else {
-      mcp.pinMode(ButtonPins[thisButton] - 100, INPUT_PULLUP);
+      mcp.pinMode(ButtonPins[thisButton] - 100, INPUT);
+      mcp.pullUp(ButtonPins[thisButton] - 100, HIGH);
     } 
 #endif 
   }
@@ -983,7 +1054,8 @@ void setup() {
     }
 #if defined(MCP_present)
     else {
-      mcp.pinMode(PirSensors[pirid] - 100, INPUT_PULLUP);
+      mcp.pinMode(PirSensors[pirid] - 100, INPUT);
+      mcp.pullUp(PirSensors[pirid] - 100, HIGH);
     }
 #endif
   }

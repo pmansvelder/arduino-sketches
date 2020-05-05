@@ -103,11 +103,11 @@
 
 // parameters to tune memory use
 //#define BMP_present 1 // use BMP280 sensor
-#define DHT_present 1 // use DHT sensor
-#define MQ_present 0 // MQ-x gas sensor
+//#define DHT_present 1 // use DHT sensor
+//#define MQ_present 0 // MQ-x gas sensor
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
-#define LDR_present 1 // LDR sensor
+//#define LDR_present 1 // LDR sensor
 #define MCP_present // MCP serie i2c expander
 #define DEBUG 1 // Zet debug mode aan
 
@@ -182,20 +182,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
-const byte RelayPins[] = {5, 6, 100, 101};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
-String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel", "*Screen keuken", "*Screen Huiskamer"};
+const byte NumberOfRelays = 2;
+const byte RelayPins[] = {100, 101};
+bool RelayInitialState[] = {HIGH, HIGH};
+String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel"};
 char* state_topic_relays = "domus/test/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 3;
-const byte LightPins[] = {30, 102, 103};
-bool LightInitialState[] = {HIGH, HIGH, HIGH};
-bool LightBrightness[] = {false, false, true};
-byte LightValue[] = {0, 0, 0};
-String LightNames[] = {"*Keuken", "*Plafondlamp", "*Buttonleds"};
+const byte NumberOfLights = 1;
+const byte LightPins[] = {102};
+bool LightInitialState[] = {HIGH};
+bool LightBrightness[] = {false};
+byte LightValue[] = {0};
+String LightNames[] = {"*Testled"};
 const char* state_topic_lights = "domus/test/stat/light";
 const char* cmd_topic_lights = "domus/test/cmd/light";
 
@@ -224,30 +224,33 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/test/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 3;
-int PirSensors[] = {106, 107, 108};
-int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
-int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
-byte PirState[] = {0, 0, 0};
-String PirNames[] = {"*PIR Hal", "*PIR Keuken", "*Voordeur"};
-String PirClasses[] = {"motion", "motion", "door"};
+const byte NumberOfPirs = 0;
+int PirSensors[] = {104};
+int PirDebounce[] = {0}; // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0};
+static byte lastPirStates[] = {0};
+bool PirInitialState[] = {LOW};
+int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
+byte PirState[] = {0};
+String PirNames[] = {"*Testpir"};
+String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/test/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
-const int NumberOfButtons = 3;
-int ButtonPins[] = {11, 104, 105};
-static byte lastButtonStates[] = {0, 0, 0};
-long lastActivityTimes[] = {0, 0, 0};
-long LongPressActive[] = {0, 0, 0};
-String ButtonNames[] = {"*Knop Keuken", "*Keuken", "*Voordeur"};
+const int NumberOfButtons = 1;
+int ButtonPins[] = {104};
+static byte lastButtonStates[] = {0};
+long lastActivityTimes[] = {0};
+long LongPressActive[] = {0};
+String ButtonNames[] = {"*Testbutton"};
 const char* state_topic_buttons = "domus/test/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 7;
-String SensorNames[] = {"*Temperatuur test", "*Luchtvochtigheid test", "*Gevoelstemperatuur test", "*Temperatuur BMP test", "*Lichtsterkte test", "*Tijd sinds opstart", "*Luchtdruk test"};
-String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "BMP-T", "LDR", "TIME", "BMP-P"};
-String SensorClasses[] = {"temperature", "humidity", "temperature", "temperature", "illuminance", "timestamp", "pressure"};
-String SensorUnits[] = {"°C", "%", "°C", "°C", "lux", "s", "mbar"};
+const int NumberOfSensors = 1;
+String SensorNames[] = {"*Tijd sinds opstart"};
+String SensorTypes[] = {"TIME"};
+String SensorClasses[] = {"timestamp"};
+String SensorUnits[] = {"s"};
 const char* state_topic_sensors = "domus/test/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
