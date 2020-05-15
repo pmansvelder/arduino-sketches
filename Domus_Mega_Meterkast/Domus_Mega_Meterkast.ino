@@ -21,7 +21,7 @@
           11: Button 0 (huiskamer)
           12: Button 1 (huiskamer)
           14: Deurbel buiten
-          19: PIR Hal
+          15: PIR Hal
           20: SDA
           21: SCL
           22: Pulserelay screen 1
@@ -104,6 +104,7 @@
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
+#define P1_meter // P1 port smart meter reading
 //#define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
@@ -135,6 +136,21 @@ Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 
 #if defined(MQ_present)
 int SmokeSensor = A9;
+#endif
+
+#if defined(P1_meter)
+#include "dsmr.h"
+const int READER_INTERVAL = 5000; // interval to read meter values in ms
+using MyData = ParsedData <
+               /* FixedValue */ energy_delivered_tariff1,
+               /* FixedValue */ energy_delivered_tariff2,
+               /* String */ electricity_tariff,
+               /* FixedValue */ power_delivered,
+               /* FixedValue */ voltage_l1,
+               /* FixedValue */ current_l1,
+               /* FixedValue */ power_delivered_l1,
+               /* TimestampedFixedValue */ gas_delivered
+               >;
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
@@ -212,8 +228,8 @@ const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 4;
-int PirSensors[] = {19, 28, 29, 14};
-int PirDebounce[] = {0, 0, 450, 300}; // debounce time for pir or door sensor
+int PirSensors[] = {15, 28, 29, 14};
+int PirDebounce[] = {0, 0, 450, 150}; // debounce time for pir or door sensor
 long PirLastActivityTimes[] = {0, 0, 0, 0};
 static byte lastPirStates[] = {0, 0, 0, 0};
 bool PirInitialState[] = {LOW, LOW, LOW, LOW};
@@ -233,11 +249,11 @@ String ButtonNames[] = {"Knop 1 Huiskamer", "Knop 2 Huiskamer", "Keuken"};
 const char* state_topic_buttons = "domus/mk/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 1;
-String SensorNames[] = {"Runtime meterkast"};
-String SensorTypes[] = {"TIME"};
-String SensorClasses[] = {"timestamp"};
-String SensorUnits[] = {"s"};
+const int NumberOfSensors = 8;
+const String SensorNames[] = {"Runtime meterkast","Energieverbruik laag","Energieverbruik hoog","Energietarief","Energieverbruik","Netspanning","Stroomsterkte","Gasverbruik"};
+const String SensorTypes[] = {"TIME","P1_en_t1","P1_en_t2","P1_ta","P1_pd","P1_v1","P1_c1","P1_gas"};
+String SensorClasses[] = {"","power","power","power","power","power","power","power"};
+String SensorUnits[] = {"s","kWh","kWh","","W","V","A","m3"};
 const char* state_topic_sensors = "domus/mk/uit/sensor";
 
 // Vul hier het aantal pulsrelais in

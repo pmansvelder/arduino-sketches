@@ -16,8 +16,10 @@
 
 #define MCP_LED1 0
 #define MCP_INPUTPIN 4
-#define MCP_LEDTOG1 1
-#define MCP_LEDTOG2 2
+#define MCP_LEDTOG1 0
+#define MCP_LEDTOG2 1
+#define MCP_LEDTOG3 2
+#define MCP_LEDTOG4 3
 
 Adafruit_MCP23017 mcp;
 
@@ -26,6 +28,8 @@ void setup() {
 
   mcp.pinMode(MCP_LEDTOG1, OUTPUT);  // Toggle LED 1
   mcp.pinMode(MCP_LEDTOG2, OUTPUT);  // Toggle LED 2
+  mcp.pinMode(MCP_LEDTOG3, OUTPUT);  // Toggle LED 3
+  mcp.pinMode(MCP_LEDTOG4, OUTPUT);  // Toggle LED 4
 
   mcp.pinMode(MCP_LED1, OUTPUT);     // LED output
   mcp.digitalWrite(MCP_LED1, HIGH);
@@ -38,21 +42,19 @@ void setup() {
 // Transfer pin input to LED1.
 void loop() {
 
-  delay(300);
+  delay(1000);
 
   mcp.digitalWrite(MCP_LEDTOG1, HIGH);
   mcp.digitalWrite(MCP_LEDTOG2, LOW);
+  mcp.digitalWrite(MCP_LEDTOG3, HIGH);
+  mcp.digitalWrite(MCP_LEDTOG4, LOW);
 
-  delay(300);
+  delay(1000);
 
   mcp.digitalWrite(MCP_LEDTOG1, LOW);
   mcp.digitalWrite(MCP_LEDTOG2, HIGH);
+  mcp.digitalWrite(MCP_LEDTOG3, LOW);
+  mcp.digitalWrite(MCP_LEDTOG4, HIGH);
 
-  // Transfer input pin state to LED1
-  if (mcp.digitalRead(MCP_INPUTPIN)) {
-    mcp.digitalWrite(MCP_LED1, HIGH);
-  } else {
-    mcp.digitalWrite(MCP_LED1, LOW);
-  }
 
 }

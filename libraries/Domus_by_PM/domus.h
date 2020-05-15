@@ -2,13 +2,20 @@
 #include <Ethernet.h>           // Ethernet.h library
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include "ArduinoJson.h"
-#define BUFFERSIZE 512              // default 100
+#define BUFFERSIZE 480              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512
 #define DEBOUNCE_DELAY 150  // debounce delay for buttons
 #define LONGPRESS_TIME 450  // time for press to be detected as 'long'
-StaticJsonDocument<512> doc;
+StaticJsonDocument<480> doc; // default 512
 EthernetClient ethClient;
 PubSubClient mqttClient;
+
+#if defined(P1_meter)
+P1Reader reader(&Serial1, 2);
+unsigned long last_p1_read;
+MyData last_p1_data;
+#endif
+
 char messageBuffer[BUFFERSIZE];
 char topicBuffer[BUFFERSIZE];
 String ip = "";
@@ -316,10 +323,11 @@ void processButtonDigital( int buttonId ) {
     lastButtonStates[buttonId] = HIGH;
   }
   else {
-    if (lastButtonStates[buttonId] == HIGH) {
+    if (lastButtonStates[buttonId]) {
       if (LongPressActive[buttonId]) {
         LongPressActive[buttonId] = false;
-      } else {
+      } 
+      else {
         if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Proceed if we haven't seen a recent event on this button
         {
           ShowDebug( "Button" + String(buttonId) + " pressed" );
@@ -485,6 +493,37 @@ void sendData() {
 #if defined(MQ7_present)
     else if (SensorTypes[i] == "MQ7") {
       doc["sensor" + String(i + 1)] = raw_value_to_CO_ppm(co_value);
+    }
+#endif
+#if defined(P1_meter)
+    else if (SensorTypes[i] == "P1_en_t1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff1.val();
+    }
+    else if (SensorTypes[i] == "P1_en_t2") {
+      doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff2.val();
+    }
+    else if (SensorTypes[i] == "P1_ta") {
+      if (last_p1_data.electricity_tariff.toInt() == 2) {
+        doc["sensor" + String(i + 1)] = "hoog";
+      }
+      else {
+        doc["sensor" + String(i + 1)] = "laag";
+      }
+    }
+    else if (SensorTypes[i] == "P1_pd") {
+      doc["sensor" + String(i + 1)] = last_p1_data.power_delivered.int_val();
+    }
+    else if (SensorTypes[i] == "P1_v1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.voltage_l1.val();
+    }
+    else if (SensorTypes[i] == "P1_c1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.current_l1;
+    }
+    else if (SensorTypes[i] == "P1_pd1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.power_delivered_l1.int_val();
+    }
+    else if (SensorTypes[i] == "P1_gas") {
+      doc["sensor" + String(i + 1)] = last_p1_data.gas_delivered.val();
     }
 #endif
   }
@@ -972,7 +1011,9 @@ void reportMQTTdisco() {
     if (SensorClasses[i] != "") {
       doc["device_class"] = SensorClasses[i];
     }
-    doc["unit_of_meas"] = SensorUnits[i];
+    if (SensorUnits[i] != "") {
+      doc["unit_of_meas"] = SensorUnits[i];
+    }
     doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + " | round (1) }}";
     setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str());
   }
@@ -1093,6 +1134,13 @@ void setup() {
   ShowDebug("MQ7 sensor: " + String(mq_sensor_pin));
 #endif
 
+#if defined(P1_meter)
+  Serial1.begin(115200); // P1 meter connected to pin 19 (RX1) of Arduino Mega
+  reader.enable(true);
+  last_p1_read = millis();
+  ShowDebug("Slimme meter via P1 geactiveerd via RX1 (pin19) ");
+#endif
+
   ShowDebug("Network...");
   // attempt to connect to network:
   //   setup ethernet communication using DHCP
@@ -1175,6 +1223,26 @@ void loop() {
       ShowDebug("MQ-7 heatup...");
       mq_state = 0;
       mq_millis = millis() + mq_heat_interval;
+    }
+  }
+#endif
+
+#if defined(P1_meter)
+  reader.loop();
+  unsigned long now = millis();
+  if (now - last_p1_read > READER_INTERVAL) {
+    reader.enable(true);
+    last_p1_read = now;
+  }
+  if (reader.available()) {
+    MyData data;
+    String err;
+    if (reader.parse(&data, &err)) {
+      // Parse succesful, print result
+      last_p1_data = data;
+    } else {
+      // Parser error, print error
+      ShowDebug(err);
     }
   }
 #endif
