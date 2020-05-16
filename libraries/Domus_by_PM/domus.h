@@ -11,7 +11,7 @@ EthernetClient ethClient;
 PubSubClient mqttClient;
 
 #if defined(P1_meter)
-P1Reader reader(&Serial1, 2);
+P1Reader reader(&Serial1, P1_REQUEST_PIN);
 unsigned long last_p1_read;
 MyData last_p1_data;
 #endif

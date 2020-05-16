@@ -22,6 +22,8 @@
           12: Button 1 (huiskamer)
           14: Deurbel buiten
           15: PIR Hal
+          18: Serial1 TX }
+          19: Serial1 RX } in use for P1 Reader
           20: SDA
           21: SCL
           22: Pulserelay screen 1
@@ -32,6 +34,7 @@
           29: Magneetcontact voordeur
           30: Relay 3: SSR Relais voor keukenlamp
           31: Relay 4: SSR Relais voor plafondlamp huiskamer
+          49: enable pin for P1 reader (not connected)
 
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
@@ -140,6 +143,7 @@ int SmokeSensor = A9;
 
 #if defined(P1_meter)
 #include "dsmr.h"
+#define P1_REQUEST_PIN 49
 const int READER_INTERVAL = 5000; // interval to read meter values in ms
 using MyData = ParsedData <
                /* FixedValue */ energy_delivered_tariff1,

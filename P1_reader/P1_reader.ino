@@ -70,7 +70,6 @@ void PrintValues(MyData data) {
   Serial.println(data.equipment_id);
   Serial.print("Tarief (1=nacht, 2=dag): ");
   Serial.println(data.electricity_tariff);
-  types(data.electricity_tariff);
   Serial.print("Verbruik: ");
   Serial.print(data.power_delivered.int_val());
   Serial.println(" W.");
