@@ -1,6 +1,6 @@
 /*
           <========Arduino Sketch for Arduino Uno Wifi=========>
-          Locatie: Hobbykamer
+          Locatie: Tuin
 
           Pins used:
           2:
@@ -17,29 +17,29 @@
           13: <in gebruik voor W5100>
 
 
-          incoming topic: domus/hobby/in
+          incoming topic: domus/tuin/in
 
           Arduino Uno Wifi rev2 used as MQTT client
           It will connect over Wifi to the MQTT broker and controls digital outputs (LED, relays)
-          The topics have the format "domus/hobby/uit" for outgoing messages and
-          "domus/hobby/in" for incoming messages.
+          The topics have the format "domus/tuin/uit" for outgoing messages and
+          "domus/tuin/in" for incoming messages.
           As the available memory of a UNO  with Ethernetcard is limited,
           I have kept the topics short
           Also, the payloads  are kept short
           The outgoing topics are
 
-          domus/hobby/uit        // Relaisuitgangen: R<relaisnummer><status>
-          domus/hobby/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
-          domus/hobby/uit/licht  // LDR-melder: 0=licht, 1=donker
-          domus/hobby/uit/temp   // DHT-22 temperatuursensor
-          domus/hobby/uit/warmte // DHT-22 gevoelstemperatuur
-          domus/hobby/uit/vocht  // DHT-22 luchtvochtigheid
+          domus/tuin/uit        // Relaisuitgangen: R<relaisnummer><status>
+          domus/tuin/uit/rook   // MQ-2 gas & rookmelder, geconverteerd naar 0-100%
+          domus/tuin/uit/licht  // LDR-melder: 0=licht, 1=donker
+          domus/tuin/uit/temp   // DHT-22 temperatuursensor
+          domus/tuin/uit/warmte // DHT-22 gevoelstemperatuur
+          domus/tuin/uit/vocht  // DHT-22 luchtvochtigheid
 
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
           There is only one incoming topic:
-          domus/hobby/in
+          domus/tuin/in
           The payload here determines the action:
           STAT - Report the status of all relays (0-9)
           AON - turn all the relays on
@@ -75,8 +75,9 @@
 */
 // parameters to tune memory use
 //#define BMP280 0 // use BMP280 sensor
-#define DHT_present 1 // use DHT sensor
-#define MQ_present 1 // MQ-x gas sensor
+//#define DHT_present 1 // use DHT sensor
+//#define MQ_present 1 // MQ-x gas sensor
+#define MS_present // YL-69 moisture sensor
 #define DEBUG 1 // Zet debug mode aan
 
 //#include <Ethernet.h>           // Ethernet.h library
@@ -86,7 +87,6 @@
 #include "secrets.h"
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary
 //#include <Adafruit_Sensor.h>
-//#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
 
 #define BUFFERSIZE 100          // default 100
 
@@ -100,6 +100,13 @@ DHT dht(DHT_PIN, DHT22);
 #define MQ_PIN A3 // Vul hier de pin in van de DHT11 sensor
 #endif
 
+#if defined(MS_present)
+#define MS_PIN A0 // Vul hier de pin in van de moisture sensor
+#define MS_ENABLE 8 // vul hier de enable pin in
+#define SAMPLESIZE 10 // aantal keren meten
+const char* topic_out_moisture = "domus/tuin/uit/moisture";
+#endif
+
 #if defined(BMP280)
 #include <Adafruit_BMP280.h>
 Adafruit_BMP280 bmp; // I2C
@@ -107,7 +114,7 @@ bool bmp_present = true;
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT
-#define CLIENT_ID  "domus_hobby"
+#define CLIENT_ID  "domus_tuin"
 
 // Vul hier het interval in waarmee sensorgegevens worden verstuurd op MQTT
 #define PUBLISH_DELAY 5000 // that is 5 seconds interval
@@ -115,38 +122,38 @@ bool bmp_present = true;
 String hostname = CLIENT_ID;
 
 // Vul hier de data in van de PIRs
-byte NumberOfPirs = 1;
+byte NumberOfPirs = 0;
 int PirSensors[] = {1};
 int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/hobby/in";
+const char* topic_in = "domus/tuin/in";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/hobby/uit";
-//const char* topic_out_smoke = "domus/hobby/uit/rook";
-//const char* topic_out_light = "domus/hobby/uit/licht";
-//const char* topic_out_door = "domus/hobby/uit/deur";
+const char* topic_out = "domus/tuin/uit";
+//const char* topic_out_smoke = "domus/tuin/uit/rook";
+//const char* topic_out_light = "domus/tuin/uit/licht";
+//const char* topic_out_door = "domus/tuin/uit/deur";
 
 #if defined(DHT_present)
-const char* topic_out_temp = "domus/hobby/uit/temp";
-const char* topic_out_hum = "domus/hobby/uit/vocht";
-const char* topic_out_heat = "domus/hobby/uit/warmte";
+const char* topic_out_temp = "domus/tuin/uit/temp";
+const char* topic_out_hum = "domus/tuin/uit/vocht";
+const char* topic_out_heat = "domus/tuin/uit/warmte";
 #endif
 
-const char* topic_out_pir = "domus/hobby/uit/pir";
+const char* topic_out_pir = "domus/tuin/uit/pir";
 
 #if defined(MQ_present)
-const char* topic_out_gas = "domus/hobby/uit/gas";
+const char* topic_out_gas = "domus/tuin/uit/gas";
 #endif
 
 #if defined(BMP280)
-const char* topic_out_bmptemp = "domus/hobby/uit/b_temp";
-const char* topic_out_pressure = "domus/hobby/uit/druk";
+const char* topic_out_bmptemp = "domus/tuin/uit/b_temp";
+const char* topic_out_pressure = "domus/tuin/uit/druk";
 #endif
 
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
+const byte NumberOfRelays = 0;
 const byte RelayPins[] = {10, 11, 12, 13};
 PinStatus RelayInitialState[] = {LOW, LOW, LOW, LOW};
 
@@ -183,7 +190,7 @@ void ShowDebug(String tekst) {
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
 // Vul hier het aantal knoppen in en de pinnen waaraan ze verbonden zijn
-int NumberOfButtons = 4;
+int NumberOfButtons = 0;
 int ButtonPins[] = {6, 7, 8, 9};
 static byte lastButtonStates[] = {0, 0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0, 0};
@@ -251,7 +258,7 @@ void reconnect() {
       set_rgb_led(0, 0, 64);  // BLUE
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
-      mqttClient.publish(topic_out, "MQTT Arduino Domus Test connected");
+      mqttClient.publish(topic_out, "MQTT Arduino Domus Tuin connected");
       // ... and resubscribe
       mqttClient.subscribe(topic_in);
     } else {
@@ -271,6 +278,8 @@ void sendMessage(String m, char* topic) {
 
 void sendData() {
 
+
+  ShowDebug("sendData function entered.");
 #if defined(DHT_present)
   float h = dht.readHumidity();
   float t = dht.readTemperature();
@@ -296,10 +305,24 @@ void sendData() {
 #endif
 
 #if defined(MQ_present)
+  ShowDebug("Sending moisture data...");
   analogWrite(MQ_PIN, HIGH);
-//  delay(50);
+  //  delay(50);
   byte g = analogRead(MQ_PIN);
   sendMessage(String(g), topic_out_gas);
+#endif
+
+#if defined(MS_present)
+  digitalWrite(MS_ENABLE, HIGH);
+  float g = 0;
+  delay(50);
+  for (int i = 0; i < SAMPLESIZE; i++) {
+    g += analogRead(MS_PIN);
+  }
+  g /= SAMPLESIZE;
+  ShowDebug("sending moisture data:");
+  sendMessage(String(map(g,0,1023,100,0)), topic_out_moisture);
+  digitalWrite(MS_ENABLE, LOW);
 #endif
 
   // Send status of relays
@@ -471,6 +494,11 @@ void setup() {
   dht.begin();
 #endif
 
+#if defined(MS_present)
+  analogReference(VDD);
+  pinMode(MS_ENABLE, OUTPUT); // vul hier de enable pin in
+#endif
+
 #if defined(MQ_present)
   ShowDebug("Setting up pin " + String(MQ_PIN) + " as MQ gas sensor");
   analogWrite(MQ_PIN, HIGH);
@@ -504,14 +532,14 @@ void setup() {
   ip = ip + String (WiFi.localIP()[3]);
 
   // setup mqtt client
-  mqttClient.setServer( "majordomo", 1883); // or local broker
+  mqttClient.setServer( MQTTSERVER, 1883); // or local broker
   ShowDebug(F("MQTT client configured"));
   set_rgb_led(32, 64, 0);  // Set status LED
   mqttClient.setCallback(callback);
   ShowDebug("");
   ShowDebug(F("Ready to send data"));
   previousMillis = millis();
-  //  mqttClient.publish(topic_out, ip.c_str());
+  mqttClient.publish(topic_out, ip.c_str());
 #if defined(BMP280)
   if (!bmp.begin()) {
     ShowDebug("Could not find a valid BMP280 sensor, check wiring!");

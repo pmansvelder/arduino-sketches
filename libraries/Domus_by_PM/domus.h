@@ -1,5 +1,14 @@
 // library file for domus sketches
-#include <Ethernet.h>           // Ethernet.h library
+
+#if defined(UNO_WIFI)
+    #include <WiFiNINA.h>
+    #include <utility/wifi_drv.h>
+    WiFiClient NetClient;
+    int status = WL_IDLE_STATUS;      // the Wifi radio's status
+#else
+    #include <Ethernet.h>           // Ethernet.h library
+    EthernetClient NetClient;
+#endif
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include "ArduinoJson.h"
 #define BUFFERSIZE 480              // default 100, should be 512
@@ -7,7 +16,7 @@
 #define DEBOUNCE_DELAY 150  // debounce delay for buttons
 #define LONGPRESS_TIME 450  // time for press to be detected as 'long'
 StaticJsonDocument<480> doc; // default 512
-EthernetClient ethClient;
+
 PubSubClient mqttClient;
 
 #if defined(P1_meter)
@@ -48,6 +57,14 @@ String mac2String(byte ar[]) {
   }
   return s;
 }
+#if defined(UNO_WIFI)
+void set_rgb_led(byte red, byte green, byte blue)
+{
+  WiFiDrv::analogWrite(25, red);  // for configurable brightness
+  WiFiDrv::analogWrite(26, green);  // for configurable brightness
+  WiFiDrv::analogWrite(27, blue);  // for configurable brightness
+}
+#endif
 void report_state_relay() {
   bool relaytest;
   if (NumberOfRelays > 0) {
@@ -409,10 +426,23 @@ float raw_value_to_CO_ppm(float value) {
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
+#if defined(UNO_WIFI)
+    set_rgb_led(64, 0, 0);  // RED
+    status = WiFi.begin(ssid, pass);
+    while ( status != WL_CONNECTED) {
+    ShowDebug("Attempting to connect to WPA SSID: ");
+    ShowDebug(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+    }
+#endif
     ShowDebug("Attempting MQTT connection...");
     // Attempt to connect
     if (mqttClient.connect(CLIENT_ID)) {
       ShowDebug("connected");
+#if defined(UNO_WIFI)
+      set_rgb_led(0, 0, 64);  // BLUE
+#endif
       // Once connected, publish an announcement...
       mqttClient.publish(topic_out, ip.c_str());
       mqttClient.publish(topic_out, CLIENT_ID);
@@ -483,6 +513,22 @@ void sendData() {
     else if (SensorTypes[i] == "BMP-P") {
       t = bmp.readPressure() / 100;
       doc["sensor" + String(i + 1)] = t;
+    }
+#endif
+#if defined(MS_present)
+    else if (SensorTypes[i] == "MS") {
+        digitalWrite(MS_ENABLE, HIGH);
+        float f,g = 0;
+        delay(50);
+        for (int i = 0; i < SAMPLESIZE; i++) {
+            // g += analogRead(MS_PIN);
+            f = analogRead(MS_PIN);
+            ShowDebug(String(f));
+            g += f;
+        }
+        g /= SAMPLESIZE;
+        doc["sensor" + String(i + 1)] = String(map(g,0,1023,100,0));
+        digitalWrite(MS_ENABLE, LOW);
     }
 #endif
 #if defined(MQ_present)
@@ -892,7 +938,9 @@ void setDeviceInfo(char* configtopic) {
   identifiers.add(CLIENT_ID);
   JsonArray connections = device.createNestedArray("cns");
   connections.add(serialized("[\"ip\",\"" + String(ip) + "\"]"));
+#if !defined(UNO_WIFI)
   connections.add(serialized("[\"mac\",\"" + mac2String(mac) + "\"]"));
+#endif
   device["name"] = DISCOVERY_ID;
   device["mdl"] = MODEL_ID;
   device["mf"] = MANUFACTURER_ID;
@@ -1111,6 +1159,11 @@ void setup() {
   ShowDebug("LDR sensor: A10");
 #endif
 
+#if defined(MS_present)
+  analogReference(VDD);
+  pinMode(MS_ENABLE, OUTPUT); // vul hier de enable pin in
+#endif
+
 #if defined(DS18B20_present)
   ShowDebug("DS18B20 sensor: 16");
 #endif
@@ -1141,29 +1194,49 @@ void setup() {
   ShowDebug("Slimme meter via P1 geactiveerd via RX1 (pin19) ");
 #endif
 
-  ShowDebug("Network...");
-  // attempt to connect to network:
-  //   setup ethernet communication using DHCP
-  if (Ethernet.begin(mac) == 0) {
-
+#if defined(UNO_WIFI)
+    WiFiDrv::pinMode(25, OUTPUT);  //RED
+    WiFiDrv::pinMode(26, OUTPUT);  //GREEN
+    WiFiDrv::pinMode(27, OUTPUT);  //BLUE
+    set_rgb_led(64, 64, 64); // Set Wifi Status LED to WHITE
+    while ( status != WL_CONNECTED) {
+        ShowDebug("Attempting to connect to WPA SSID: ");
+        ShowDebug(ssid);
+        // Connect to WPA/WPA2 network:
+        status = WiFi.begin(ssid, pass);
+    }
+    set_rgb_led(0, 64, 0); // GREEN
+    ip = String (WiFi.localIP()[0]);
+    ip = ip + ".";
+    ip = ip + String (WiFi.localIP()[1]);
+    ip = ip + ".";
+    ip = ip + String (WiFi.localIP()[2]);
+    ip = ip + ".";
+    ip = ip + String (WiFi.localIP()[3]);    
+#else
+    ShowDebug("Network...");
+    // attempt to connect to network:
+    //   setup ethernet communication using DHCP
+    if (Ethernet.begin(mac) == 0) {
     ShowDebug(F("No DHCP"));
     delay(1000);
     resetFunc();
-  }
-  ShowDebug(F("Ethernet via DHCP"));
-  ShowDebug("IP address: ");
-  ip = String (Ethernet.localIP()[0]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[1]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[2]);
-  ip = ip + ".";
-  ip = ip + String (Ethernet.localIP()[3]);
-  ShowDebug(ip);
-  ShowDebug("");
+    }
+    ShowDebug(F("Ethernet via DHCP"));
+    ShowDebug("IP address: ");
+    ip = String (Ethernet.localIP()[0]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[1]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[2]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[3]);
+    ShowDebug(ip);
+    ShowDebug("");
+#endif
 
   // setup mqtt client
-  mqttClient.setClient(ethClient);
+  mqttClient.setClient(NetClient);
   mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug("MQTT set up");
   mqttClient.setCallback(callback);
