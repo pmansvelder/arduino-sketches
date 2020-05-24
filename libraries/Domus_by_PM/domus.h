@@ -10,12 +10,12 @@
     EthernetClient NetClient;
 #endif
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
-#include "ArduinoJson.h"
-#define BUFFERSIZE 480              // default 100, should be 512
+#include "ArduinoJson.h"        // max size of mqtt payload
+#define BUFFERSIZE 450              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512
 #define DEBOUNCE_DELAY 150  // debounce delay for buttons
 #define LONGPRESS_TIME 450  // time for press to be detected as 'long'
-StaticJsonDocument<480> doc; // default 512
+StaticJsonDocument<450> doc; // default 512
 
 PubSubClient mqttClient;
 
@@ -25,8 +25,20 @@ unsigned long last_p1_read;
 MyData last_p1_data;
 #endif
 
+// BMP280 pressure and temperature sensor
+#if defined(BMP_present)
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
+Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
+#endif
+
+#if defined(MCP_present)
+#include <Wire.h>
+#include "Adafruit_MCP23017.h"  // define type of MCP expander
+Adafruit_MCP23017 mcp;
+#endif
+
 char messageBuffer[BUFFERSIZE];
-char topicBuffer[BUFFERSIZE];
 String ip = "";
 bool startsend = HIGH;// flag for sending at startup
 // Vul hier het interval in waarmee gegevens worden verstuurd op MQTT
@@ -1078,10 +1090,17 @@ void setup() {
 #if defined(MCP_present)
   Wire.setClock(400000);
   mcp.begin();      // use default address 0 for i2c expander (MCP23017/MCP23008)
+  Wire.beginTransmission(32);
+  if (Wire.endTransmission () == 0) {
+      ShowDebug("MCP23017 found at address 20h");
+  }
+  else {
+      ShowDebug("MCP23017 not found at address 20h !!");
+  }
 #endif
 
   for (byte thisPin = 0; thisPin < NumberOfRelays; thisPin++) {
-    ShowDebug("Relay: " + String(RelayPins[thisPin]));
+    ShowDebug("Relay: " + String(RelayPins[thisPin]) + " (" + String(SwitchNames[thisPin]) + ")");
     if (RelayPins[thisPin] < 100) { // pins > 100 are MCP ports
       pinMode(RelayPins[thisPin], OUTPUT);
       digitalWrite(RelayPins[thisPin], RelayInitialState[thisPin]);
@@ -1095,7 +1114,7 @@ void setup() {
   }
 
   for (byte thisPin = 0; thisPin < NumberOfLights; thisPin++) {
-    ShowDebug("Light: " + String(LightPins[thisPin]));
+    ShowDebug("Light: " + String(LightPins[thisPin])+ " (" + String(LightNames[thisPin]) + ")");
     if (LightPins[thisPin] < 100) { // pins > 100 are MCP ports
       pinMode(LightPins[thisPin], OUTPUT);
       digitalWrite(LightPins[thisPin], LightInitialState[thisPin]);
@@ -1136,7 +1155,7 @@ void setup() {
   }
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
-    ShowDebug("Pir: " + String(PirSensors[pirid]));
+    ShowDebug("Pir: " + String(PirSensors[pirid])+ " (" + String(PirNames[pirid]) + ")");
     lastPirStates[pirid] = PirInitialState[pirid];
     if (PirSensors[pirid] < 100) { // pins > 100 are MCP ports 
       pinMode(PirSensors[pirid], INPUT_PULLUP);
@@ -1206,33 +1225,39 @@ void setup() {
         status = WiFi.begin(ssid, pass);
     }
     set_rgb_led(0, 64, 0); // GREEN
-    ip = String (WiFi.localIP()[0]);
-    ip = ip + ".";
-    ip = ip + String (WiFi.localIP()[1]);
-    ip = ip + ".";
-    ip = ip + String (WiFi.localIP()[2]);
-    ip = ip + ".";
-    ip = ip + String (WiFi.localIP()[3]);    
+    if (debug) {
+        ip = String (WiFi.localIP()[0]);
+        ip = ip + ".";
+        ip = ip + String (WiFi.localIP()[1]);
+        ip = ip + ".";
+        ip = ip + String (WiFi.localIP()[2]);
+        ip = ip + ".";
+        ip = ip + String (WiFi.localIP()[3]); 
+        ShowDebug(ip);
+        ShowDebug("");   
+    }
 #else
     ShowDebug("Network...");
     // attempt to connect to network:
     //   setup ethernet communication using DHCP
     if (Ethernet.begin(mac) == 0) {
-    ShowDebug(F("No DHCP"));
-    delay(1000);
-    resetFunc();
+        ShowDebug(F("No DHCP"));
+        delay(1000);
+        resetFunc();
     }
-    ShowDebug(F("Ethernet via DHCP"));
-    ShowDebug("IP address: ");
-    ip = String (Ethernet.localIP()[0]);
-    ip = ip + ".";
-    ip = ip + String (Ethernet.localIP()[1]);
-    ip = ip + ".";
-    ip = ip + String (Ethernet.localIP()[2]);
-    ip = ip + ".";
-    ip = ip + String (Ethernet.localIP()[3]);
-    ShowDebug(ip);
-    ShowDebug("");
+    if (debug) {
+        ShowDebug(F("Ethernet via DHCP"));
+        ShowDebug("IP address: ");
+        ip = String (Ethernet.localIP()[0]);
+        ip = ip + ".";
+        ip = ip + String (Ethernet.localIP()[1]);
+        ip = ip + ".";
+        ip = ip + String (Ethernet.localIP()[2]);
+        ip = ip + ".";
+        ip = ip + String (Ethernet.localIP()[3]);
+        ShowDebug(ip);
+        ShowDebug("");
+    }
 #endif
 
   // setup mqtt client

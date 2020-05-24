@@ -103,13 +103,6 @@ DallasTemperature sensors(&oneWire);
 float last_temp = 0;
 #endif
 
-// BMP280 pressure and temperature sensor
-#if defined(BMP_present)
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
-Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
-#endif
-
 #if defined(MQ_present)
 int SmokeSensor = A9;
 #endif

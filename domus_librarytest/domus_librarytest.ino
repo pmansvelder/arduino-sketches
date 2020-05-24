@@ -102,23 +102,15 @@
 #include "secrets.h"
 
 // parameters to tune memory use
-//#define BMP_present 1 // use BMP280 sensor
+#define BMP_present 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
-#define P1_meter // P1 port smart meter reading
-//#define MCP_present // MCP serie i2c expander
+//#define P1_meter // P1 port smart meter reading
+#define MCP_present // MCP serie i2c expander
 #define DEBUG 1 // Zet debug mode aan
-
-#if defined(MCP_present)
-#include <Wire.h>
-#include "Adafruit_MCP23017.h"  // define type of MCP expander
-Adafruit_MCP23017 mcp;
-//#include "Adafruit_MCP23008.h"  // define type of MCP expander
-//Adafruit_MCP23008 mcp;
-#endif
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -138,13 +130,6 @@ int LightSensor = A10;
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 float last_temp = 0;
-#endif
-
-// BMP280 pressure and temperature sensor
-#if defined(BMP_present)
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
-Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 #endif
 
 #if defined(MQ_present)
@@ -194,7 +179,7 @@ const String config_topic_base = "homeassistant";
 const String item_prefix = "test";
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0xF0, 0x01, 0x02, 0x03, 0x04, 0x4B};
+const uint8_t mac[6] = {0xF0, 0x01, 0x02, 0x03, 0x04, 0x4B};
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/test/in";
@@ -213,15 +198,15 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 2;
-const byte RelayPins[] = {100, 101};
-bool RelayInitialState[] = {HIGH, HIGH};
-String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel"};
+const byte NumberOfRelays = 4;
+const byte RelayPins[] = {100, 101, 102, 103};
+const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
+const char* const SwitchNames[] = {"_test_1", "_test_2", "_test_3", "_test_4"};
 char* state_topic_relays = "domus/test/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 1;
+const byte NumberOfLights = 0;
 const byte LightPins[] = {102};
 bool LightInitialState[] = {HIGH};
 bool LightBrightness[] = {false};
@@ -268,7 +253,7 @@ String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/test/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
-const int NumberOfButtons = 1;
+const int NumberOfButtons = 0;
 int ButtonPins[] = {104};
 static byte lastButtonStates[] = {0};
 long lastActivityTimes[] = {0};
@@ -277,11 +262,11 @@ String ButtonNames[] = {"*Testbutton"};
 const char* state_topic_buttons = "domus/test/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 10;
-String SensorNames[] = {"*Tijd sinds opstart", "Energieverbruik", "Test P1 Timestamp", "Energietarief", "Netspanning", "Stroomsterkte", "Verbruik laag", "Verbruik hoog", "Gasverbruik", "P1 ID"};
-String SensorTypes[] = {"TIME","P1_pd", "P1_ts", "P1_ta", "P1_v1", "P1_c1", "P1_en_t1", "P1_en_t2", "P1_gas", "P1_id"};
-String SensorClasses[] = {"timestamp","power", "", "", "", "", "", "", "", ""};
-String SensorUnits[] = {"s","W","","","V", "A","kWh","kWh","m3", ""};
+const int NumberOfSensors = 3;
+String SensorNames[] = {"_runtime_test", "_temperatuur", "_luchtdruk"};
+String SensorTypes[] = {"TIME","BMP-T", "BMP-P"};
+String SensorClasses[] = {"","temperature", "pressure"};
+String SensorUnits[] = {"s","°C","mbar"};
 const char* state_topic_sensors = "domus/test/uit/sensor";
 
 // Vul hier het aantal pulsrelais in

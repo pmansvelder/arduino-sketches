@@ -101,12 +101,13 @@
 #include "secrets.h"
 
 // parameters to tune memory use
-//#define BMP_present 1 // use BMP280 sensor
+#define BMP_present 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
+#define MCP_present // MCP serie i2c expander
 #define P1_meter // P1 port smart meter reading
 //#define DEBUG 1 // Zet debug mode aan
 
@@ -130,13 +131,6 @@ DallasTemperature sensors(&oneWire);
 float last_temp = 0;
 #endif
 
-// BMP280 pressure and temperature sensor
-#if defined(BMP_present)
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
-Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
-#endif
-
 #if defined(MQ_present)
 int SmokeSensor = A9;
 #endif
@@ -158,19 +152,19 @@ using MyData = ParsedData <
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
-#define CLIENT_ID  "domus_meterkast_screens"
+#define CLIENT_ID  "domus_meterkast"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
-#define DISCOVERY_ID  "Domus Mega Meterkast"
+#define DISCOVERY_ID  "Domus Meterkast"
 #define MODEL_ID  "Mega 2560"
 #define MANUFACTURER_ID  "Arduino"
-String hostname = CLIENT_ID;
+const String hostname = CLIENT_ID;
 // base for Home Assistant MQTT discovery (must be configured in configuration.yaml)
 const String config_topic_base = "homeassistant";
 // prefix for inidvidual items
 const String item_prefix = "mk";
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0B};
+const uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0B};
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/mk/in";
@@ -189,20 +183,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
-const byte RelayPins[] = {5, 6, 23, 25};
-bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
-String SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer"};
+const byte NumberOfRelays = 7;
+const byte RelayPins[] = {5, 100, 23, 25, 101, 102, 103};
+const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+const char* const SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer", "Radiator Keuken", "Alarm voor", "Keuken"};
 char* state_topic_relays = "domus/mk/stat/relay";
 
 // MQTT Discovery lights
-// Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
+// Vul hier het aantal gebruikte lampen in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfLights = 3;
 const byte LightPins[] = {30, 31, 2};
-bool LightInitialState[] = {LOW, LOW, LOW};
-bool LightBrightness[] = {false, false, true};
+const bool LightInitialState[] = {LOW, LOW, LOW};
+const bool LightBrightness[] = {false, false, true};
 byte LightValue[] = {0, 0, 0};
-String LightNames[] = {"Keuken", "Plafondlamp", "Buttonleds"};
+const char* const LightNames[] = {"Keuken", "Plafondlamp", "Buttonleds"};
 const char* state_topic_lights = "domus/mk/stat/light";
 const char* cmd_topic_lights = "domus/mk/cmd/light";
 
@@ -212,64 +206,63 @@ const char* cmd_topic_lights = "domus/mk/cmd/light";
 // hiervoor gebruik ik de pulserelais en de normale relais
 // de waarden zijn de indices op de onderstaande 'RelayPins' en 'PulseRelayPins' arrays
 const byte NumberOfCovers = 2;
-byte CoverDir[] = {2, 3}; // relay numbers for direction
-byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
+const byte CoverDir[] = {2, 3}; // relay numbers for direction
+const byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
 byte CoverState[] = {0, 0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
 int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 int CoverSetPos[] = {255, 255}; // set position (255 = not set)
-String CoverNames[] = {"Screen Keuken", "Screen Huiskamer"};
-long CoverDelay[] = {27000, 28000}; // time to wait for full open or close
+const char* const CoverNames[] = {"Screen Keuken", "Screen Huiskamer"};
+const long CoverDelay[] = {27000, 28000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/mk/uit/screen"; // Screens (zonwering)
 
 // MQTT Discovery locks
 const byte NumberOfLocks = 2;
-byte LockPulse[] = {0, 1}; // relay numbers for lock pulses (index on PulseRelayPins)
+const byte LockPulse[] = {0, 1}; // relay numbers for lock pulses (index on PulseRelayPins)
 byte LockState[] = {1, 1};  // status of locks: 0 = unlocked, 1 = locked
-String LockNames[] = {"Haldeurslot", "VoordeurSlot"};
-long LockDelay[] = {2000, 250}; // pulse time for locks
+const char* const LockNames[] = {"Haldeurslot", "VoordeurSlot"};
+const long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/mk/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 4;
-int PirSensors[] = {15, 28, 29, 14};
-int PirDebounce[] = {0, 0, 450, 150}; // debounce time for pir or door sensor
+const byte PirSensors[] = {15, 28, 29, 14};
+const byte PirDebounce[] = {0, 0, 450, 150}; // debounce time for pir or door sensor
 long PirLastActivityTimes[] = {0, 0, 0, 0};
 static byte lastPirStates[] = {0, 0, 0, 0};
-bool PirInitialState[] = {LOW, LOW, LOW, LOW};
+const bool PirInitialState[] = {LOW, LOW, LOW, LOW};
 int PreviousDetects[] = {false, false, false, false}; // Statusvariabele PIR sensor
 byte PirState[] = {0, 0, 0, 0};
-String PirNames[] = {"PIR Hal", "PIR Keuken", "Voordeur", "Deurbel"};
-String PirClasses[] = {"motion", "motion", "door", "sound"};
+const char* const PirNames[] = {"PIR Hal", "PIR Keuken", "Voordeur", "Deurbel"};
+const char* const PirClasses[] = {"motion", "motion", "door", "sound"};
 const char* state_topic_pirs = "domus/mk/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
 const int NumberOfButtons = 3;
-int ButtonPins[] = {11, 12, 9};
+const int ButtonPins[] = {11, 12, 9};
 static byte lastButtonStates[] = {0, 0, 0};
 long lastActivityTimes[] = {0, 0, 0};
 long LongPressActive[] = {0, 0, 0};
-String ButtonNames[] = {"Knop 1 Huiskamer", "Knop 2 Huiskamer", "Keuken"};
 const char* state_topic_buttons = "domus/mk/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 8;
-const String SensorNames[] = {"Runtime meterkast","Energieverbruik laag","Energieverbruik hoog","Energietarief","Energieverbruik","Netspanning","Stroomsterkte","Gasverbruik"};
-const String SensorTypes[] = {"TIME","P1_en_t1","P1_en_t2","P1_ta","P1_pd","P1_v1","P1_c1","P1_gas"};
-String SensorClasses[] = {"","power","power","power","power","power","power","power"};
-String SensorUnits[] = {"s","kWh","kWh","","W","V","A","m3"};
+const int NumberOfSensors = 10;
+const char* const SensorNames[] = {"Runtime meterkast","Energieverbruik laag","Energieverbruik hoog","Energietarief","Energieverbruik","Netspanning","Stroomsterkte","Gasverbruik", "Luchtdruk", "Temperatuur keuken"};
+const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T"};
+const char* const SensorClasses[] = {"", "power", "power", "power", "power", "power", "power", "power", "pressure", "temperature"};
+const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m3", "mBar", "°C"};
 const char* state_topic_sensors = "domus/mk/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
 const int NumberOfPulseRelays = 4; // 0 = haldeur, 1 = voordeur, 2 = screen keuken, 3 = screen huiskamer
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {8, 7, 22, 24};
+const int PulseRelayPins[] = {8, 7, 22, 24};
 long PulseActivityTimes[] = {0, 0, 0, 0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
-bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
+const bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
-long int PulseRelayTimes[] = {LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1]};
+const long int PulseRelayTimes[] = {LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1]};
 const char* topic_out_pulse = "domus/mk/uit/pulse";    // Pulserelais t.b.v. deuropener
 
 // Vul hier de uitgaande MQTT topics in
