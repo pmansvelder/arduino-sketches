@@ -11,11 +11,11 @@
 #endif
 #include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include "ArduinoJson.h"        // max size of mqtt payload
-#define BUFFERSIZE 450              // default 100, should be 512
+#define BUFFERSIZE 470              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512
 #define DEBOUNCE_DELAY 150  // debounce delay for buttons
 #define LONGPRESS_TIME 450  // time for press to be detected as 'long'
-StaticJsonDocument<450> doc; // default 512
+StaticJsonDocument<470> doc; // default 512
 
 PubSubClient mqttClient;
 
@@ -1250,19 +1250,17 @@ void setup() {
         delay(1000);
         resetFunc();
     }
-    if (debug) {
-        ShowDebug(F("Ethernet via DHCP"));
-        ShowDebug("IP address: ");
-        ip = String (Ethernet.localIP()[0]);
-        ip = ip + ".";
-        ip = ip + String (Ethernet.localIP()[1]);
-        ip = ip + ".";
-        ip = ip + String (Ethernet.localIP()[2]);
-        ip = ip + ".";
-        ip = ip + String (Ethernet.localIP()[3]);
-        ShowDebug(ip);
-        ShowDebug("");
-    }
+    ShowDebug(F("Ethernet via DHCP"));
+    ShowDebug("IP address: ");
+    ip = String (Ethernet.localIP()[0]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[1]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[2]);
+    ip = ip + ".";
+    ip = ip + String (Ethernet.localIP()[3]);
+    ShowDebug(ip);
+    ShowDebug("");
 #endif
 
   // setup mqtt client
