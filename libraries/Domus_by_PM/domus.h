@@ -1178,8 +1178,13 @@ void setup() {
   ShowDebug("LDR sensor: A10");
 #endif
 
-#if defined(MS_present)
+#if defined(UNO_WIFI)
   analogReference(VDD);
+#else
+  analogReference(DEFAULT);
+#endif
+
+#if defined(MS_present)
   pinMode(MS_ENABLE, OUTPUT); // vul hier de enable pin in
 #endif
 

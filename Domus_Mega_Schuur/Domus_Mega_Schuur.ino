@@ -22,6 +22,8 @@
           12: Relais 6
           13: Relais 7 : Lamp Schuur
 
+          A0: input for humidity sensor
+
           20: SDA voor i2C
           21: SCL voor i2C
           22: PIR0
@@ -31,6 +33,7 @@
           30: Button0
           31: Button1
           32: PWM output for leds
+          35: Enable pin for humidity sensor
 
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
@@ -95,6 +98,7 @@
 #define DHT_present 1 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
 ////#define MQ7_present 0 // MQ-7 CO sensor
+#define MS_present // YL-69 moisture sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 //#define DEBUG 1 // Zet debug mode aan
@@ -128,6 +132,12 @@ Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 
 #if defined(MQ_present)
 int SmokeSensor = A9;
+#endif
+
+#if defined(MS_present)
+#define MS_PIN A0 // Vul hier de pin in van de moisture sensor
+#define MS_ENABLE 35 // vul hier de enable pin in
+#define SAMPLESIZE 10 // aantal keren meten
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
@@ -226,11 +236,11 @@ String ButtonNames[] = {"Knop schuur boven", "Knop schuur beneden"};
 const char* state_topic_buttons = "domus/schuur/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 4;
-String SensorNames[] = {"Temperatuur schuur", "Luchtvochtigheid schuur", "Gevoelstemperatuur schuur", "Runtime schuur"};
-String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "TIME"};
-String SensorClasses[] = {"temperature", "humidity", "temperature", "timestamp"};
-String SensorUnits[] = {"°C", "%", "°C", "s"};
+const int NumberOfSensors = 5;
+const char* const SensorNames[] = {"Temperatuur schuur", "Luchtvochtigheid schuur", "Gevoelstemperatuur schuur", "Runtime schuur", "Vochtigheid grond"};
+const char* const SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "TIME", "MS"};
+const char* const SensorClasses[] = {"temperature", "humidity", "temperature", "timestamp", "humidity"};
+const char* const SensorUnits[] = {"°C", "%", "°C", "s", "%"};
 const char* state_topic_sensors = "domus/schuur/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
