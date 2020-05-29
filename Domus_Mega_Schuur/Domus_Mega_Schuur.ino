@@ -12,14 +12,14 @@
           2:
           3: DHT-22
           4: <in gebruik voor W5100>
-          5: Relais 0
+          5: Relais 0 : Ventilator schuur
           6: Relais 1
           7: Relais 2 : Lamp brandgang
           8: Relais 3 : Tuinlamp achter
           9: Relais 4 : Lamp Fietsenhok
           10: <in gebruik voor W5100>
-          11: Relais 5
-          12: Relais 6
+          11: Relais 5 : Beacon schuur
+          12: Relais 6 : Beacon schuur knipper
           13: Relais 7 : Lamp Schuur
 
           A0: input for humidity sensor
@@ -172,10 +172,10 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays (switches)
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 1;
-const byte RelayPins[] = {5};
-bool RelayInitialState[] = {LOW};
-String SwitchNames[] = {"Ventilator schuur"};
+const byte NumberOfRelays = 3;
+const byte RelayPins[] = {5, 11, 12};
+bool RelayInitialState[] = {LOW, LOW, LOW};
+String SwitchNames[] = {"Ventilator schuur", "Baken schuur", "Baken schuur knipper"};
 char* state_topic_relays = "domus/schuur/stat/relay";
 
 // MQTT Discovery lights

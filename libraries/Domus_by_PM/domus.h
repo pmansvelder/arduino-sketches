@@ -1080,7 +1080,7 @@ void reportMQTTdisco() {
   //  end send config data for MQTT discovery
 }
 void setup() {
-
+  
   if (debug) {
     Serial.begin(115200);
     ShowDebug(CLIENT_ID);
@@ -1264,6 +1264,7 @@ void setup() {
 #endif
 
   // setup mqtt client
+  mqttClient.setBufferSize(512);
   mqttClient.setClient(NetClient);
   mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug("MQTT set up");
