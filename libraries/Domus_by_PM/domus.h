@@ -230,7 +230,6 @@ void SetLightState(int light, String state) {
         mcp.digitalWrite(LightPins[light] - 100, !LightInitialState[light]);
     }
 #endif    
-    report_state_light(light);
   }
   else if (state == "OFF") {
     if (LightPins[light] < 100) {    
@@ -245,7 +244,6 @@ void SetLightState(int light, String state) {
         LightValue[light] = 0;
     }
 #endif 
-    report_state_light(light);
   }
   else {
     if (LightPins[light] < 100) {    
@@ -260,8 +258,8 @@ void SetLightState(int light, String state) {
 #if defined(MCP_present)
 // dunno how to handle pwm for mcp yet
 #endif 
-    report_state_light(light);
   }
+  report_state_light(light);
 }
 void ProcessPulseRelays(int PulseRelayId) {
   // Process the timers of the pulse relays and see if we have to close them.
