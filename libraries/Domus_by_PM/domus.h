@@ -104,7 +104,7 @@ void report_state_relay() {
   }
 }
 void report_state_light(int index) {
-  StaticJsonDocument<256> outputdoc;
+  StaticJsonDocument<64> outputdoc;
   outputdoc.clear();
   if (LightBrightness[index]) {
     if (LightValue[index] > 0) {
@@ -143,7 +143,7 @@ void report_state_light(int index) {
 }
 void report_state_cover() {
   if (NumberOfCovers > 0) {
-    StaticJsonDocument<256> outputdoc;
+    StaticJsonDocument<128> outputdoc;
     outputdoc.clear();
     for (byte i = 0; i < NumberOfCovers ; i++) {
       if (CoverState[i] == 0) {
