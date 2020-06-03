@@ -1167,7 +1167,7 @@ void setup() {
   }
 
 #if defined(DHT_present)
-  dht.begin();
+  dht.begin(110); // 55 us is default
   ShowDebug("DHT-22 sensor: 3");
 #endif
 
