@@ -19,6 +19,13 @@ StaticJsonDocument<470> doc; // default 512
 
 PubSubClient mqttClient;
 
+#if defined(MS_present)
+byte ms_state = 1;  // present state of MS sensor: 0=preheat, 1=measure
+float ms_value = 0;
+long ms_millis, ms_measure_millis;
+const long ms_heat_interval = 50;
+#endif
+
 #if defined(P1_meter)
 P1Reader reader(&Serial1, P1_REQUEST_PIN);
 unsigned long last_p1_read;
@@ -473,6 +480,9 @@ float CheckIsNan(float value, float defaultvalue) {
   if (isnan(value)) value = defaultvalue;
   return value;
 }
+float fmap(float value, float min, float max, float tmin, float tmax) {
+  return (value - min) * (tmax - tmin) / (max - min) + tmin;
+}
 void sendData() {
   float t, h, hic;
   doc.clear();
@@ -496,7 +506,7 @@ void sendData() {
 #endif
 #if defined(LDR_present)
     else if (SensorTypes[i] == "LDR") {
-      doc["sensor" + String(i + 1)] = map(analogRead(LightSensor), 0, 1023, 0, 100);
+      doc["sensor" + String(i + 1)] = fmap(analogRead(LightSensor), 0, 1023, 0, 100);
     }
 #endif
 #if defined(DS18B20_present)
@@ -527,23 +537,12 @@ void sendData() {
 #endif
 #if defined(MS_present)
     else if (SensorTypes[i] == "MS") {
-        digitalWrite(MS_ENABLE, HIGH);
-        float f,g = 0;
-        delay(50);
-        for (int i = 0; i < SAMPLESIZE; i++) {
-            // g += analogRead(MS_PIN);
-            f = analogRead(MS_PIN);
-            ShowDebug(String(f));
-            g += f;
-        }
-        g /= SAMPLESIZE;
-        doc["sensor" + String(i + 1)] = String(map(g,0,1023,100,0));
-        digitalWrite(MS_ENABLE, LOW);
+      doc["sensor" + String(i + 1)] = fmap(ms_value,0,1023,100,0);
     }
 #endif
 #if defined(MQ_present)
     else if (SensorTypes[i] == "MQ2") {
-      doc["sensor" + String(i + 1)] = String(map(analogRead(SmokeSensor), 0, 1023, 0, 100));
+      doc["sensor" + String(i + 1)] = fmap(analogRead(SmokeSensor), 0, 1023, 0, 100);
     }
 #endif
 #if defined(MQ7_present)
@@ -1324,6 +1323,34 @@ void loop() {
       mq_state = 0;
       mq_millis = millis() + mq_heat_interval;
     }
+  }
+#endif
+
+#if defined(MS_present)
+  // ...process the MS sensor...
+  if ( ms_measure_millis < millis() ) {
+      if (ms_state == 0) {
+        digitalWrite(MS_ENABLE, HIGH);
+        ms_state = 1;
+        ms_millis = millis() + ms_heat_interval;
+      }
+      else {
+        if ( ms_millis < millis() ) {
+           ShowDebug("MS measure...");
+           float f;
+           ms_value = 0;
+           for (int i = 0; i < SAMPLESIZE; i++) {
+               // g += analogRead(MS_PIN);
+               f = analogRead(MS_PIN);
+               ShowDebug(String(f));
+               ms_value += f;
+           }
+           ms_value /= SAMPLESIZE;
+           digitalWrite(MS_ENABLE, LOW);
+           ms_state = 0;
+           ms_measure_millis = millis() + PUBLISH_DELAY;
+        }
+      }
   }
 #endif
 
