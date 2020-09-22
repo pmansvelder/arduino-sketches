@@ -188,7 +188,6 @@ const long mq_startup = 3000;
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfRelays = 7;
-//const byte RelayPins[] = {5, 100, 23, 25, 101, 102, 103};
 const byte RelayPins[] = {5, 39, 23, 25, 41, 43, 45};
 const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 const char* const SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer", "Radiator Keuken", "Alarm voor", "Keuken"};
