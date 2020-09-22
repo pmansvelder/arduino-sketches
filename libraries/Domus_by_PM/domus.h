@@ -736,15 +736,15 @@ void callback(char* topic, byte * payload, byte length) {
   else if (strPayload[0] == 'R') {
 
     // Relais commando
-    ShowDebug("Relay:");
+    ShowDebug("Relay command:");
 
     RelayPort = strPayload[1] - 48;
     if (RelayPort > 16) RelayPort -= 3;
     RelayValue = strPayload[2] - 48;
-
+    ShowDebug("Relay " + String(RelayPins[RelayPort]));
     if (RelayValue == 40) { // toggle
       if (RelayPins[RelayPort] < 100) {
-          ShowDebug("Relay " + String (RelayPins[RelayPort]));
+          
       
           if (digitalRead(RelayPins[RelayPort]) == LOW) {
             digitalWrite(RelayPins[RelayPort], HIGH);
@@ -770,8 +770,10 @@ void callback(char* topic, byte * payload, byte length) {
 #endif
     } 
     else {
+        ShowDebug("...to " + String(RelayValue));
         if (RelayPins[RelayPort] < 100) {
              digitalWrite(RelayPins[RelayPort], RelayValue);
+             
           }
 #if defined(MCP_present)
         else {

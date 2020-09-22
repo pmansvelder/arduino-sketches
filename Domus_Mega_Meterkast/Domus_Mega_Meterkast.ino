@@ -34,6 +34,10 @@
           29: Magneetcontact voordeur
           30: Relay 3: SSR Relais voor keukenlamp
           31: Relay 4: SSR Relais voor plafondlamp huiskamer
+          39: CV-ketel
+          41: Radiator
+          43: Alarm voor
+          45: Keuken extr
           49: enable pin for P1 reader (not connected)
 
           50: <in gebruik voor W5100>
@@ -107,7 +111,7 @@
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
-#define MCP_present // MCP serie i2c expander
+//#define MCP_present // MCP serie i2c expander
 #define P1_meter // P1 port smart meter reading
 //#define DEBUG 1 // Zet debug mode aan
 
@@ -164,7 +168,7 @@ const String config_topic_base = "homeassistant";
 const String item_prefix = "mk";
 
 // Vul hier het macadres in
-const uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0B};
+uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0B};
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 const char* topic_in = "domus/mk/in";
@@ -184,7 +188,8 @@ const long mq_startup = 3000;
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfRelays = 7;
-const byte RelayPins[] = {5, 100, 23, 25, 101, 102, 103};
+//const byte RelayPins[] = {5, 100, 23, 25, 101, 102, 103};
+const byte RelayPins[] = {5, 39, 23, 25, 41, 43, 45};
 const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 const char* const SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer", "Radiator Keuken", "Alarm voor", "Keuken"};
 char* state_topic_relays = "domus/mk/stat/relay";
