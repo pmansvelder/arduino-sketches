@@ -1082,8 +1082,8 @@ void setup() {
   
   if (debug) {
     Serial.begin(115200);
-    ShowDebug(CLIENT_ID);
-    ShowDebug(String(MQTT_MAX_PACKET_SIZE));
+    ShowDebug("Client ID: "+String(CLIENT_ID));
+    ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
   }
 
 #if defined(MCP_present)

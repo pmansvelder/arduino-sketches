@@ -14,6 +14,12 @@
           20: SDA - i2c
           21: SCL - i2c
 
+          22: PIR Zolder
+          24: LEDs zolder
+          25: (2e relais)
+          26: TL Zolder
+          28: Verwarming Zolder
+
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
           52: <in gebruik voor W5100>
@@ -139,20 +145,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 0;
-const byte RelayPins[] = {5, 6, 23, 25};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW};
-String SwitchNames[] = {"*Mediaplayer Keuken", "*CV-ketel", "*Screen keuken", "*Screen Huiskamer"};
+const byte NumberOfRelays = 1;
+const byte RelayPins[] = {28};
+bool RelayInitialState[] = {LOW};
+String SwitchNames[] = {"Verwarming Zolder"};
 char* state_topic_relays = "domus/zolder/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 0;
-const byte LightPins[] = {30, 31, 2};
-bool LightInitialState[] = {HIGH, HIGH, HIGH};
-bool LightBrightness[] = {false, false, true};
-byte LightValue[] = {0, 0, 0};
-String LightNames[] = {"*Keuken", "*Plafondlamp", "*Buttonleds"};
+const byte NumberOfLights = 2;
+const byte LightPins[] = {24,26};
+bool LightInitialState[] = {HIGH, LOW};
+bool LightBrightness[] = {false, false};
+byte LightValue[] = {0, 0};
+String LightNames[] = {"LEDs Zolder", "TL Zolder"};
 const char* state_topic_lights = "domus/zolder/stat/light";
 const char* cmd_topic_lights = "domus/zolder/cmd/light";
 
@@ -181,16 +187,16 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/zolder/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 0;
-int PirSensors[] = {19, 28, 29};
-int PirDebounce[] = {0, 0, 0}; // debounce time for pir or door sensor
-long PirLastActivityTimes[] = {};
-static byte lastPirStates[] = {};
-bool PirInitialState[] = {LOW, LOW, LOW};
-int PreviousDetects[] = {false, false, false}; // Statusvariabele PIR sensor
-byte PirState[] = {0, 0, 0};
-String PirNames[] = {"*PIR Hal", "*PIR Keuken", "*Voordeur"};
-String PirClasses[] = {"motion", "motion", "door"};
+const byte NumberOfPirs = 1;
+int PirSensors[] = {22};
+int PirDebounce[] = {0}; // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0};
+static byte lastPirStates[] = {0};
+bool PirInitialState[] = {LOW};
+int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
+byte PirState[] = {0};
+String PirNames[] = {"PIR Zolder"};
+String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/zolder/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
