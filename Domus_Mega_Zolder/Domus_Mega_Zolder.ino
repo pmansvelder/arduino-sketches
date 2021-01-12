@@ -154,7 +154,7 @@ char* state_topic_relays = "domus/zolder/stat/relay";
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfLights = 2;
-const byte LightPins[] = {24,26};
+const byte LightPins[] = {24, 26};
 bool LightInitialState[] = {HIGH, LOW};
 bool LightBrightness[] = {false, false};
 byte LightValue[] = {0, 0};
