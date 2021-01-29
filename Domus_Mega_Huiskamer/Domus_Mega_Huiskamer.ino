@@ -15,8 +15,8 @@
           8     Relay port R1: 12v relay for lamp living room
           9     Relay port R0: 12v relay for radiator valve
           10    < reserved for Ethernet Shield >
-          11
-          12
+          11    SSR relay 1
+          12    SSR relay 2
           13
           14    Relay port R6: SSR Tuin 1
           15    Relay port R7: SSR Tuin 2
@@ -167,10 +167,10 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 6;
-const byte RelayPins[] = {9, 37, 25, 3, 5, 22};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW};
-String SwitchNames[] = {"Stopcontact Huiskamer", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer"};
+const byte NumberOfRelays = 8;
+const byte RelayPins[] = {9, 37, 25, 3, 5, 22, 11, 12};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH};
+String SwitchNames[] = {"Stopcontact Huiskamer", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer", "SSR Relais 1", "SSR Relais 2"};
 char* state_topic_relays = "domus/hk/stat/relay";
 
 // MQTT Discovery lights
