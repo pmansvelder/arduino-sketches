@@ -159,10 +159,10 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 8;
-const byte RelayPins[] = {A1, A2, A3, A4, 30, 32, 34, 36};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, HIGH};
-String SwitchNames[] = {"Relais 1", "Relais 2", "Relais 3", "Relais 4", "Radiator Hobbykamer", "Radiator Badkamer", "Relaispoort 6", "Buitenkraan"};
+const byte NumberOfRelays = 12;
+const byte RelayPins[] = {A1, A2, A3, A4, 30, 32, 34, 36, 14, 15, 16, 17};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW};
+String SwitchNames[] = {"Relais 1", "Relais 2", "Relais 3", "Relais 4", "Radiator Hobbykamer", "Radiator Badkamer", "Relaispoort 6", "Buitenkraan", "SSR Relais 1", "SSR Relais 2", "SSR Relais 3", "SSR Relais 4"};
 char* state_topic_relays = "domus/hobby/stat/relay";
 
 // MQTT Discovery lights

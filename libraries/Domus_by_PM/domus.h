@@ -737,10 +737,20 @@ void callback(char* topic, byte * payload, byte length) {
 
     // Relais commando
     ShowDebug("Relay command:");
+    
+    ShowDebug("Length=" + String(strPayload.length()));
 
-    RelayPort = strPayload[1] - 48;
+    if (strPayload.length() > 3) {
+        ShowDebug(strPayload.substring(1,3));
+        RelayPort = strPayload.substring(1,3).toInt();
+        RelayValue = strPayload[3] - 48;
+    }
+    else {
+        RelayPort = strPayload[1] - 48;
+        RelayValue = strPayload[2] - 48;
+    }
+
     if (RelayPort > 16) RelayPort -= 3;
-    RelayValue = strPayload[2] - 48;
     ShowDebug("Relay " + String(RelayPins[RelayPort]));
     if (RelayValue == 40) { // toggle
       if (RelayPins[RelayPort] < 100) {
