@@ -4,23 +4,23 @@
     #include <WiFiNINA.h>
     #include <utility/wifi_drv.h>
     WiFiClient NetClient;
-    int status = WL_IDLE_STATUS;      // the Wifi radio's status
+    int status = WL_IDLE_STATUS;    // the Wifi radio's status
 #else
     #include <Ethernet.h>           // Ethernet.h library
     EthernetClient NetClient;
 #endif
-#include "PubSubClient.h"       //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
-#include "ArduinoJson.h"        // max size of mqtt payload
+#include "PubSubClient.h"           //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
+#include "ArduinoJson.h"        
 #define BUFFERSIZE 470              // default 100, should be 512
-#define MQTT_MAX_PACKET_SIZE 512
-#define DEBOUNCE_DELAY 150  // debounce delay for buttons
-#define LONGPRESS_TIME 450  // time for press to be detected as 'long'
-StaticJsonDocument<470> doc; // default 512
+#define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
+#define DEBOUNCE_DELAY 150          // debounce delay for buttons
+#define LONGPRESS_TIME 450          // time for press to be detected as 'long'
+StaticJsonDocument<470> doc;        // default 512
 
 PubSubClient mqttClient;
 
 #if defined(MS_present)
-byte ms_state = 1;  // present state of MS sensor: 0=preheat, 1=measure
+byte ms_state = 1;                  // present state of MS sensor: 0=preheat, 1=measure
 float ms_value = 0;
 long ms_millis, ms_measure_millis;
 const long ms_heat_interval = 50;
@@ -35,31 +35,31 @@ MyData last_p1_data;
 // BMP280 pressure and temperature sensor
 #if defined(BMP_present)
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>    // Adafruit BMP280 library
-Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
+#include <Adafruit_BMP280.h>        // Adafruit BMP280 library
+Adafruit_BMP280 bmp;                // I2C: SDA=20, SCL=21
 #endif
 
 #if defined(MCP_present)
 #include <Wire.h>
-#include "Adafruit_MCP23017.h"  // define type of MCP expander
+#include "Adafruit_MCP23017.h"      // define type of MCP expander
 Adafruit_MCP23017 mcp;
 #endif
 
 char messageBuffer[BUFFERSIZE];
 String ip = "";
-bool startsend = HIGH;// flag for sending at startup
-// Vul hier het interval in waarmee gegevens worden verstuurd op MQTT
-#define PUBLISH_DELAY 10000 // that is 10 second interval
+bool startsend = HIGH;              // flag for sending at startup
+                                    // Vul hier het interval in waarmee gegevens worden verstuurd op MQTT
+#define PUBLISH_DELAY 10000         // that is 10 second interval
 long lastPublishTime;
-// Vul hier het interval in waarmee alle statussen worden verstuurd op MQTT
-#define REPORT_DELAY 60000 // that is 60 seconds interval
+                                    // Vul hier het interval in waarmee alle statussen worden verstuurd op MQTT
+#define REPORT_DELAY 60000          // that is 60 seconds interval
 long lastReportTime;
 #if defined (DEBUG)
 bool debug = true;
 #else
 bool debug = false;
 #endif
-void(* resetFunc) (void) = 0; //declare reset function @ address 0
+void(* resetFunc) (void) = 0;       //declare reset function @ address 0
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
@@ -1098,7 +1098,7 @@ void setup() {
 
 #if defined(MCP_present)
   Wire.setClock(400000);
-  mcp.begin();      // use default address 0 for i2c expander (MCP23017/MCP23008)
+  mcp.begin();                      // use default address 0 for i2c expander (MCP23017/MCP23008)
   Wire.beginTransmission(32);
   if (Wire.endTransmission () == 0) {
       ShowDebug("MCP23017 found at address 20h");
@@ -1221,24 +1221,24 @@ void setup() {
 #endif
 
 #if defined(P1_meter)
-  Serial1.begin(115200); // P1 meter connected to pin 19 (RX1) of Arduino Mega
+  Serial1.begin(115200);                // P1 meter connected to pin 19 (RX1) of Arduino Mega
   reader.enable(true);
   last_p1_read = millis();
   ShowDebug("Slimme meter via P1 geactiveerd via RX1 (pin19) ");
 #endif
 
 #if defined(UNO_WIFI)
-    WiFiDrv::pinMode(25, OUTPUT);  //RED
-    WiFiDrv::pinMode(26, OUTPUT);  //GREEN
-    WiFiDrv::pinMode(27, OUTPUT);  //BLUE
-    set_rgb_led(64, 64, 64); // Set Wifi Status LED to WHITE
+    WiFiDrv::pinMode(25, OUTPUT);       //RED
+    WiFiDrv::pinMode(26, OUTPUT);       //GREEN
+    WiFiDrv::pinMode(27, OUTPUT);       //BLUE
+    set_rgb_led(64, 64, 64);            // Set Wifi Status LED to WHITE
     while ( status != WL_CONNECTED) {
         ShowDebug("Attempting to connect to WPA SSID: ");
         ShowDebug(ssid);
         // Connect to WPA/WPA2 network:
         status = WiFi.begin(ssid, pass);
     }
-    set_rgb_led(0, 64, 0); // GREEN
+    set_rgb_led(0, 64, 0);              // GREEN
     if (debug) {
         ip = String (WiFi.localIP()[0]);
         ip = ip + ".";
@@ -1253,7 +1253,7 @@ void setup() {
 #else
     ShowDebug("Network...");
     // attempt to connect to network:
-    //   setup ethernet communication using DHCP
+    // setup ethernet communication using DHCP
     if (Ethernet.begin(mac) == 0) {
         ShowDebug(F("No DHCP"));
         delay(1000);
