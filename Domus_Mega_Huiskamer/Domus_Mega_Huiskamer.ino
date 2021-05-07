@@ -167,20 +167,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 8;
-const byte RelayPins[] = {9, 37, 25, 3, 5, 22, 11, 12};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH};
-String SwitchNames[] = {"Stopcontact Huiskamer", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer", "SSR Relais 1", "SSR Relais 2"};
+const byte NumberOfRelays = 9;
+const byte RelayPins[] = {9, 37, 25, 3, 5, 22, 11, 12, 8};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW};
+String SwitchNames[] = {"Huiskamer voor", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer", "SSR Relais 1", "SSR Relais 2", "Huiskamer achter"};
 char* state_topic_relays = "domus/hk/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 5;
-const byte LightPins[] = {8, 36, 14, 15, 2};
-bool LightInitialState[] = {LOW, LOW, LOW, LOW, LOW};
-bool LightBrightness[] = {false, false, false, false, true};
-byte LightValue[] = {0, 0, 0, 0, 0};
-String LightNames[] = {"Staande lamp", "Lamp hal", "Floodlight tuin", "Tuinlamp huis", "Buttonleds huiskamer"};
+const byte NumberOfLights = 4;
+const byte LightPins[] = {36, 14, 15, 2};
+bool LightInitialState[] = {LOW, LOW, LOW, LOW};
+bool LightBrightness[] = {false, false, false, true};
+byte LightValue[] = {0, 0, 0, 0};
+String LightNames[] = {"Lamp hal", "Floodlight tuin", "Tuinlamp huis", "Buttonleds huiskamer"};
 const char* state_topic_lights = "domus/hk/stat/light";
 const char* cmd_topic_lights = "domus/hk/cmd/light";
 
