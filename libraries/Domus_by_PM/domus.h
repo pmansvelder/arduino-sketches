@@ -1024,7 +1024,7 @@ void reportMQTTdisco() {
     doc["position_closed"] = 0;
     doc["set_pos_t"] = topic_in;
     doc["set_pos_tpl"] = "{ \"POSITION" + String(i + 1) +  "\": {{ position }} }";
-    doc["val_tpl"] = "{{value_json.POSITION" + String(i + 1) + "}}";
+    doc["pos_tpl"] = "{{value_json.POSITION" + String(i + 1) + "}}";
     setDeviceInfo((config_topic_base + "/cover/" + item_prefix + "_cover" + String(i + 1) + "/config").c_str());
   }
   // discovery data for locks
