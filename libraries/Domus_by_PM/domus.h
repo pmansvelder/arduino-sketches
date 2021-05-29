@@ -1,5 +1,14 @@
 // library file for domus sketches
 
+#include <EEPROM.h>
+#include "EEPROMAnything.h"
+
+struct config_t
+{
+  bool saved;
+  int cover_pos[2];
+} configuration;
+
 #if defined(UNO_WIFI)
     #include <WiFiNINA.h>
     #include <utility/wifi_drv.h>
@@ -225,6 +234,21 @@ void report_state() {
   report_state_lock();
   // end send state data for MQTT discovery
 }
+
+
+void SaveCoverPos(int cover) {
+    ShowDebug("Checking if we should save cover position:");
+    if (CoverPos[cover] != configuration.cover_pos[cover]) {
+        ShowDebug("Saving cover position:");
+        configuration.cover_pos[cover] = CoverPos[cover];
+        ShowDebug("Cover"+String(cover)+" : "+String(configuration.cover_pos[cover]));
+        EEPROM_writeAnything(0, configuration);
+      }
+    else {
+        ShowDebug("No save");
+    }
+}
+
 void SetLightState(int light, String state) {
   if (state == "ON") {
     if (LightPins[light] < 100) {
@@ -296,6 +320,7 @@ void ProcessPulseRelays(int PulseRelayId) {
           }
           ShowDebug("Setting cover position:");
           ShowDebug(String(CoverPos[i]));
+          SaveCoverPos(i);
         }
       } // end update covers
       // Update lock status
@@ -588,6 +613,7 @@ void sendData() {
   mqttClient.publish(state_topic_sensors, messageBuffer);
 
 }
+
 void OpenCover(int Cover) {
   int PulseRelayPort = CoverPulse[Cover];
   ShowDebug("Pulse relay index = " + String(PulseRelayPort));
@@ -617,6 +643,7 @@ void OpenCover(int Cover) {
     String messageString = "P" + String(PulseRelayPort) + "0";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_pulse, messageBuffer);
+    SaveCoverPos(Cover);
   }
 }
 void CloseCover(int Cover) {
@@ -645,6 +672,7 @@ void CloseCover(int Cover) {
     String messageString = "P" + String(PulseRelayPort) + "0";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out_pulse, messageBuffer);
+    SaveCoverPos(Cover);
   }
 }
 void StopCover(int Cover) {
@@ -668,6 +696,7 @@ void StopCover(int Cover) {
   else {
     CoverState[Cover] = 4;
   }
+  SaveCoverPos(Cover);
 }
 void SetCoverPosition(int cover, int position) {
   CoverSetPos[cover] = position;
@@ -688,11 +717,14 @@ void SetCoverPosition(int cover, int position) {
     CloseCover(cover);
   }
 }
+
 void ProcessCovers(int cover) {
   if (CoverPos[cover] == CoverSetPos[cover]) {
     StopCover(cover);
+    SaveCoverPos(cover);
   }
 }
+
 void callback(char* topic, byte * payload, byte length) {
   char msgBuffer[BUFFERSIZE];
   payload[length] = '\0'; // terminate string with 0
@@ -821,6 +853,15 @@ void callback(char* topic, byte * payload, byte length) {
 
     // Status van alle sensors and relais
     sendData();
+  }
+  else if (strPayload == "SAVE") {
+
+    // Save current parameters
+    for (int id = 0; id < NumberOfCovers; id++) {
+        configuration.cover_pos[id] = CoverPos[id];
+        configuration.saved = true;
+    }
+    EEPROM_writeAnything(0, configuration);
   }
   else if (strPayload == "#RESET") {
     ShowDebug("Reset command received, resetting in one second...");
@@ -1096,6 +1137,15 @@ void setup() {
     ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
   }
 
+  EEPROM_readAnything(0, configuration);
+  ShowDebug("Reading stored configuration");
+  if (configuration.saved) {
+      for (int id = 0; id < NumberOfCovers; id++) {
+        CoverPos[id] = configuration.cover_pos[id];
+        ShowDebug("Cover position: "+String(configuration.cover_pos[id]));
+      }
+  }
+  
 #if defined(MCP_present)
   Wire.setClock(400000);
   mcp.begin();                      // use default address 0 for i2c expander (MCP23017/MCP23008)
@@ -1285,6 +1335,7 @@ void loop() {
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
+//     resetFunc();
     reconnect();
     startsend = true;
   }
@@ -1402,5 +1453,6 @@ void loop() {
   }
 
   // and loop.
-  mqttClient.loop();
+//   mqttClient.loop();
+  if(!mqttClient.loop()) resetFunc();
 }
