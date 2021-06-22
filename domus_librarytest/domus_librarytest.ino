@@ -102,14 +102,14 @@
 #include "secrets.h"
 
 // parameters to tune memory use
-#define BMP_present 1 // use BMP280 sensor
+//#define BMP_present 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
 //#define MQ_present 0 // MQ-x gas sensor
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 //#define P1_meter // P1 port smart meter reading
-#define MCP_present // MCP serie i2c expander
+//#define MCP_present // MCP serie i2c expander
 #define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
@@ -198,10 +198,10 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 4;
-const byte RelayPins[] = {100, 101, 102, 103};
-const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH};
-const char* const SwitchNames[] = {"_test_1", "_test_2", "_test_3", "_test_4"};
+const byte NumberOfRelays = 1;
+const byte RelayPins[] = {15};
+const bool RelayInitialState[] = {LOW};
+const char* const SwitchNames[] = {"_test_1"};
 char* state_topic_relays = "domus/test/stat/relay";
 
 // MQTT Discovery lights
@@ -220,15 +220,16 @@ const char* cmd_topic_lights = "domus/test/cmd/light";
 // 2 relais per motor: 1 x richting, 1 x motorpuls
 // hiervoor gebruik ik de pulserelais en de normale relais
 // de waarden zijn de indices op de onderstaande 'RelayPins' en 'PulseRelayPins' arrays
-const byte NumberOfCovers = 0;
-byte CoverDir[] = {2, 3}; // relay numbers for direction
-byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
-byte CoverState[] = {0, 0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
-int CoverPos[] = {100, 100}; // position 100 = open
-int CoverStart[] = {100, 100 }; // start position
-int CoverSetPos[] = {255, 255}; // set position (255 = not set)
-String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
-long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
+const byte NumberOfCovers = 1;
+byte CoverDir[] = {0}; // relay numbers for direction
+byte CoverPulse[] = {0}; // relay numbers for motor pulses
+byte CoverState[] = {0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
+int CoverPos[] = {100}; // position 100 = open
+int CoverStart[] = {100 }; // start position
+int CoverSetPos[] = {255}; // set position (255 = not set)
+String CoverNames[] = {"*Gordijnen"};
+String CoverClasses[] = {"curtain"}; // https://www.home-assistant.io/integrations/cover/
+long CoverDelay[] = {15000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/test/uit/screen"; // Screens (zonwering)
 
 // MQTT Discovery locks
@@ -262,7 +263,7 @@ String ButtonNames[] = {"*Testbutton"};
 const char* state_topic_buttons = "domus/test/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 3;
+const int NumberOfSensors = 1;
 String SensorNames[] = {"_runtime_test", "_temperatuur", "_luchtdruk"};
 String SensorTypes[] = {"TIME","BMP-T", "BMP-P"};
 String SensorClasses[] = {"","temperature", "pressure"};
@@ -270,15 +271,15 @@ String SensorUnits[] = {"s","°C","mbar"};
 const char* state_topic_sensors = "domus/test/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
-const int NumberOfPulseRelays = 0; // 0 = haldeurslot, 1 = voordeurslot, 2 = screen keuken, 3 = screen huiskamer
+const int NumberOfPulseRelays = 1; // 0 = haldeurslot, 1 = voordeurslot, 2 = screen keuken, 3 = screen huiskamer
 // Vul hier de pins in van het pulserelais.
-int PulseRelayPins[] = {8, 7, 22, 24};
-long PulseActivityTimes[] = {0, 0, 0, 0};
+int PulseRelayPins[] = {16};
+long PulseActivityTimes[] = {0};
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
-bool PulseRelayInitialStates[] = {HIGH, HIGH, HIGH, HIGH};
+bool PulseRelayInitialStates[] = {LOW};
 // Vul hier de pulsetijden in voor de pulserelais
-long int PulseRelayTimes[] = {LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1]};
+long int PulseRelayTimes[] = {CoverDelay[0]};
 const char* topic_out_pulse = "domus/test/uit/pulse";    // Pulserelais t.b.v. deuropener
 
 // Vul hier de uitgaande MQTT topics in

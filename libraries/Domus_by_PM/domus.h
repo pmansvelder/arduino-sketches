@@ -20,11 +20,11 @@ struct config_t
 #endif
 #include "PubSubClient.h"           //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include "ArduinoJson.h"        
-#define BUFFERSIZE 470              // default 100, should be 512
+#define BUFFERSIZE 512              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
 #define DEBOUNCE_DELAY 150          // debounce delay for buttons
 #define LONGPRESS_TIME 450          // time for press to be detected as 'long'
-StaticJsonDocument<470> doc;        // default 512
+StaticJsonDocument<512> doc;        // default 512
 
 PubSubClient mqttClient;
 
@@ -1056,13 +1056,14 @@ void reportMQTTdisco() {
     doc.clear();
     doc["name"] = CoverNames[i];
     doc["uniq_id"] = item_prefix + "_cover" + String(i + 1);
+    doc["dev_cla"] = CoverClasses[i];
     doc["pos_t"] = state_topic_covers;
     doc["cmd_t"] = topic_in;
     doc["pl_open"] = "O" + String(i + 1);
     doc["pl_cls"] = "C" + String(i + 1);
     doc["pl_stop"] = "S" + String(i + 1);
-    doc["position_open"] = 100;
-    doc["position_closed"] = 0;
+    doc["pos_open"] = 100;
+    doc["pos_clsd"] = 0;
     doc["set_pos_t"] = topic_in;
     doc["set_pos_tpl"] = "{ \"POSITION" + String(i + 1) +  "\": {{ position }} }";
     doc["pos_tpl"] = "{{value_json.POSITION" + String(i + 1) + "}}";
