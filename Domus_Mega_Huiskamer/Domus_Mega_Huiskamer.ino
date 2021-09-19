@@ -9,11 +9,13 @@
 
           Pins used:
           2     LED for button hallway
-          3     Relay port R8: 12v relay for TV
+          3     Relay port R3: 12v relay for TV
           4     < reserved for Ethernet Shield >
-          5     Relay port R9: 12v relay for stereo
-          8     Relay port R1: 12v relay for lamp living room
-          9     Relay port R0: 12v relay for radiator valve
+          5     Relay port R4: 12v relay for stereo
+          6     Relay port R9: direction relay for curtain
+          7     Puslse relay for curtain
+          8     Relay port R8: 12v relay for lamp living room
+          9     Relay port R0: 12v relay living room
           10    < reserved for Ethernet Shield >
           11    SSR relay 1
           12    SSR relay 2
@@ -90,7 +92,7 @@
           - Change pin numbers for sensors
           - item_prefix variable
 
-
+          Last revision: 19/09/2021 included curtain control living room
 */
 
 #include "secrets.h"
