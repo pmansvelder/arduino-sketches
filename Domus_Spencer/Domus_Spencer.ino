@@ -142,7 +142,7 @@ void ShowDebug(String tekst) {
 void RandomAnimation() {
   int RandomNumber;
   String randomfile;
-  RandomNumber = random(1, 11    ); // number from 1 to 10
+  RandomNumber = random(1, 11); // number from 1 to 10
   randomfile = "GIF-idle" + String(RandomNumber) + ".gif";
   Serial.println("Idle pattern : " + randomfile);
   char char_array[randomfile.length() + 1];
@@ -172,7 +172,7 @@ void SetDisplay() {
   if (configuration.state) {
     ShowDebug("Display state on");
     LEDmatrix.setBrightness(configuration.brightness);
-    LEDmatrix.startAnimation(new Animation(new SerialFlashFileAdapter("GIF-noWifi.gif")), true);
+    LEDmatrix.startAnimation(new Animation(new SerialFlashFileAdapter("GIF-smile.gif")), true);
   }
   else {
     ShowDebug("Display state off");
