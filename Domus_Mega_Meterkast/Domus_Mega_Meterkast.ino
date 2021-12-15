@@ -217,6 +217,7 @@ int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 int CoverSetPos[] = {255, 255}; // set position (255 = not set)
 const char* const CoverNames[] = {"Screen Keuken", "Screen Huiskamer"};
+String CoverClasses[] = {"shade", "shade"}; // https://www.home-assistant.io/integrations/cover/
 const long CoverDelay[] = {27000, 28000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/mk/uit/screen"; // Screens (zonwering)
 

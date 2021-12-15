@@ -1,3 +1,83 @@
+/*
+          <========Arduino Sketch for Circuitmess Spencer =========>
+
+ LEDmatrix.startAnimation(new Animation(new SerialFlashFileAdapter("GIF-talk.gif")), true); to display a gif
+
+Valid gifs:
+
+GIF-angry.gif
+GIF-clouds.gif
+GIF-error500.gif
+GIF-error.gif
+GIF-fog.gif
+GIF-heart.gif
+GIF-horoscope.gif
+GIF-idle1.gif
+GIF-idle2.gif
+GIF-idle3.gif
+GIF-idle4.gif
+GIF-idle5.gif
+GIF-idle6.gif
+GIF-idle7.gif
+GIF-idle8.gif
+GIF-idle9.gif
+GIF-idle10.gif
+GIF-laugh.gif
+GIF-listen.gif
+GIF-loading0.gif
+GIF-loading1.gif
+GIF-loading2.gif
+GIF-loading3.gif
+GIF-loading4.gif
+GIF-loading5.gif
+GIF-loading6.gif
+GIF-loading7.gif
+GIF-music.gif
+GIF-news.gif
+GIF-night.gif
+GIF-noWifi.gif
+GIF-questionMark.gif
+GIF-rain.gif
+GIF-random0.gif
+GIF-random1.gif
+GIF-random2.gif
+GIF-random3.gif
+GIF-random4.gif
+GIF-random5.gif
+GIF-random6.gif
+GIF-random7.gif
+GIF-random8.gif
+GIF-random9.gif
+GIF-random10.gif
+GIF-random11.gif
+GIF-red.gif
+GIF-relax.gif
+GIF-shutdown.gif
+GIF-smile.gif
+GIF-snow.gif
+GIF-startup.gif
+GIF-sunClouds.gif
+GIF-sun.gif
+GIF-talk.gif
+GIF-wifi.gif
+GIF-wink.gif
+GIF-yawn.gif
+
+  LEDmatrix.drawString(0, 0, "Hello There", 255); to display a text
+
+For speech:
+
+  if(synthesizing){
+    Serial.println("Another speech synthesis operation is already pending");
+  }else{
+    synthesizing = true;
+    delete statement;
+    statement = new PreparedStatement();
+    statement->addTTS("Hello! My name is Spencer!");
+    statement->prepare(speechPlay);
+  }
+*/
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <CircuitOS.h>
