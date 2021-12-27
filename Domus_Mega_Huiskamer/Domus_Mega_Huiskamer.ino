@@ -169,20 +169,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 10;
-const byte RelayPins[] = {9, 37, 25, 3, 5, 22, 11, 12, 8, 6};
-bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW};
-String SwitchNames[] = {"Huiskamer voor", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer", "SSR Relais 1", "SSR Relais 2", "Huiskamer achter", "GordijnP"};
+const byte NumberOfRelays = 11;
+const byte RelayPins[] = {9, 37, 25, 3, 5, 22, 11, 12, 8, 6, 36};
+bool RelayInitialState[] = {LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW};
+String SwitchNames[] = {"Huiskamer voor", "Verwarming", "Zoemer Huiskamer", "LoggerTV", "Stereo", "Slaapkamer", "SSR Relais 1", "SSR Relais 2", "Huiskamer achter", "GordijnP", "SSR Lamp Hal"};
 char* state_topic_relays = "domus/hk/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 4;
-const byte LightPins[] = {36, 14, 15, 2};
-bool LightInitialState[] = {LOW, LOW, LOW, LOW};
-bool LightBrightness[] = {false, false, false, true};
-byte LightValue[] = {0, 0, 0, 0};
-String LightNames[] = {"Lamp hal", "Floodlight tuin", "Tuinlamp huis", "Buttonleds huiskamer"};
+const byte NumberOfLights = 3;
+const byte LightPins[] = {14, 15, 2};
+bool LightInitialState[] = {LOW, LOW, LOW};
+bool LightBrightness[] = {false, false, true};
+byte LightValue[] = {0, 0, 0};
+String LightNames[] = {"Floodlight tuin", "Tuinlamp huis", "Buttonleds huiskamer"};
 const char* state_topic_lights = "domus/hk/stat/light";
 const char* cmd_topic_lights = "domus/hk/cmd/light";
 
@@ -237,7 +237,7 @@ const char* state_topic_buttons = "domus/hk/uit/button";
 const int NumberOfSensors = 7;
 String SensorNames[] = {"Temperatuur huiskamer", "Luchtvochtigheid huiskamer", "Gevoelstemperatuur huiskamer", "VOS sensor huiskamer", "Lichtsterkte huiskamer", "Temperatuur tuin", "Runtime huiskamer"};
 String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "MQ2", "LDR", "DS18B20", "TIME"};
-String SensorClasses[] = {"temperature", "humidity", "temperature", "", "illuminance", "temperature", "timestamp"};
+String SensorClasses[] = {"temperature", "humidity", "temperature", "", "illuminance", "temperature", ""};
 String SensorUnits[] = {"°C", "%", "°C", "%" , "lux", "°C", "s"};
 const char* state_topic_sensors = "domus/hk/uit/sensor";
 

@@ -187,20 +187,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 7;
-const byte RelayPins[] = {5, 39, 23, 25, 41, 43, 45};
-const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
-const char* const SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer", "Radiator Keuken", "Alarm voor", "Keuken"};
+const byte NumberOfRelays = 8;
+const byte RelayPins[] = {5, 39, 23, 25, 41, 43, 45, 31};
+const bool RelayInitialState[] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, LOW};
+const char* const SwitchNames[] = {"Gong Hal", "CV-ketel", "Screen keuken", "Screen Huiskamer", "Radiator Keuken", "Alarm voor", "Keuken", "SSR Plafondlamp"};
 char* state_topic_relays = "domus/mk/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte lampen in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 3;
-const byte LightPins[] = {30, 31, 2};
-const bool LightInitialState[] = {LOW, LOW, LOW};
-const bool LightBrightness[] = {false, false, true};
-byte LightValue[] = {0, 0, 0};
-const char* const LightNames[] = {"Keuken", "Plafondlamp", "Buttonleds"};
+const byte NumberOfLights = 2;
+const byte LightPins[] = {30, 2};
+const bool LightInitialState[] = {LOW, LOW};
+const bool LightBrightness[] = {false, true};
+byte LightValue[] = {0, 0};
+const char* const LightNames[] = {"Keuken", "Buttonleds"};
 const char* state_topic_lights = "domus/mk/stat/light";
 const char* cmd_topic_lights = "domus/mk/cmd/light";
 
@@ -254,7 +254,7 @@ const char* state_topic_buttons = "domus/mk/uit/button";
 const int NumberOfSensors = 10;
 const char* const SensorNames[] = {"Runtime meterkast","Energieverbruik laag","Energieverbruik hoog","Energietarief","Energieverbruik","Netspanning","Stroomsterkte","Gasverbruik", "Luchtdruk", "Temperatuur keuken"};
 const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T"};
-const char* const SensorClasses[] = {"", "power", "power", "power", "power", "power", "power", "power", "pressure", "temperature"};
+const char* const SensorClasses[] = {"", "power", "power", "", "power", "power", "power", "power", "pressure", "temperature"};
 const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m3", "mBar", "°C"};
 const char* state_topic_sensors = "domus/mk/uit/sensor";
 
