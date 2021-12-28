@@ -189,6 +189,7 @@ int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 int CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
+String CoverClasses[] = {"curtain"}; // https://www.home-assistant.io/integrations/cover/
 long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/hobby/uit/screen"; // Screens (zonwering)
 
@@ -226,12 +227,12 @@ const char* state_topic_buttons = "domus/hobby/uit/button";
 const int NumberOfSensors = 5;
 String SensorNames[] = {"Temperatuur hobbykamer", "Luchtvochtigheid hobbykamer", "GevoelsTemperatuur hobbykamer", "CO sensor hobbykamer", "Runtime hobbykamer"};
 String SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "MQ7", "TIME"};
-String SensorClasses[] = {"temperature", "humidity", "temperature", "", "timestamp"};
+String SensorClasses[] = {"temperature", "humidity", "temperature", "", ""};
 String SensorUnits[] = {"°C", "%", "°C", "ppm", "s"};
 const char* state_topic_sensors = "domus/hobby/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
-const int NumberOfPulseRelays = 0; // 0 = haldeurslot, 1 = voordeurslot, 2 = screen keuken, 3 = screen huiskamer
+const int NumberOfPulseRelays = 0; 
 // Vul hier de pins in van het pulserelais.
 int PulseRelayPins[] = {8, 7, 22, 24};
 long PulseActivityTimes[] = {0, 0, 0, 0};
