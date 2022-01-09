@@ -175,6 +175,7 @@ int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 int CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
+String CoverClasses[] = {"shade", "shade"}; // https://www.home-assistant.io/integrations/cover/
 long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/zolder/uit/screen"; // Screens (zonwering)
 
@@ -212,7 +213,7 @@ const char* state_topic_buttons = "domus/zolder/uit/button";
 const int NumberOfSensors = 3;
 String SensorNames[] = {"Temperatuur zolder", "Runtime zolder", "Luchtdruk zolder"};
 String SensorTypes[] = {"BMP-T", "TIME", "BMP-P"};
-String SensorClasses[] = {"temperature", "timestamp", "pressure"};
+String SensorClasses[] = {"temperature", "", "pressure"};
 String SensorUnits[] = {"°C", "s", "mbar"};
 const char* state_topic_sensors = "domus/zolder/uit/sensor";
 
