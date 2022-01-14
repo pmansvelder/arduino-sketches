@@ -235,6 +235,15 @@ void report_state() {
   // end send state data for MQTT discovery
 }
 
+void heartbeat() {
+  ShowDebug("Heartbeat sent!");
+  pinMode(heartbeatPin, OUTPUT);
+  digitalWrite(heartbeatPin,LOW);
+  delay(100); // Should be enough time to pulse to get the 555 to recognize it
+  digitalWrite(heartbeatPin, HIGH);
+  // Return to high impedance
+  pinMode(heartbeatPin, INPUT);
+}
 
 void SaveCoverPos(int cover) {
     ShowDebug("Checking if we should save cover position:");
