@@ -1347,6 +1347,10 @@ void setup() {
   lastPublishTime = millis();
 }
 void loop() {
+  // first send a pulse to the heartbeat timer...
+  heartbeat();
+
+
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
