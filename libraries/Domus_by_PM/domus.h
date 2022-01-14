@@ -1347,10 +1347,6 @@ void setup() {
   lastPublishTime = millis();
 }
 void loop() {
-  // first send a pulse to the heartbeat timer...
-  heartbeat();
-
-
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
     ShowDebug("Not Connected!");
@@ -1464,6 +1460,8 @@ void loop() {
   else if (millis() - lastReportTime > REPORT_DELAY) {
     lastReportTime = millis();
     report_state();
+    // send a heartbeat pulse
+    heartbeat();
   }
   else {
     for (int id = 0; id < NumberOfButtons; id++) {
