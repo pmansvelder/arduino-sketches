@@ -1359,6 +1359,8 @@ void loop() {
   if (startsend) {
     reportMQTTdisco();
     report_state();
+    // send heartbeat
+    heartbeat();
     startsend = false;
   }
 
@@ -1456,6 +1458,7 @@ void loop() {
   if (millis() - lastPublishTime > PUBLISH_DELAY) {
     lastPublishTime = millis();
     sendData();
+    heartbeat();
   }
   else if (millis() - lastReportTime > REPORT_DELAY) {
     lastReportTime = millis();
