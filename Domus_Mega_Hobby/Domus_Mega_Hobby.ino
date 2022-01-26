@@ -17,6 +17,7 @@
           7: Button #1
           8: Button #1
           9: Button #1
+          10: <in gebruik voor W5100>
           11: Heartbeat 
           30: Relay #5
           32: Relay #6
