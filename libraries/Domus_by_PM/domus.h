@@ -256,6 +256,7 @@ void SaveCoverPos(int cover) {
     else {
         ShowDebug("No save");
     }
+    CoverSetPos[cover] = 255; // and set coversetpos to unset position again
 }
 
 void SetLightState(int light, String state) {
@@ -728,7 +729,6 @@ void SetCoverPosition(int cover, int position) {
 }
 
 void ProcessCovers(int cover) {
-
   if (CoverPos[cover] == CoverSetPos[cover]) {
     ShowDebug("ProcessCovers");
     StopCover(cover);
