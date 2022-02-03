@@ -728,6 +728,7 @@ void SetCoverPosition(int cover, int position) {
 }
 
 void ProcessCovers(int cover) {
+  ShowDebug("ProcessCovers");
   if (CoverPos[cover] == CoverSetPos[cover]) {
     StopCover(cover);
     SaveCoverPos(cover);
