@@ -86,7 +86,7 @@
           Uno: pins 4,10,11,12,13 in use
           Mega: 4,10,50,51,52,53 in use
 
-          3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
+          Uno: 3,5,6,7,8,9,A0(14),A1(15),A2(16),A3(17), using those not used by ethernet shield (4, 10, 11, 12, 13) and other
           ports (0, 1 used by serial interface).
           A4(18) and A5(19) are used as inputs, for 2 buttons
 
