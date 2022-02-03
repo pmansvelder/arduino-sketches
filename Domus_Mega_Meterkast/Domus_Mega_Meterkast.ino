@@ -139,6 +139,9 @@ float last_temp = 0;
 int SmokeSensor = A9;
 #endif
 
+// Heartbeat function
+byte heartbeatPin = 16;
+
 #if defined(P1_meter)
 #include "dsmr.h"
 #define P1_REQUEST_PIN 49
