@@ -21,6 +21,7 @@
           11: Relais 5 : Beacon schuur
           12: Relais 6 : Beacon schuur knipper
           13: Relais 7 : Lamp Schuur
+          16: NE555 Heartbeat module
 
           A0: input for humidity sensor
 
@@ -134,6 +135,9 @@ Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 int SmokeSensor = A9;
 #endif
 
+// Heartbeat function
+byte heartbeatPin = 16;
+
 #if defined(MS_present)
 #define MS_PIN A0 // Vul hier de pin in van de moisture sensor
 #define MS_ENABLE 35 // vul hier de enable pin in
@@ -202,6 +206,7 @@ int CoverPos[] = {100, 100}; // position 100 = open
 int CoverStart[] = {100, 100 }; // start position
 int CoverSetPos[] = {255, 255}; // set position (255 = not set)
 String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
+String CoverClasses[] = {}; // https://www.home-assistant.io/integrations/cover/
 long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
 const char* state_topic_covers = "domus/schuur/uit/screen"; // Screens (zonwering)
 

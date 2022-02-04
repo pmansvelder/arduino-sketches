@@ -232,6 +232,8 @@ void report_state() {
   report_state_cover();
   // send data for locks
   report_state_lock();
+  // send data for pirs
+  report_state_pir();
   // end send state data for MQTT discovery
 }
 
