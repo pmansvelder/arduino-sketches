@@ -244,7 +244,7 @@ const char* state_topic_buttons = "domus/schuur/uit/button";
 const int NumberOfSensors = 5;
 const char* const SensorNames[] = {"Temperatuur schuur", "Luchtvochtigheid schuur", "Gevoelstemperatuur schuur", "Runtime schuur", "Vochtigheid grond"};
 const char* const SensorTypes[] = {"DHT-T", "DHT-H", "DHT-I", "TIME", "MS"};
-const char* const SensorClasses[] = {"temperature", "humidity", "temperature", "timestamp", "humidity"};
+const char* const SensorClasses[] = {"temperature", "humidity", "temperature", "", "humidity"};
 const char* const SensorUnits[] = {"°C", "%", "°C", "s", "%"};
 const char* state_topic_sensors = "domus/schuur/uit/sensor";
 
