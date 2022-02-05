@@ -137,6 +137,9 @@ Adafruit_BMP280 bmp; // I2C: SDA=20, SCL=21
 int SmokeSensor = A9;
 #endif
 
+// Heartbeat function
+byte heartbeatPin = 30;
+
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
 #define CLIENT_ID  "domus_huiskamer"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant

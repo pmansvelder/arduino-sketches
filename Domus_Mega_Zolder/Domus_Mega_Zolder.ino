@@ -113,6 +113,9 @@ float last_temp = 0;
 int SmokeSensor = A9;
 #endif
 
+// Heartbeat function
+byte heartbeatPin = 16;
+
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
 #define CLIENT_ID  "domus_zolder"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
