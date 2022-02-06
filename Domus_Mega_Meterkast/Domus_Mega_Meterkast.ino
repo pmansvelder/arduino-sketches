@@ -173,8 +173,8 @@ const String item_prefix = "mk";
 // Vul hier het macadres in
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x0B};
 
-// Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/mk/in";
+// Vul hier de MQTT topic in waar deze arduino naar luistert (test in domus.h voor het berekenen van deze topic)
+//const char* topic_in = "domus/mk/in";
 
 #if defined(MQ7_present)
 byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
@@ -255,7 +255,7 @@ const char* state_topic_buttons = "domus/mk/uit/button";
 
 // MQTT Discovery sensors (sensors)
 const int NumberOfSensors = 10;
-const char* const SensorNames[] = {"Runtime meterkast","Energieverbruik laag","Energieverbruik hoog","Energietarief","Energieverbruik","Netspanning","Stroomsterkte","Gasverbruik", "Luchtdruk", "Temperatuur keuken"};
+const char* const SensorNames[] = {"Runtime meterkast", "Energieverbruik laag", "Energieverbruik hoog", "Energietarief", "Energieverbruik", "Netspanning", "Stroomsterkte", "Gasverbruik", "Luchtdruk", "Temperatuur keuken"};
 const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T"};
 const char* const SensorClasses[] = {"", "power", "power", "", "power", "power", "power", "power", "pressure", "temperature"};
 const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m3", "mBar", "°C"};

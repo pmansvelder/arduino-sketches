@@ -28,6 +28,18 @@ StaticJsonDocument<512> doc;        // default 512
 
 PubSubClient mqttClient;
 
+// calculated topic for incoming messages
+const String topic_in_string = "domus/" + item_prefix + "/in";
+const char* topic_in = topic_in_string.c_str();
+
+// calculated topic for outgoing status messages
+const String status_topic_string = "domus/" + item_prefix + "/status";
+const char* status_topic = status_topic_string.c_str();
+// Last will message
+const char* last_will = "error";
+byte willQoS = 0;
+boolean willRetain = false;
+
 #if defined(MS_present)
 byte ms_state = 1;                  // present state of MS sensor: 0=preheat, 1=measure
 float ms_value = 0;
@@ -220,6 +232,8 @@ void report_state_pir() {
   }
 }
 void report_state() {
+  // send general status of controller
+  mqttClient.publish(status_topic, "ok");
   // send data for relays
   report_state_relay();
   // send data for lights
@@ -492,7 +506,7 @@ void reconnect() {
 #endif
     ShowDebug("Attempting MQTT connection...");
     // Attempt to connect
-    if (mqttClient.connect(CLIENT_ID)) {
+    if (mqttClient.connect(CLIENT_ID, status_topic, willQoS, willRetain, last_will)) {
       ShowDebug("connected");
 #if defined(UNO_WIFI)
       set_rgb_led(0, 0, 64);  // BLUE
@@ -1096,6 +1110,15 @@ void reportMQTTdisco() {
     doc["val_tpl"] = "{{value_json.LOCK" + String(i + 1) + "}}";
     setDeviceInfo((config_topic_base + "/lock/" + item_prefix + "_lock" + String(i + 1) + "/config").c_str());
   }
+  // discovery data for status message (binary_sensor)
+  doc.clear();
+  doc["name"] = "Status";
+  doc["uniq_id"] = item_prefix + "_state";
+  doc["stat_t"] = status_topic;
+  doc["device_class"] = "problem";
+  doc["pl_on"] = "error";
+  doc["pl_off"] = "ok";
+  setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_status" + "/config").c_str());
   // discover data for pirs (binary_sensors)
   for (int i = 0; i < NumberOfPirs ; i++ ) {
     doc.clear();
