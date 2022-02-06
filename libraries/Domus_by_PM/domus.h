@@ -1161,7 +1161,7 @@ void reportMQTTdisco() {
     if (SensorUnits[i] != "") {
       doc["unit_of_meas"] = SensorUnits[i];
     }
-    if (SensorTypes[i + 1] == "P1_ta"){
+    if (SensorTypes[i] == "P1_ta"){
       doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + " }}";
     }
     else {
