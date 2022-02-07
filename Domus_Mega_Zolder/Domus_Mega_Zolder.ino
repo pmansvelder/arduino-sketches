@@ -132,7 +132,7 @@ const String item_prefix = "zolder";
 uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x05, 0x0B};
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-const char* topic_in = "domus/zolder/in";
+//const char* topic_in = "domus/zolder/in";
 
 #if defined(MQ7_present)
 byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
