@@ -506,7 +506,7 @@ void reconnect() {
 #endif
     ShowDebug("Attempting MQTT connection...");
     // Attempt to connect
-    if (mqttClient.connect(CLIENT_ID, status_topic, willQoS, willRetain, last_will)) {
+    if (mqttClient.connect(CLIENT_ID, MQTT_USER, MQTT_PASS, status_topic, willQoS, willRetain, last_will)) {
       ShowDebug("connected");
 #if defined(UNO_WIFI)
       set_rgb_led(0, 0, 64);  // BLUE
@@ -608,6 +608,12 @@ void sendData() {
     else if (SensorTypes[i] == "P1_en_t2") {
       doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff2.val();
     }
+    else if (SensorTypes[i] == "P1_rt_t1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff1.val();
+    }
+    else if (SensorTypes[i] == "P1_rt_t2") {
+      doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff2.val();
+    }
     else if (SensorTypes[i] == "P1_ta") {
       if (last_p1_data.electricity_tariff.toInt() == 2) {
         doc["sensor" + String(i + 1)] = "hoog";
@@ -619,6 +625,9 @@ void sendData() {
     else if (SensorTypes[i] == "P1_pd") {
       doc["sensor" + String(i + 1)] = last_p1_data.power_delivered.int_val();
     }
+    else if (SensorTypes[i] == "P1_pr") {
+      doc["sensor" + String(i + 1)] = last_p1_data.power_returned.int_val();
+    }
     else if (SensorTypes[i] == "P1_v1") {
       doc["sensor" + String(i + 1)] = last_p1_data.voltage_l1.val();
     }
@@ -627,6 +636,9 @@ void sendData() {
     }
     else if (SensorTypes[i] == "P1_pd1") {
       doc["sensor" + String(i + 1)] = last_p1_data.power_delivered_l1.int_val();
+    }
+    else if (SensorTypes[i] == "P1_pr1") {
+      doc["sensor" + String(i + 1)] = last_p1_data.power_returned_l1.int_val();
     }
     else if (SensorTypes[i] == "P1_gas") {
       doc["sensor" + String(i + 1)] = last_p1_data.gas_delivered.val();
@@ -1115,17 +1127,18 @@ void reportMQTTdisco() {
   doc["name"] = "Status";
   doc["uniq_id"] = item_prefix + "_state";
   doc["stat_t"] = status_topic;
-  doc["device_class"] = "problem";
+  doc["dev_cla"] = "problem";
   doc["pl_on"] = "error";
   doc["pl_off"] = "ok";
   setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_status" + "/config").c_str());
+  
   // discover data for pirs (binary_sensors)
   for (int i = 0; i < NumberOfPirs ; i++ ) {
     doc.clear();
     doc["name"] = PirNames[i];
     doc["uniq_id"] = item_prefix + "_pir" + String(i + 1);
     doc["stat_t"] = state_topic_pirs;
-    doc["device_class"] = PirClasses[i];
+    doc["dev_cla"] = PirClasses[i];
     doc["pl_on"] = "ON";
     doc["pl_off"] = "OFF";
     doc["val_tpl"] = " {{value_json.PIR" + String(i + 1) + "}}";
@@ -1156,7 +1169,10 @@ void reportMQTTdisco() {
     doc["uniq_id"] = item_prefix + "_sensor" + String(i + 1);
     doc["stat_t"] = state_topic_sensors;
     if (SensorClasses[i] != "") {
-      doc["device_class"] = SensorClasses[i];
+      doc["dev_cla"] = SensorClasses[i];
+    }
+    if (StateClasses[i] != "") {
+      doc["stat_cla"] = StateClasses[i];
     }
     if (SensorUnits[i] != "") {
       doc["unit_of_meas"] = SensorUnits[i];

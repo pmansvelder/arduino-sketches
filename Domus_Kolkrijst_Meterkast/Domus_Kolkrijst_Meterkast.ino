@@ -10,7 +10,8 @@
           4: <in gebruik voor W5100>
 
           10: <in gebruik voor W5100>
-
+          18: Serial1 TX }
+          19: Serial1 RX } in use for P1 Reader
           20: SDA - i2c
           21: SCL - i2c
 
@@ -19,7 +20,7 @@
           25: 
           26: 
           28: 
-
+          49: enable pin for P1 reader (not connected)
           50: <in gebruik voor W5100>
           51: <in gebruik voor W5100>
           52: <in gebruik voor W5100>
@@ -87,7 +88,8 @@
 //#define MQ7_present 0 // MQ-7 CO sensor
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
-//#define DEBUG 1 // Zet debug mode aan
+#define P1_meter // P1 port smart meter reading
+#define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -115,6 +117,26 @@ int SmokeSensor = A9;
 
 // Heartbeat function
 byte heartbeatPin = 16;
+
+#if defined(P1_meter)
+#include "dsmr.h"
+#define P1_REQUEST_PIN 49
+const int READER_INTERVAL = 5000; // interval to read meter values in ms
+using MyData = ParsedData <
+               /* FixedValue */ energy_delivered_tariff1,
+               /* FixedValue */ energy_delivered_tariff2,
+               /* FixedValue */ energy_returned_tariff1,
+               /* FixedValue */ energy_returned_tariff2,
+               /* String */ electricity_tariff,
+               /* FixedValue */ power_delivered,
+               /* FixedValue */ power_returned,
+               /* FixedValue */ voltage_l1,
+               /* FixedValue */ current_l1,
+               /* FixedValue */ power_delivered_l1,
+               /* FixedValue */ power_returned_l1,
+               /* TimestampedFixedValue */ gas_delivered
+               >;
+#endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
 #define CLIENT_ID  "domus_meterkast"
@@ -213,11 +235,17 @@ String ButtonNames[] = {"*Knop Keuken", "*Keuken", "*Voordeur"};
 const char* state_topic_buttons = "domus/meterkast/uit/button";
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 3;
-String SensorNames[] = {"Temperatuur", "Runtime", "Luchtdruk"};
-String SensorTypes[] = {"BMP-T", "TIME", "BMP-P"};
-String SensorClasses[] = {"temperature", "", "pressure"};
-String SensorUnits[] = {"°C", "s", "mbar"};
+const int NumberOfSensors = 13;
+// const int NumberOfSensors = 3;
+// String SensorNames[] = {"Temperatuur", "Runtime", "Luchtdruk"};
+// String SensorTypes[] = {"BMP-T", "TIME", "BMP-P"};
+// String SensorClasses[] = {"temperature", "", "pressure"};
+// String SensorUnits[] = {"°C", "s", "mbar"};
+const char* const SensorNames[] = {"Runtime meterkast", "Energieverbruik laag", "Energieverbruik hoog", "Energietarief", "Energieverbruik", "Netspanning", "Stroomsterkte", "Gasverbruik", "Luchtdruk", "Temperatuur", "Energie teruglevering laag", "Energie teruglevering hoog", "Energie teruglevering"};
+const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T", "P1_rt_t1", "P1_rt_t2", "P1_pr"};
+const char* const SensorClasses[] = {"", "energy", "energy", "", "energy", "energy", "energy", "gas", "pressure", "temperature", "energy", "energy", "energy"};
+const char* const StateClasses[] = {"total_increasing", "total_increasing", "total_increasing", "", "measurement", "measurement", "measurement", "total_increasing", "measurement", "measurement", "total_increasing", "total_increasing", "measurement"};
+const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m³", "mBar", "°C", "kWh", "kWh", "W"};
 const char* state_topic_sensors = "domus/meterkast/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
