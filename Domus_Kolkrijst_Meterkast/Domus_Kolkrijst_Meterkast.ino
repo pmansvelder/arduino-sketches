@@ -89,7 +89,7 @@
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 #define P1_meter // P1 port smart meter reading
-#define DEBUG 1 // Zet debug mode aan
+// #define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -123,19 +123,29 @@ byte heartbeatPin = 16;
 #define P1_REQUEST_PIN 49
 const int READER_INTERVAL = 5000; // interval to read meter values in ms
 using MyData = ParsedData <
-               /* FixedValue */ energy_delivered_tariff1,
-               /* FixedValue */ energy_delivered_tariff2,
-               /* FixedValue */ energy_returned_tariff1,
-               /* FixedValue */ energy_returned_tariff2,
-               /* String */ electricity_tariff,
-               /* FixedValue */ power_delivered,
-               /* FixedValue */ power_returned,
-               /* FixedValue */ voltage_l1,
-               /* FixedValue */ current_l1,
-               /* FixedValue */ power_delivered_l1,
-               /* FixedValue */ power_returned_l1,
-               /* TimestampedFixedValue */ gas_delivered
-               >;
+  /* String */ identification,
+  /* String */ p1_version,
+  /* String */ timestamp,
+  /* String */ equipment_id,
+  /* FixedValue */ energy_delivered_tariff1,
+  /* FixedValue */ energy_delivered_tariff2,
+  /* FixedValue */ energy_returned_tariff1,
+  /* FixedValue */ energy_returned_tariff2,
+  /* String */ electricity_tariff,
+  /* FixedValue */ power_delivered,
+  /* FixedValue */ power_returned,
+  /* uint32_t */ electricity_failures,
+  /* uint32_t */ electricity_long_failures,
+  /* uint32_t */ electricity_sags_l1,
+  /* uint32_t */ electricity_swells_l1,
+  /* String */ message_long,
+  /* FixedValue */ voltage_l1,
+  /* FixedValue */ current_l1,
+  /* FixedValue */ power_delivered_l1,
+  /* FixedValue */ power_returned_l1,
+  /* uint16_t */ gas_device_type,
+  /* String */ gas_equipment_id,
+  /* TimestampedFixedValue */ gas_delivered >;
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant

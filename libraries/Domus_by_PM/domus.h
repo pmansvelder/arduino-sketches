@@ -649,7 +649,6 @@ void sendData() {
   ShowDebug("Sending MQTT state for sensors...");
   ShowDebug(messageBuffer);
   mqttClient.publish(state_topic_sensors, messageBuffer);
-
 }
 
 void OpenCover(int Cover) {
@@ -1389,6 +1388,62 @@ void setup() {
   ShowDebug("Ready to send data");
   lastPublishTime = millis();
 }
+
+void PrintValues(MyData data) {
+  Serial.print("Id: ");
+  Serial.println(data.identification);
+  Serial.print("Versie: ");
+  Serial.println(data.p1_version);
+  Serial.print("Tijd: ");
+  Serial.println(data.timestamp);
+  Serial.print("Equipment ID: ");
+  Serial.println(data.equipment_id);
+  Serial.print("Tarief (1=nacht, 2=dag): ");
+  Serial.println(data.electricity_tariff);
+  Serial.print("Verbruik: ");
+  Serial.print(data.power_delivered.int_val());
+  Serial.println(" W.");
+  Serial.print("Teruglevering: ");
+  Serial.print(data.power_returned.int_val());
+  Serial.println(" W.");
+  Serial.print("Voltage: ");
+  Serial.print(data.voltage_l1.val(), 0);
+  Serial.println(" V.");
+  Serial.print("Stroomsterkte: ");
+  Serial.print(data.current_l1);
+  Serial.println(" A.");
+  Serial.print("Verbruik nacht: ");
+  Serial.print(data.energy_delivered_tariff1.val(), 0);
+  Serial.println(" kWh.");
+  Serial.print("Verbruik dag: ");
+  Serial.print(data.energy_delivered_tariff2.val(), 0);
+  Serial.println(" kWh.");
+  Serial.print("Teruglevering nacht: ");
+  Serial.print(data.energy_returned_tariff1.val(), 0);
+  Serial.println(" kWh.");
+  Serial.print("Teruglevering dag: ");
+  Serial.print(data.energy_returned_tariff2.val(), 0);
+  Serial.println(" kWh.");
+  Serial.print("Elektra Storingen: ");
+  Serial.println(data.electricity_failures);
+  Serial.print("Elektra Lange Storingen: ");
+  Serial.println(data.electricity_long_failures);
+  Serial.print("Elektra Brownouts: ");
+  Serial.println(data.electricity_sags_l1);
+  Serial.print("Elektra Pieken: ");
+  Serial.println(data.electricity_swells_l1);
+  Serial.print("Message Long: ");
+  Serial.println(data.message_long);
+  Serial.print("Gas type: ");
+  Serial.println(data.gas_device_type);
+  Serial.print("Gas id: ");
+  Serial.println(data.gas_equipment_id);
+  Serial.print("Gasverbruik: ");
+  Serial.print(data.gas_delivered.val(), 0);
+  Serial.println(" m3.");
+  Serial.println("==============================");
+}
+
 void loop() {
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
@@ -1490,6 +1545,9 @@ void loop() {
     if (reader.parse(&data, &err)) {
       // Parse succesful, print result
       last_p1_data = data;
+      if (debug) {
+        PrintValues(data);
+        }
     } else {
       // Parser error, print error
       ShowDebug(err);
