@@ -19,7 +19,7 @@ struct config_t
     EthernetClient NetClient;
 #endif
 #include "PubSubClient.h"           //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
-#include "ArduinoJson.h"        
+#include "ArduinoJson.h"            // Arduino JSON library to create/parse JSON messages
 #define BUFFERSIZE 512              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
 #define DEBOUNCE_DELAY 150          // debounce delay for buttons

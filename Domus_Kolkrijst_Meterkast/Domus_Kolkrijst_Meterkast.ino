@@ -180,7 +180,7 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 0;
+const byte NumberOfRelays = 1;
 const byte RelayPins[] = {28};
 bool RelayInitialState[] = {LOW};
 String SwitchNames[] = {"Verwarming"};
