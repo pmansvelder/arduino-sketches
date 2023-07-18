@@ -157,7 +157,7 @@ using MyData = ParsedData <
 String hostname = CLIENT_ID;
 // base for Home Assistant MQTT discovery (must be configured in configuration.yaml)
 const String config_topic_base = "homeassistant";
-// prefix for inidvidual items
+// prefix for individual items
 const String item_prefix = "meterkast";
 
 // Vul hier het macadres in
@@ -223,25 +223,25 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/meterkast/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 1;
-int PirSensors[] = {22};
-int PirDebounce[] = {0}; // debounce time for pir or door sensor
-long PirLastActivityTimes[] = {0};
-static byte lastPirStates[] = {0};
-bool PirInitialState[] = {LOW};
-int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
-byte PirState[] = {0};
-String PirNames[] = {"PIR"};
-String PirClasses[] = {"motion"};
+const byte NumberOfPirs = 2;
+int PirSensors[] = {22,12};
+int PirDebounce[] = {0,0}; // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0,0};
+static byte lastPirStates[] = {0,0};
+bool PirInitialState[] = {LOW,LOW};
+int PreviousDetects[] = {false,false}; // Statusvariabele PIR sensor
+byte PirState[] = {0,0};
+String PirNames[] = {"PIR","Deurbel"};
+String PirClasses[] = {"motion","sound"};
 const char* state_topic_pirs = "domus/meterkast/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
 const int NumberOfButtons = 0;
-int ButtonPins[] = {11, 12, 9};
-static byte lastButtonStates[] = {0, 0, 0};
-long lastActivityTimes[] = {0, 0, 0};
-long LongPressActive[] = {0, 0, 0};
-String ButtonNames[] = {"*Knop Keuken", "*Keuken", "*Voordeur"};
+int ButtonPins[] = {12};
+static byte lastButtonStates[] = {0};
+long lastActivityTimes[] = {0};
+long LongPressActive[] = {0};
+String ButtonNames[] = {"Deurbel"};
 const char* state_topic_buttons = "domus/meterkast/uit/button";
 
 // MQTT Discovery sensors (sensors)
