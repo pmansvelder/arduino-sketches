@@ -603,16 +603,24 @@ void sendData() {
 #endif
 #if defined(P1_meter)
     else if (SensorTypes[i] == "P1_en_t1") {
-      doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff1.val();
+      if (last_p1_data.energy_delivered_tariff1.val() > 0) {
+        doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff1.val();
+      }
     }
     else if (SensorTypes[i] == "P1_en_t2") {
-      doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff2.val();
+      if (last_p1_data.energy_delivered_tariff2.val() > 0) {
+        doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff2.val();
+      }
     }
     else if (SensorTypes[i] == "P1_rt_t1") {
-      doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff1.val();
+      if (last_p1_data.energy_returned_tariff1.val() > 0) {
+        doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff1.val();
+      }
     }
     else if (SensorTypes[i] == "P1_rt_t2") {
-      doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff2.val();
+      if (last_p1_data.energy_returned_tariff2.val() > 0) {
+        doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff2.val();
+      }
     }
     else if (SensorTypes[i] == "P1_ta") {
       if (last_p1_data.electricity_tariff.toInt() == 2) {
