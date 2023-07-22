@@ -649,7 +649,9 @@ void sendData() {
       doc["sensor" + String(i + 1)] = last_p1_data.power_returned_l1.int_val();
     }
     else if (SensorTypes[i] == "P1_gas") {
-      doc["sensor" + String(i + 1)] = last_p1_data.gas_delivered.val();
+      if (last_p1_data.gas_delivered.val() > 0) {
+        doc["sensor" + String(i + 1)] = last_p1_data.gas_delivered.val();
+      }
     }
 #endif
   }
