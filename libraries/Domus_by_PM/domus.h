@@ -1,5 +1,9 @@
 // library file for domus sketches
 
+#define DOMUS_LIBRARY_VERSION "2023.07.28-1" // library version
+
+String version = VERSION;
+
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
 
@@ -1054,6 +1058,7 @@ void setDeviceInfo(char* configtopic) {
   device["name"] = DISCOVERY_ID;
   device["mdl"] = MODEL_ID;
   device["mf"] = MANUFACTURER_ID;
+  device["sw"] = version;
   size_t n = serializeJson(doc, messageBuffer);
   ShowDebug("Sending MQTT config on topic:");
   ShowDebug(configtopic);
@@ -1198,6 +1203,10 @@ void reportMQTTdisco() {
 }
 void setup() {
   
+  version += "(";
+  version += DOMUS_LIBRARY_VERSION;
+  version += ")";
+
   if (debug) {
     Serial.begin(115200);
     ShowDebug("Client ID: "+String(CLIENT_ID));

@@ -81,6 +81,8 @@
 
 #include "secrets.h"
 
+#define VERSION "2023.07.28-1" // version of sketch
+
 // parameters to tune memory use
 #define BMP_present 1 // use BMP280 sensor
 //#define DHT_present 1 // use DHT sensor
