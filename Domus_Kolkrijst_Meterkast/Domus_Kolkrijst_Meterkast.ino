@@ -9,6 +9,8 @@
 
           4: <in gebruik voor W5100>
 
+          12: Deurbel
+
           10: <in gebruik voor W5100>
           18: Serial1 TX }
           19: Serial1 RX } in use for P1 Reader
@@ -81,7 +83,7 @@
 
 #include "secrets.h"
 
-#define VERSION "2023.07.28-1" // version of sketch
+#define VERSION "2023.12.27-1" // version of sketch
 
 // parameters to tune memory use
 #define BMP_present 1 // use BMP280 sensor
@@ -182,10 +184,10 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 1;
-const byte RelayPins[] = {28};
-bool RelayInitialState[] = {LOW};
-String SwitchNames[] = {"Verwarming"};
+const byte NumberOfRelays = 2;
+const byte RelayPins[] = {28,12};
+bool RelayInitialState[] = {LOW,HIGH};
+String SwitchNames[] = {"Verwarming","Deurbel"};
 char* state_topic_relays = "domus/meterkast/stat/relay";
 
 // MQTT Discovery lights
@@ -225,16 +227,16 @@ long LockDelay[] = {2000, 250}; // pulse time for locks
 const char* state_topic_locks = "domus/meterkast/stat/lock"; // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 2;
-int PirSensors[] = {22,12};
-int PirDebounce[] = {0,0}; // debounce time for pir or door sensor
-long PirLastActivityTimes[] = {0,0};
-static byte lastPirStates[] = {0,0};
-bool PirInitialState[] = {LOW,LOW};
-int PreviousDetects[] = {false,false}; // Statusvariabele PIR sensor
+const byte NumberOfPirs = 1;
+int PirSensors[] = {22};
+int PirDebounce[] = {0}; // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0};
+static byte lastPirStates[] = {0};
+bool PirInitialState[] = {LOW};
+int PreviousDetects[] = {false}; // Statusvariabele PIR sensor
 byte PirState[] = {0,0};
-String PirNames[] = {"PIR","Deurbel"};
-String PirClasses[] = {"motion","sound"};
+String PirNames[] = {"PIR"};
+String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/meterkast/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
