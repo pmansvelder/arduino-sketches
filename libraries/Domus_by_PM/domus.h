@@ -1175,7 +1175,6 @@ void reportMQTTdisco() {
      doc["payload"] = "Button" + String(i) + "_long";
      setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "_long" + "/config").c_str());
    }
-  // end send config data for MQTT discovery
   // discover data for sensors (sensors)
   for (int i = 0; i < NumberOfSensors ; i++ ) {
     doc.clear();
@@ -1408,6 +1407,7 @@ void setup() {
   lastPublishTime = millis();
 }
 
+#if defined(P1_meter)
 void PrintValues(MyData data) {
   Serial.print("Id: ");
   Serial.println(data.identification);
@@ -1462,6 +1462,7 @@ void PrintValues(MyData data) {
   Serial.println(" m3.");
   Serial.println("==============================");
 }
+#endif
 
 void loop() {
   // Main loop, where we check if we're connected to MQTT...

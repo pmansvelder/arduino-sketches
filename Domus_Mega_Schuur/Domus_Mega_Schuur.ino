@@ -10,17 +10,17 @@
           0: Serial
           1: Serial
           2:
-          3: DHT-22
+          3: 
           4: <in gebruik voor W5100>
-          5: Relais 0 : Ventilator schuur
-          6: Relais 1 : Gong schuur
-          7: Relais 2 : Lamp brandgang
-          8: Relais 3 : Tuinlamp achter
-          9: Relais 4 : Lamp Fietsenhok
+          5: 
+          6: 
+          7: 
+          8:
+          9: 
           10: <in gebruik voor W5100>
-          11: Relais 5 : Beacon schuur
-          12: Relais 6 : Beacon schuur knipper
-          13: Relais 7 : Lamp Schuur
+          11: 
+          12:
+          13: 
           16: NE555 Heartbeat module
 
           A0: input for humidity sensor
