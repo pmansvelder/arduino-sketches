@@ -1,6 +1,6 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2024.01.08-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.09-1" // library version
 
 String version = VERSION;
 
@@ -1102,7 +1102,7 @@ void reportMQTTdisco() {
     doc["pl_on"] = "P" + String(i) + "1";
     doc["stat_on"] = "on";
     doc["stat_off"] = "off";
-    doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
+    doc["val_tpl"] = "P" + String(i) + "0";
     setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_pulseswitch" + String(i + 1) + "/config").c_str());
   }  
   // discovery data for lights
