@@ -83,7 +83,7 @@
 
 #include "secrets.h"
 
-#define VERSION "2023.12.27-2" // version of sketch
+#define VERSION "2024.01.08-1" // version of sketch
 
 // parameters to tune memory use
 #define BMP_present 1 // use BMP280 sensor
@@ -272,6 +272,7 @@ long PulseActivityTimes[] = {0};
 bool PulseRelayInitialStates[] = {HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = {200};
+String PulseSwitchNames[] = {"Deurbel"};
 const char* topic_out_pulse = "domus/meterkast/uit/pulse";  
 
 // Vul hier de uitgaande MQTT topics in

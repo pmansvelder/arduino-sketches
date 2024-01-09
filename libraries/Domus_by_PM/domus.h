@@ -1,6 +1,6 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2023.07.28-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.08-1" // library version
 
 String version = VERSION;
 
@@ -1092,6 +1092,19 @@ void reportMQTTdisco() {
     doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
     setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_switch" + String(i + 1) + "/config").c_str());
   }
+  // discovery data for pulse relays
+  for (int i = 0; i < NumberOfPulseRelays ; i++) {
+    doc.clear();
+    doc["name"] = PulseSwitchNames[i];
+    doc["uniq_id"] = item_prefix + "_pulseswitch" + String(i + 1);
+    doc["stat_t"] = state_topic_relays;
+    doc["cmd_t"] = topic_in;
+    doc["pl_on"] = "P" + String(i) + "1";
+    doc["stat_on"] = "on";
+    doc["stat_off"] = "off";
+    doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
+    setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_pulseswitch" + String(i + 1) + "/config").c_str());
+  }  
   // discovery data for lights
   for (int i = 0; i < NumberOfLights ; i++) {
     doc.clear();
