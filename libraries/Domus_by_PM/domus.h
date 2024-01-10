@@ -1,6 +1,6 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2024.01.09-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.10-1" // library version
 
 String version = VERSION;
 
@@ -109,6 +109,7 @@ void set_rgb_led(byte red, byte green, byte blue)
   WiFiDrv::analogWrite(27, blue);  // for configurable brightness
 }
 #endif
+
 void report_state_relay() {
   bool relaytest;
   if (NumberOfRelays > 0) {
@@ -135,6 +136,34 @@ void report_state_relay() {
     mqttClient.publish(state_topic_relays, messageBuffer);
   }
 }
+
+void report_state_pulserelay() {
+  bool relaytest;
+  if (NumberOfPulseRelays > 0) {
+    doc.clear();
+    for (int i = 0; i < NumberOfPulseRelays; i++) {
+      if (PulseRelayPins[i] < 100) {
+        relaytest = (digitalRead(PulseRelayPins[i]) == PulseRelayInitialStates[i]);
+      }
+#if defined(MCP_present)
+      else {
+        relaytest = (mcp.digitalRead(PulseRelayPins[i] - 100) == PulseRelayInitialStates[i]);
+      }
+#endif
+      if (relaytest) {
+        doc["PULSE" + String(i)] = "off";
+      }
+      else {
+        doc["PULSE" + String(i)] = "on";
+      }
+      serializeJson(doc, messageBuffer);
+    }
+    ShowDebug("Sending MQTT state for pulse relays...");
+    ShowDebug(messageBuffer);
+    mqttClient.publish(state_topic_relays, messageBuffer);
+  }
+}
+
 void report_state_light(int index) {
   StaticJsonDocument<64> outputdoc;
   outputdoc.clear();
@@ -173,6 +202,7 @@ void report_state_light(int index) {
   ShowDebug(messageBuffer);
   mqttClient.publish((state_topic_lights + String(index + 1)).c_str(), messageBuffer);
 }
+
 void report_state_cover() {
   if (NumberOfCovers > 0) {
     StaticJsonDocument<128> outputdoc;
@@ -201,6 +231,7 @@ void report_state_cover() {
     mqttClient.publish(state_topic_covers, messageBuffer);
   }
 }
+
 void report_state_lock() {
   if (NumberOfLocks > 0) {
     doc.clear();
@@ -218,6 +249,7 @@ void report_state_lock() {
     mqttClient.publish(state_topic_locks, messageBuffer);
   }
 }
+
 void report_state_pir() {
   if (NumberOfPirs > 0) {
     doc.clear();
@@ -235,11 +267,13 @@ void report_state_pir() {
     mqttClient.publish(state_topic_pirs, messageBuffer);
   }
 }
+
 void report_state() {
   // send general status of controller
   mqttClient.publish(status_topic, "ok");
   // send data for relays
   report_state_relay();
+  report_state_pulserelay();
   // send data for lights
   if (NumberOfLights > 0) {
     for (int index = 0; index < NumberOfLights ; index++) {
@@ -1102,7 +1136,7 @@ void reportMQTTdisco() {
     doc["pl_on"] = "P" + String(i) + "1";
     doc["stat_on"] = "on";
     doc["stat_off"] = "off";
-    doc["val_tpl"] = "P" + String(i) + "0";
+    doc["val_tpl"] = "{{value_json.PULSE" + String(i) + "}}";
     setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_pulseswitch" + String(i + 1) + "/config").c_str());
   }  
   // discovery data for lights
