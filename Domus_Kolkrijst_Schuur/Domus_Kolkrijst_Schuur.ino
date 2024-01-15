@@ -3,6 +3,60 @@
           Locatie: Schuur
           Macadres: 00:01:02:03:04:09
 
+                                      +-----+
+         +----[PWR]-------------------| USB |--+
+         |                            +-----+  |
+         |           GND/RST2  [ ] [ ]         |
+         |         MOSI2/SCK2  [ ] [ ]  SCL[ ] |   D0
+         |            5V/MISO2 [ ] [ ]  SDA[ ] |   D1
+         |                             AREF[ ] |
+         |                              GND[ ] |
+         | [ ]N/C                        13[ ]~|   B7
+         | [ ]IOREF                      12[ ]~|   B6
+         | [ ]RST                        11[ ]~|   B5
+         | [ ]3V3      +----------+      10[ ]~|   B4
+         | [ ]5v       | ARDUINO  |       9[ ]~|   H6
+         | [ ]GND      |   MEGA   |       8[ ]~|   H5
+         | [ ]GND      +----------+            |
+         | [ ]Vin                         7[ ]~|   H4
+         |                                6[ ]~|   H3
+         | [ ]A0                          5[ ]~|   E3
+         | [ ]A1                          4[ ]~|   G5
+         | [ ]A2                     INT5/3[ ]~|   E5
+         | [ ]A3                     INT4/2[ ]~|   E4
+         | [ ]A4                       TX>1[ ]~|   E1
+         | [ ]A5                       RX<0[ ]~|   E0
+         | [ ]A6                               |   
+         | [ ]A7                     TX3/14[ ] |   J1
+         |                           RX3/15[ ] |   J0
+         | [ ]A8                     TX2/16[ ] |   H1         
+         | [ ]A9                     RX2/17[ ] |   H0
+         | [ ]A10               TX1/INT3/18[ ] |   D3         
+         | [ ]A11               RX1/INT2/19[ ] |   D2
+         | [ ]A12           I2C-SDA/INT1/20[ ] |   D1         
+         | [ ]A13           I2C-SCL/INT0/21[ ] |   D0
+         | [ ]A14                              |            
+         | [ ]A15                              |   Ports:
+         |                RST SCK MISO         |    22=A0  23=A1   
+         |         ICSP   [ ] [ ] [ ]          |    24=A2  25=A3   
+         |                [ ] [ ] [ ]          |    26=A4  27=A5   
+         |                GND MOSI 5V          |    28=A6  29=A7   
+         | G                                   |    30=C7  31=C6   
+         | N 5 5 4 4 4 4 4 3 3 3 3 3 2 2 2 2 5 |    32=C5  33=C4   
+         | D 2 0 8 6 4 2 0 8 6 4 2 0 8 6 4 2 V |    34=C3  35=C2   
+         |         ~ ~                         |    36=C1  37=C0   
+         | @ # # # # # # # # # # # # # # # # @ |    38=D7  39=G2    
+         | @ # # # # # # # # # # # # # # # # @ |    40=G1  41=G0   
+         |           ~                         |    42=L7  43=L6   
+         | G 5 5 4 4 4 4 4 3 3 3 3 3 2 2 2 2 5 |    44=L5  45=L4   
+         | N 3 1 9 7 5 3 1 9 7 5 3 1 9 7 5 3 V |    46=L3  47=L2   
+         | D                                   |    48=L1  49=L0    SPI:
+         |                                     |    50=B3  51=B2     50=MISO 51=MOSI
+         |     2560                ____________/    52=B1  53=B0     52=SCK  53=SS 
+          \_______________________/         
+         
+         http://busyducks.com/ascii-art-arduinos
+
           Pins used:
           0: Serial
           1: Serial
@@ -24,10 +78,10 @@
 
           20: SDA voor i2C
           21: SCL voor i2C
-          22: 
-          23: 
-          24: 
-          25: 
+          22: SSRelay 1
+          24: SSRelay 2
+          26: SSRelay 3
+          28: SSRelay 4
           30: 
           31: 
           32: 
@@ -91,7 +145,7 @@
 
 #include "secrets.h"
 
-#define VERSION "2024.01.04-1"  // version of sketch
+#define VERSION "2024.01.14-1"  // version of sketch
 
 // parameters to tune memory use
 //#define BMP_present 1 // use BMP280 sensor
@@ -102,7 +156,7 @@
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 // #define P1_meter // P1 port smart meter reading
-//#define DEBUG 1 // Zet debug mode aan
+#define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -176,20 +230,20 @@ const long mq_startup = 3000;
 
 // MQTT Discovery relays (switches)
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfRelays = 0;
-const byte RelayPins[] = {};
-bool RelayInitialState[] = {};
-String SwitchNames[] = {};
+const byte NumberOfRelays = 1;
+const byte RelayPins[] = {28};
+bool RelayInitialState[] = {LOW};
+String SwitchNames[] = {"Stopcontact"};
 char* state_topic_relays = "domus/schuur/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 0;
-const byte LightPins[] = {};
-bool LightInitialState[] = {};
-bool LightBrightness[] = {};
-byte LightValue[] = {};
-String LightNames[] = {};
+const byte NumberOfLights = 3;
+const byte LightPins[] = {22,24,26};
+bool LightInitialState[] = {LOW,LOW,LOW};
+bool LightBrightness[] = {false, false, false};
+byte LightValue[] = {0,0,0};
+String LightNames[] = {"Schuur","Garage","Buitenlamp"};
 const char* state_topic_lights = "domus/schuur/stat/light";
 const char* cmd_topic_lights = "domus/schuur/cmd/light";
 
@@ -219,16 +273,16 @@ long LockDelay[] = { 2000, 250 };                          // pulse time for loc
 const char* state_topic_locks = "domus/schuur/stat/lock";  // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
-const byte NumberOfPirs = 0;
-const byte PirSensors[] = {};
-const byte PirDebounce[] = {};  // debounce time for pir or door sensor
-long PirLastActivityTimes[] = {};
-static byte lastPirStates[] = {};
-bool PirInitialState[] = {};
-int PreviousDetects[] = {};  // Statusvariabele PIR sensor
-byte PirState[] = { 0, 0, 0 };
-String PirNames[] = {};
-String PirClasses[] = {};
+const byte NumberOfPirs = 1;
+const byte PirSensors[] = {52};
+const byte PirDebounce[] = {0};  // debounce time for pir or door sensor
+long PirLastActivityTimes[] = {0};
+static byte lastPirStates[] = {0};
+bool PirInitialState[] = {LOW};
+int PreviousDetects[] = {false};  // Statusvariabele PIR sensor
+byte PirState[] = {0};
+String PirNames[] = {"Schuur"};
+String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/schuur/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
@@ -257,6 +311,7 @@ long PulseActivityTimes[] = { 0, 0, 0, 0 };
 // Vul hier de default status in van het pulsrelais (sommige relais vereisen een 0, andere een 1 om te activeren)
 // gebruikt 5V YwRobot relay board vereist een 0, 12 volt insteekrelais een 1, SSR relais een 1.
 bool PulseRelayInitialStates[] = { HIGH, HIGH, HIGH, HIGH };
+String PulseSwitchNames[] = {};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = { LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1] };
 const char* topic_out_pulse = "domus/schuur/uit/pulse";  // Pulserelais t.b.v. deuropener

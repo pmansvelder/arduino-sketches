@@ -1,6 +1,6 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2024.01.15-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.13-1" // library version
 
 String version = VERSION;
 
@@ -28,8 +28,8 @@ struct config_t
 #define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
 #define DEBOUNCE_DELAY 150          // debounce delay for buttons
 #define LONGPRESS_TIME 450          // time for press to be detected as 'long'
-StaticJsonDocument<512> doc;        // default 512 (deprecated, arduinojson 6)
-// JsonDocument doc;                   // for arduinojson 7
+// StaticJsonDocument<512> doc;        // default 512 (deprecated, arduinojson 6)
+JsonDocument doc;                   // for arduinojson 7
 
 PubSubClient mqttClient;
 
@@ -135,29 +135,13 @@ void report_state_relay() {
     ShowDebug("Sending MQTT state for relays...");
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_relays, messageBuffer);
-    doc.clear();
   }
-}
-
-void report_pulse_relay(int index, bool state)
-{
-    doc.clear();
-    if (state) {
-      doc["PULSE" + String(index)] = "on";
-    }
-    else {
-      doc["PULSE" + String(index)] = "off";
-    }
-    serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT state for pulse relays...");
-    ShowDebug(messageBuffer);
-    mqttClient.publish(state_topic_pulserelays, messageBuffer);
-    doc.clear();
 }
 
 void report_state_pulserelay() {
   bool relaytest;
   if (NumberOfPulseRelays > 0) {
+    doc.clear();
     for (int i = 0; i < NumberOfPulseRelays; i++) {
       if (PulseRelayPins[i] < 100) {
         relaytest = (digitalRead(PulseRelayPins[i]) == PulseRelayInitialStates[i]);
@@ -167,8 +151,17 @@ void report_state_pulserelay() {
         relaytest = (mcp.digitalRead(PulseRelayPins[i] - 100) == PulseRelayInitialStates[i]);
       }
 #endif
-      report_pulse_relay(i,!relaytest);
+      if (relaytest) {
+        doc["PULSE" + String(i)] = "off";
+      }
+      else {
+        doc["PULSE" + String(i)] = "on";
+      }
+      serializeJson(doc, messageBuffer);
     }
+    ShowDebug("Sending MQTT state for pulse relays...");
+    ShowDebug(messageBuffer);
+    mqttClient.publish(state_topic_relays, messageBuffer);
   }
 }
 
@@ -209,7 +202,6 @@ void report_state_light(int index) {
   ShowDebug("Sending MQTT state for lights...");
   ShowDebug(messageBuffer);
   mqttClient.publish((state_topic_lights + String(index + 1)).c_str(), messageBuffer);
-  outputdoc.clear();
 }
 
 void report_state_cover() {
@@ -238,7 +230,6 @@ void report_state_cover() {
     ShowDebug("Sending MQTT state for covers...");
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_covers, messageBuffer);
-    outputdoc.clear();
   }
 }
 
@@ -257,7 +248,6 @@ void report_state_lock() {
     ShowDebug("Sending MQTT state for locks...");
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_locks, messageBuffer);
-    doc.clear();
   }
 }
 
@@ -276,7 +266,6 @@ void report_state_pir() {
     ShowDebug("Sending MQTT state for pirs...");
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_pirs, messageBuffer);
-    doc.clear();
   }
 }
 
@@ -376,13 +365,9 @@ void ProcessPulseRelays(int PulseRelayId) {
     {
       ShowDebug("Disabling pulse relay" + String(PulseRelayId) + ".");
       ShowDebug(String(PulseActivityTimes[PulseRelayId]));
-      
-//       String messageString = "P" + String(PulseRelayId) + "0";
-//       messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//       mqttClient.publish(topic_out_pulse, messageBuffer);
-      
-      report_pulse_relay(PulseRelayId, false);
-      
+      String messageString = "P" + String(PulseRelayId) + "0";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
       digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
 
       // Update end position of covers
@@ -588,7 +573,6 @@ float CheckIsNan(float value, float defaultvalue) {
 float fmap(float value, float min, float max, float tmin, float tmax) {
   return (value - min) * (tmax - tmin) / (max - min) + tmin;
 }
-
 void sendData() {
   float t, h, hic;
   doc.clear();
@@ -714,7 +698,6 @@ void sendData() {
   ShowDebug("Sending MQTT state for sensors...");
   ShowDebug(messageBuffer);
   mqttClient.publish(state_topic_sensors, messageBuffer);
-  doc.clear();
 }
 
 void OpenCover(int Cover) {
@@ -729,13 +712,9 @@ void OpenCover(int Cover) {
     digitalWrite(RelayPins[CoverDir[Cover]], !RelayInitialState[CoverDir[Cover]]);
     // Set opening pulse
     digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    
-//     String messageString = "P" + String(PulseRelayPort) + "1";
-//     messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//     mqttClient.publish(topic_out_pulse, messageBuffer);
-    
-    report_pulse_relay(PulseRelayPort, true);
-    
+    String messageString = "P" + String(PulseRelayPort) + "1";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_pulse, messageBuffer);
     ShowDebug("Cover: Starting pulse time on " + String(millis()));
     PulseActivityTimes[PulseRelayPort] = millis();
     // report state of screen
@@ -747,13 +726,9 @@ void OpenCover(int Cover) {
     // Commmand given while cover moving, Stop pulse
     ShowDebug("Stopping cover number " + String(Cover));
     digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
-    
-//     String messageString = "P" + String(PulseRelayPort) + "0";
-//     messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//     mqttClient.publish(topic_out_pulse, messageBuffer);
-    
-    report_pulse_relay(PulseRelayPort, false);    
-    
+    String messageString = "P" + String(PulseRelayPort) + "0";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_pulse, messageBuffer);
     SaveCoverPos(Cover);
   }
 }
@@ -766,13 +741,9 @@ void CloseCover(int Cover) {
     digitalWrite(RelayPins[CoverDir[Cover]], RelayInitialState[CoverDir[Cover]]);
     // Set opening pulse
     digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-    
-//     String messageString = "P" + String(PulseRelayPort) + "1";
-//     messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//     mqttClient.publish(topic_out_pulse, messageBuffer);
-    
-    report_pulse_relay(PulseRelayPort, true);    
-    
+    String messageString = "P" + String(PulseRelayPort) + "1";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_pulse, messageBuffer);
     ShowDebug("Cover: Starting pulse time on " + String(millis()));
     PulseActivityTimes[PulseRelayPort] = millis();
     // report state of screen
@@ -784,13 +755,9 @@ void CloseCover(int Cover) {
     ShowDebug("Stopping cover number " + String(Cover + 1));
     // Commmand given while cover moving, Stop pulse
     digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
-    
-//     String messageString = "P" + String(PulseRelayPort) + "0";
-//     messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//     mqttClient.publish(topic_out_pulse, messageBuffer);
-//     
-    report_pulse_relay(PulseRelayPort, false);    
-    
+    String messageString = "P" + String(PulseRelayPort) + "0";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_pulse, messageBuffer);
     SaveCoverPos(Cover);
   }
 }
@@ -800,13 +767,9 @@ void StopCover(int Cover) {
     // Stop pulse
     ShowDebug("Stop cover number " + String(Cover + 1));
     digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
-    
-//     String messageString = "P" + String(PulseRelayPort) + "0";
-//     messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//     mqttClient.publish(topic_out_pulse, messageBuffer);
-    
-    report_pulse_relay(PulseRelayPort, false);    
-    
+    String messageString = "P" + String(PulseRelayPort) + "0";
+    messageString.toCharArray(messageBuffer, messageString.length() + 1);
+    mqttClient.publish(topic_out_pulse, messageBuffer);
   }
   if (CoverPos[Cover] <= 0) {
     CoverPos[Cover] = 0;
@@ -998,25 +961,17 @@ void callback(char* topic, byte * payload, byte length) {
       if (strPayload[2] == '1') {  // Pulserelay on
         ShowDebug("Enabling pulse relay " + String(PulseRelayPort) + ".");
         digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-        
-//         String messageString = "P" + String(PulseRelayPort) + "1";
-//         messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//         mqttClient.publish(topic_out_pulse, messageBuffer);
-        
-        report_pulse_relay(PulseRelayPort, true);    
-        
+        String messageString = "P" + String(PulseRelayPort) + "1";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
         PulseActivityTimes[PulseRelayPort] = millis();
         ShowDebug("Starting pulse time on " + String(millis()));
       }
       else { // Pulserelay forced off
         ShowDebug("Disabling pulse relay " + String(PulseRelayPort) + ".");
-        
-//         String messageString = "P" + String(PulseRelayPort) + "0";
-//         messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//         mqttClient.publish(topic_out_pulse, messageBuffer);
-
-        report_pulse_relay(PulseRelayPort, false);    
-        
+        String messageString = "P" + String(PulseRelayPort) + "0";
+        messageString.toCharArray(messageBuffer, messageString.length() + 1);
+        mqttClient.publish(topic_out_pulse, messageBuffer);
         digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
       }
     }
@@ -1090,13 +1045,9 @@ void callback(char* topic, byte * payload, byte length) {
     if (LockPort <= NumberOfLocks) {
       // End opening pulse
       digitalWrite(PulseRelayPins[PulseRelayPort], PulseRelayInitialStates[PulseRelayPort]);
-      
-//       String messageString = "P" + String(PulseRelayPort) + "0";
-//       messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//       mqttClient.publish(topic_out_pulse, messageBuffer);
-      
-      report_pulse_relay(PulseRelayPort, false);    
-      
+      String messageString = "P" + String(PulseRelayPort) + "0";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
       LockState[LockPort - 1] = 1;
       report_state_lock();
     }
@@ -1113,13 +1064,9 @@ void callback(char* topic, byte * payload, byte length) {
     if (LockPort <= NumberOfLocks) {
       // Set opening pulse
       digitalWrite(PulseRelayPins[PulseRelayPort], !PulseRelayInitialStates[PulseRelayPort]);
-      
-//       String messageString = "P" + String(PulseRelayPort) + "1";
-//       messageString.toCharArray(messageBuffer, messageString.length() + 1);
-//       mqttClient.publish(topic_out_pulse, messageBuffer);
-
-      report_pulse_relay(PulseRelayPort, true);    
-      
+      String messageString = "P" + String(PulseRelayPort) + "1";
+      messageString.toCharArray(messageBuffer, messageString.length() + 1);
+      mqttClient.publish(topic_out_pulse, messageBuffer);
       PulseActivityTimes[PulseRelayPort] = millis();
       LockState[LockPort - 1] = 0;
       report_state_lock();
@@ -1159,7 +1106,6 @@ void setDeviceInfo(char* configtopic) {
     ShowDebug("...publish failed, either connection lost, or message too large.");
   }
 }
-
 void reportMQTTdisco() {
   // discovery data for relays
   for (int i = 0; i < NumberOfRelays ; i++) {
@@ -1186,7 +1132,7 @@ void reportMQTTdisco() {
     doc.clear();
     doc["name"] = PulseSwitchNames[i];
     doc["uniq_id"] = item_prefix + "_pulseswitch" + String(i + 1);
-    doc["stat_t"] = state_topic_pulserelays;
+    doc["stat_t"] = state_topic_relays;
     doc["cmd_t"] = topic_in;
     doc["pl_on"] = "P" + String(i) + "1";
     doc["stat_on"] = "on";
@@ -1301,7 +1247,6 @@ void reportMQTTdisco() {
     setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str());
   }
   //  end send config data for MQTT discovery
-  doc.clear();
 }
 void setup() {
   

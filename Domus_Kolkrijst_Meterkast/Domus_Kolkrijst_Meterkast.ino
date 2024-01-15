@@ -273,7 +273,8 @@ bool PulseRelayInitialStates[] = {HIGH};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = {200};
 String PulseSwitchNames[] = {"Deurbel"};
-const char* topic_out_pulse = "domus/meterkast/uit/pulse";  
+const char* state_topic_pulserelays = "domus/meterkast/stat/pulserelay";
+// const char* topic_out_pulse = "domus/meterkast/uit/pulse";  
 
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/meterkast/uit";
