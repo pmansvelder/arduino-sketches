@@ -314,7 +314,8 @@ bool PulseRelayInitialStates[] = { HIGH, HIGH, HIGH, HIGH };
 String PulseSwitchNames[] = {};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = { LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1] };
-const char* topic_out_pulse = "domus/schuur/uit/pulse";  // Pulserelais t.b.v. deuropener
+// const char* topic_out_pulse = "domus/schuur/uit/pulse";  // Pulserelais t.b.v. deuropener
+const char* state_topic_pulserelays = "domus/schuur/stat/pulserelay";
 
 // Vul hier de uitgaande MQTT topics in
 const char* topic_out = "domus/schuur/uit";
