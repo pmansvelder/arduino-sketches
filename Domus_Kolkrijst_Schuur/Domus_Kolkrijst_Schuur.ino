@@ -156,7 +156,7 @@
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 // #define P1_meter // P1 port smart meter reading
-#define DEBUG 1 // Zet debug mode aan
+// #define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
 #include <DHT.h>

@@ -1,6 +1,6 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2024.01.15-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.16-1" // library version
 
 String version = VERSION;
 
@@ -24,12 +24,13 @@ struct config_t
 #endif
 #include "PubSubClient.h"           //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include <ArduinoJson.h>            // Arduino JSON library to create/parse JSON messages, for arduinojson 7
+#include <ArduinoJson.hpp>
 #define BUFFERSIZE 512              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
 #define DEBOUNCE_DELAY 150          // debounce delay for buttons
 #define LONGPRESS_TIME 450          // time for press to be detected as 'long'
-StaticJsonDocument<512> doc;        // default 512 (deprecated, arduinojson 6)
-// JsonDocument doc;                   // for arduinojson 7
+// StaticJsonDocument<512> doc;        // default 512 (deprecated, arduinojson 6)
+JsonDocument doc;                   // for arduinojson 7
 
 PubSubClient mqttClient;
 
@@ -85,7 +86,9 @@ bool debug = true;
 #else
 bool debug = false;
 #endif
+
 void(* resetFunc) (void) = 0;       //declare reset function @ address 0
+
 void ShowDebug(String tekst) {
   if (debug) {
     Serial.println(tekst);
@@ -173,7 +176,8 @@ void report_state_pulserelay() {
 }
 
 void report_state_light(int index) {
-  StaticJsonDocument<64> outputdoc;
+//   StaticJsonDocument<64> outputdoc;
+  JsonDocument outputdoc;
   outputdoc.clear();
   if (LightBrightness[index]) {
     if (LightValue[index] > 0) {
@@ -214,7 +218,8 @@ void report_state_light(int index) {
 
 void report_state_cover() {
   if (NumberOfCovers > 0) {
-    StaticJsonDocument<128> outputdoc;
+//     StaticJsonDocument<128> outputdoc;
+    JsonDocument outputdoc;
     outputdoc.clear();
     for (byte i = 0; i < NumberOfCovers ; i++) {
       if (CoverState[i] == 0) {
@@ -849,7 +854,7 @@ void ProcessCovers(int cover) {
   }
 }
 
-void callback(char* topic, byte * payload, byte length) {
+void onMessage(char* topic, byte * payload, byte length) {
   char msgBuffer[BUFFERSIZE];
   payload[length] = '\0'; // terminate string with 0
   String strPayload = String((char*)payload);  // convert to string
@@ -991,6 +996,21 @@ void callback(char* topic, byte * payload, byte length) {
     ShowDebug("Reset command received, resetting in one second...");
     delay(1000);
     resetFunc();
+  }
+  else if (strPayload == "#DEBUGON") {
+    ShowDebug("Debug on");
+    debug = true;
+    Serial.begin(115200);
+    ShowDebug("Client ID: "+String(CLIENT_ID));
+    ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
+    Serial.print("Using Domus library version ");
+    Serial.println(DOMUS_LIBRARY_VERSION);
+    Serial.print("Using ArduinoJson version ");
+    Serial.println(ARDUINOJSON_VERSION);
+  }
+  else if (strPayload == "#DEBUGOFF") {
+    ShowDebug("Debug off");
+    debug = false;
   }
   else if (strPayload[0] == 'P') {  // PULSE RELAY
     int PulseRelayPort = strPayload[1] - 48;
@@ -1313,6 +1333,10 @@ void setup() {
     Serial.begin(115200);
     ShowDebug("Client ID: "+String(CLIENT_ID));
     ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
+    Serial.print("Using Domus library version ");
+    Serial.println(DOMUS_LIBRARY_VERSION);
+    Serial.print("Using ArduinoJson version ");
+    Serial.println(ARDUINOJSON_VERSION);
   }
 
   EEPROM_readAnything(0, configuration);
@@ -1505,7 +1529,7 @@ void setup() {
   mqttClient.setClient(NetClient);
   mqttClient.setServer(MQTTSERVER, 1883); // or local broker
   ShowDebug("MQTT set up");
-  mqttClient.setCallback(callback);
+  mqttClient.setCallback(onMessage);
   ShowDebug("Ready to send data");
   lastPublishTime = millis();
 }
