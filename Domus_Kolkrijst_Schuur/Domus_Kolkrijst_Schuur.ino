@@ -1,7 +1,8 @@
 /*
           <========Arduino Sketch for Arduino Mega =========>
           Locatie: Schuur
-          Macadres: 00:01:02:03:04:09
+          Macadres: A8:61:0A:03:04:09
+          prefix voor Arduino AG (bestaat niet meer): A8:61:0A
 
                                       +-----+
          +----[PWR]-------------------| USB |--+
@@ -156,6 +157,12 @@
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 // #define P1_meter // P1 port smart meter reading
+// #define MEMORY // report free memory
+// #define RECYCLE // reboot after x minutes due to instability
+#define LIGHTS
+// #define TRIGGERS
+// #define COVERS
+// #define LOCKS
 // #define DEBUG 1 // Zet debug mode aan
 
 #if defined(DHT_present)
@@ -210,8 +217,8 @@ const String config_topic_base = "homeassistant";
 // prefix for inidvidual items
 const String item_prefix = "schuur";
 
-// Vul hier het macadres in
-uint8_t mac[6] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x09 };
+// Vul hier het macadres in A8:61:0A
+uint8_t mac[6] = { 0xA8, 0x61, 0x0A, 0x03, 0x04, 0x09 };
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 //const char* topic_in = "domus/schuur/in";

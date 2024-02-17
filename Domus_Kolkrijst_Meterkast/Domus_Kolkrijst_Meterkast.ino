@@ -83,7 +83,7 @@
 
 #include "secrets.h"
 
-#define VERSION "2024.01.16-1" // version of sketch
+#define VERSION "2024.01.23-1" // version of sketch
 
 // parameters to tune memory use
 #define BMP_present 1 // use BMP280 sensor
@@ -93,7 +93,17 @@
 //#define DS18B20_present 1 // DS18B20 1-wire temperature sensor
 //#define LDR_present 1 // LDR sensor
 #define P1_meter // P1 port smart meter reading
+#define MEMORY // report free memory
+// #define RECYCLE // reboot after x minutes due to instability
 // #define DEBUG 1 // Zet debug mode aan
+// #define LIGHTS
+// #define TRIGGERS
+// #define COVERS
+// #define LOCKS
+
+#if defined(RECYCLE)
+unsigned long MaxUptime = 900000; // 1000 * 15 * 60 seconds, also every fifteen minutes
+#endif
 
 #if defined(DHT_present)
 #include <DHT.h>
@@ -165,7 +175,7 @@ const String config_topic_base = "homeassistant";
 const String item_prefix = "meterkast";
 
 // Vul hier het macadres in
-uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x05, 0x0B};
+const uint8_t mac[6] = {0x00, 0x01, 0x02, 0x03, 0x05, 0x0B};
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
 //const char* topic_in = "domus/meterkast/in";
@@ -190,41 +200,47 @@ bool RelayInitialState[] = {LOW};
 String SwitchNames[] = {"Verwarming","Deurbel"};
 char* state_topic_relays = "domus/meterkast/stat/relay";
 
+#if defined(LIGHTS)
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
 const byte NumberOfLights = 0;
-const byte LightPins[] = {24, 26};
-bool LightInitialState[] = {HIGH, LOW};
-bool LightBrightness[] = {false, false};
-byte LightValue[] = {0, 0};
-String LightNames[] = {"LEDs", "TL"};
+const byte LightPins[] = {};
+bool LightInitialState[] = {};
+bool LightBrightness[] = {};
+byte LightValue[] = {};
+String LightNames[] = {};
 const char* state_topic_lights = "domus/meterkast/stat/light";
 const char* cmd_topic_lights = "domus/meterkast/cmd/light";
+#endif
 
+#if defined(COVERS)
 // MQTT Discovery covers
 // Vul hier de gegevens in van de motorsturing voor de screens:
 // 2 relais per motor: 1 x richting, 1 x motorpuls
 // hiervoor gebruik ik de pulserelais en de normale relais
 // de waarden zijn de indices op de onderstaande 'RelayPins' en 'PulseRelayPins' arrays
 const byte NumberOfCovers = 0;
-byte CoverDir[] = {2, 3}; // relay numbers for direction
-byte CoverPulse[] = {2, 3}; // relay numbers for motor pulses
-byte CoverState[] = {0, 0}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
-int CoverPos[] = {100, 100}; // position 100 = open
-int CoverStart[] = {100, 100 }; // start position
-int CoverSetPos[] = {255, 255}; // set position (255 = not set)
-String CoverNames[] = {"*Screen Keuken", "*Screen Huiskamer"};
-String CoverClasses[] = {"shade", "shade"}; // https://www.home-assistant.io/integrations/cover/
-long CoverDelay[] = {28000, 27000}; // time to wait for full open or close
+byte CoverDir[] = {}; // relay numbers for direction
+byte CoverPulse[] = {}; // relay numbers for motor pulses
+byte CoverState[] = {}; // 0 = open, 1 = opening, 2 = closed, 3 = closing, 4 = stopped
+int CoverPos[] = {}; // position 100 = open
+int CoverStart[] = {}; // start position
+int CoverSetPos[] = {}; // set position (255 = not set)
+String CoverNames[] = {};
+String CoverClasses[] = {}; // https://www.home-assistant.io/integrations/cover/
+long CoverDelay[] = {}; // time to wait for full open or close
 const char* state_topic_covers = "domus/meterkast/uit/screen"; // Screens (zonwering)
+#endif
 
+#if defined(LOCKS)
 // MQTT Discovery locks
 const byte NumberOfLocks = 0;
-byte LockPulse[] = {0, 1}; // relay numbers for lock pulses (index on PulseRelayPins)
-byte LockState[] = {1, 1};  // status of locks: 0 = unlocked, 1 = locked
-String LockNames[] = {"*Haldeurslot", "*VoordeurSlot"};
-long LockDelay[] = {2000, 250}; // pulse time for locks
+byte LockPulse[] = {}; // relay numbers for lock pulses (index on PulseRelayPins)
+byte LockState[] = {};  // status of locks: 0 = unlocked, 1 = locked
+String LockNames[] = {};
+long LockDelay[] = {}; // pulse time for locks
 const char* state_topic_locks = "domus/meterkast/stat/lock"; // Locks (sloten)
+#endif
 
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 1;
@@ -239,6 +255,7 @@ String PirNames[] = {"PIR"};
 String PirClasses[] = {"motion"};
 const char* state_topic_pirs = "domus/meterkast/uit/pir";
 
+#if defined(TRIGGERS)
 // MQTT Discovery buttons (device triggers)
 const int NumberOfButtons = 0;
 int ButtonPins[] = {};
@@ -247,19 +264,15 @@ long lastActivityTimes[] = {0};
 long LongPressActive[] = {0};
 String ButtonNames[] = {};
 const char* state_topic_buttons = "domus/meterkast/uit/button";
+#endif
 
 // MQTT Discovery sensors (sensors)
-const int NumberOfSensors = 13;
-// const int NumberOfSensors = 3;
-// String SensorNames[] = {"Temperatuur", "Runtime", "Luchtdruk"};
-// String SensorTypes[] = {"BMP-T", "TIME", "BMP-P"};
-// String SensorClasses[] = {"temperature", "", "pressure"};
-// String SensorUnits[] = {"°C", "s", "mbar"};
-const char* const SensorNames[] = {"Runtime meterkast", "Energieverbruik laag", "Energieverbruik hoog", "Energietarief", "Energieverbruik", "Netspanning", "Stroomsterkte", "Gasverbruik", "Luchtdruk", "Temperatuur", "Energie teruglevering laag", "Energie teruglevering hoog", "Energie teruglevering"};
-const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T", "P1_rt_t1", "P1_rt_t2", "P1_pr"};
-const char* const SensorClasses[] = {"", "energy", "energy", "", "power", "voltage", "current", "gas", "pressure", "temperature", "energy", "energy", "power"};
-const char* const StateClasses[] = {"total_increasing", "total_increasing", "total_increasing", "", "measurement", "measurement", "measurement", "total_increasing", "measurement", "measurement", "total_increasing", "total_increasing", "measurement"};
-const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m³", "mBar", "°C", "kWh", "kWh", "W"};
+const int NumberOfSensors = 14;
+const char* const SensorNames[] = {"Runtime meterkast", "Energieverbruik laag", "Energieverbruik hoog", "Energietarief", "Energieverbruik", "Netspanning", "Stroomsterkte", "Gasverbruik", "Luchtdruk", "Temperatuur", "Energie teruglevering laag", "Energie teruglevering hoog", "Energie teruglevering", "Geheugengebruik"};
+const char* const SensorTypes[] = {"TIME", "P1_en_t1", "P1_en_t2", "P1_ta", "P1_pd", "P1_v1", "P1_c1", "P1_gas", "BMP-P", "BMP-T", "P1_rt_t1", "P1_rt_t2", "P1_pr", "MEM"};
+const char* const SensorClasses[] = {"", "energy", "energy", "", "power", "voltage", "current", "gas", "pressure", "temperature", "energy", "energy", "power", ""};
+const char* const StateClasses[] = {"total_increasing", "total_increasing", "total_increasing", "", "measurement", "measurement", "measurement", "total_increasing", "measurement", "measurement", "total_increasing", "total_increasing", "measurement", "measurement"};
+const char* const SensorUnits[] = {"s", "kWh", "kWh", "", "W", "V", "A", "m³", "mBar", "°C", "kWh", "kWh", "W", "Bytes"};
 const char* state_topic_sensors = "domus/meterkast/uit/sensor";
 
 // Vul hier het aantal pulsrelais in

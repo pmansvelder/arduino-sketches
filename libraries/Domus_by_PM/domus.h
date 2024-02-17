@@ -1,9 +1,10 @@
 // library file for domus sketches
 
-#define DOMUS_LIBRARY_VERSION "2024.01.16-1" // library version
+#define DOMUS_LIBRARY_VERSION "2024.01.23-1" // library version
 
-String version = VERSION;
+const String version = VERSION;
 
+#if defined(COVERS)
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
 
@@ -12,6 +13,26 @@ struct config_t
   bool saved;
   int cover_pos[2];
 } configuration;
+#endif
+
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
+}
 
 #if defined(UNO_WIFI)
     #include <WiFiNINA.h>
@@ -24,13 +45,13 @@ struct config_t
 #endif
 #include "PubSubClient.h"           //PubSubClient.h Library from Knolleary, must be adapted: #define MQTT_MAX_PACKET_SIZE 512
 #include <ArduinoJson.h>            // Arduino JSON library to create/parse JSON messages, for arduinojson 7
-#include <ArduinoJson.hpp>
+// #include <ArduinoJson.hpp>
 #define BUFFERSIZE 512              // default 100, should be 512
 #define MQTT_MAX_PACKET_SIZE 512    // max size of mqtt payload
 #define DEBOUNCE_DELAY 150          // debounce delay for buttons
 #define LONGPRESS_TIME 450          // time for press to be detected as 'long'
 // StaticJsonDocument<512> doc;        // default 512 (deprecated, arduinojson 6)
-JsonDocument doc;                   // for arduinojson 7
+// JsonDocument doc;                   // for arduinojson 7
 
 PubSubClient mqttClient;
 
@@ -116,8 +137,8 @@ void set_rgb_led(byte red, byte green, byte blue)
 
 void report_state_relay() {
   bool relaytest;
+  StaticJsonDocument<64> doc;
   if (NumberOfRelays > 0) {
-    doc.clear();
     for (int i = 0; i < NumberOfRelays; i++) {
       if (RelayPins[i] < 100) {
         relaytest = (digitalRead(RelayPins[i]) == RelayInitialState[i]);
@@ -135,16 +156,15 @@ void report_state_relay() {
       }
       serializeJson(doc, messageBuffer);
     }
-    ShowDebug("Sending MQTT state for relays...");
+    ShowDebug(F("Sending MQTT state for relays..."));
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_relays, messageBuffer);
-    doc.clear();
   }
 }
 
 void report_pulse_relay(int index, bool state)
 {
-    doc.clear();
+    StaticJsonDocument<20> doc;
     if (state) {
       doc["PULSE" + String(index)] = "on";
     }
@@ -152,10 +172,9 @@ void report_pulse_relay(int index, bool state)
       doc["PULSE" + String(index)] = "off";
     }
     serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT state for pulse relays...");
+    ShowDebug(F("Sending MQTT state for pulse relays..."));
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_pulserelays, messageBuffer);
-    doc.clear();
 }
 
 void report_state_pulserelay() {
@@ -175,9 +194,10 @@ void report_state_pulserelay() {
   }
 }
 
+#if defined(LIGHTS)
 void report_state_light(int index) {
-//   StaticJsonDocument<64> outputdoc;
-  JsonDocument outputdoc;
+  StaticJsonDocument<20> outputdoc;
+//   JsonDocument outputdoc;
   outputdoc.clear();
   if (LightBrightness[index]) {
     if (LightValue[index] > 0) {
@@ -210,16 +230,17 @@ void report_state_light(int index) {
        }
 #endif           
   serializeJson(outputdoc, messageBuffer);
-  ShowDebug("Sending MQTT state for lights...");
+  ShowDebug(F("Sending MQTT state for lights..."));
   ShowDebug(messageBuffer);
   mqttClient.publish((state_topic_lights + String(index + 1)).c_str(), messageBuffer);
-  outputdoc.clear();
 }
+#endif
 
+#if defined(COVERS)
 void report_state_cover() {
   if (NumberOfCovers > 0) {
-//     StaticJsonDocument<128> outputdoc;
-    JsonDocument outputdoc;
+    StaticJsonDocument<128> outputdoc;
+//     JsonDocument outputdoc;
     outputdoc.clear();
     for (byte i = 0; i < NumberOfCovers ; i++) {
       if (CoverState[i] == 0) {
@@ -240,16 +261,18 @@ void report_state_cover() {
       outputdoc["POSITION" + String(i + 1)] = CoverPos[i];
     }
     serializeJson(outputdoc, messageBuffer);
-    ShowDebug("Sending MQTT state for covers...");
+    ShowDebug(F("Sending MQTT state for covers..."));
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_covers, messageBuffer);
     outputdoc.clear();
   }
 }
+#endif
 
+#if defined(LOCKS)
 void report_state_lock() {
+   StaticJsonDocument<64> doc;
   if (NumberOfLocks > 0) {
-    doc.clear();
     for (byte i = 0; i < NumberOfLocks ; i++) {
       if (LockState[i] == 0) {
         doc["LOCK" + String(i + 1)] = "UNLOCKED";
@@ -259,16 +282,16 @@ void report_state_lock() {
       }
     }
     serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT state for locks...");
+    ShowDebug(F("Sending MQTT state for locks..."));
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_locks, messageBuffer);
-    doc.clear();
   }
 }
+#endif
 
 void report_state_pir() {
+  StaticJsonDocument<64> doc;
   if (NumberOfPirs > 0) {
-    doc.clear();
     for (byte i = 0; i < NumberOfPirs ; i++) {
       if (PirState[i] == 0) {
         doc["PIR" + String(i + 1)] = "OFF";
@@ -278,10 +301,9 @@ void report_state_pir() {
       }
     }
     serializeJson(doc, messageBuffer);
-    ShowDebug("Sending MQTT state for pirs...");
+    ShowDebug(F("Sending MQTT state for pirs..."));
     ShowDebug(messageBuffer);
     mqttClient.publish(state_topic_pirs, messageBuffer);
-    doc.clear();
   }
 }
 
@@ -291,23 +313,29 @@ void report_state() {
   // send data for relays
   report_state_relay();
   report_state_pulserelay();
+#if defined(LIGHTS)
   // send data for lights
   if (NumberOfLights > 0) {
     for (int index = 0; index < NumberOfLights ; index++) {
       report_state_light(index);
     }
   }
+#endif
+#if defined(COVERS)
   // send data for covers
   report_state_cover();
+#endif  
+#if defined(LOCKS)
   // send data for locks
   report_state_lock();
+#endif
   // send data for pirs
   report_state_pir();
   // end send state data for MQTT discovery
 }
 
 void heartbeat() {
-  ShowDebug("Heartbeat sent!");
+  ShowDebug(F("Heartbeat sent!"));
   pinMode(heartbeatPin, OUTPUT);
   digitalWrite(heartbeatPin,LOW);
   delay(100); // Should be enough time to pulse to get the 555 to recognize it
@@ -316,20 +344,23 @@ void heartbeat() {
   pinMode(heartbeatPin, INPUT);
 }
 
+#if defined(COVERS)
 void SaveCoverPos(int cover) {
-    ShowDebug("Checking if we should save cover position:");
+    ShowDebug(F("Checking if we should save cover position:"));
     if (CoverPos[cover] != configuration.cover_pos[cover]) {
-        ShowDebug("Saving cover position:");
+        ShowDebug(F("Saving cover position:"));
         configuration.cover_pos[cover] = CoverPos[cover];
         ShowDebug("Cover"+String(cover)+" : "+String(configuration.cover_pos[cover]));
         EEPROM_writeAnything(0, configuration);
       }
     else {
-        ShowDebug("No save");
+        ShowDebug(F("No save"));
     }
     CoverSetPos[cover] = 255; // and set coversetpos to unset position again
 }
+#endif
 
+#if defined(LIGHTS)
 void SetLightState(int light, String state) {
   if (state == "ON") {
     if (LightPins[light] < 100) {
@@ -373,6 +404,8 @@ void SetLightState(int light, String state) {
   }
   report_state_light(light);
 }
+#endif
+
 void ProcessPulseRelays(int PulseRelayId) {
   // Process the timers of the pulse relays and see if we have to close them.
   if (digitalRead(PulseRelayPins[PulseRelayId]) == !PulseRelayInitialStates[PulseRelayId])
@@ -390,6 +423,7 @@ void ProcessPulseRelays(int PulseRelayId) {
       
       digitalWrite(PulseRelayPins[PulseRelayId], PulseRelayInitialStates[PulseRelayId]);
 
+#if defined(COVERS)
       // Update end position of covers
       for (int i = 0 ; i < NumberOfCovers ; i++) {
         ShowDebug("Checking status of cover " + String(i));
@@ -403,11 +437,14 @@ void ProcessPulseRelays(int PulseRelayId) {
             CoverPos[i] = 0;    // position 0 = closed
             CoverState[i] = 2;  // 2 = closed
           }
-          ShowDebug("Setting cover position:");
+          ShowDebug(F("Setting cover position:"));
           ShowDebug(String(CoverPos[i]));
           SaveCoverPos(i);
         }
       } // end update covers
+#endif
+
+#if defined(LOCKS)
       // Update lock status
       for (int i = 0 ; i < NumberOfLocks ; i++) {
         if (LockPulse[i] == PulseRelayId) {
@@ -417,7 +454,10 @@ void ProcessPulseRelays(int PulseRelayId) {
           }
         }
       } // end update lock status
+#endif
     }
+
+#if defined(COVERS)
     else { // Update current position of covers
       int LastPosition;
       for (int i = 0 ; i < NumberOfCovers ; i++) {
@@ -435,8 +475,12 @@ void ProcessPulseRelays(int PulseRelayId) {
         }
       } // end update covers
     }
+#endif    
+    
   }
 }
+
+#if defined(TRIGGERS)
 void processButtonDigital( int buttonId ) {
     bool readButton;
     if (ButtonPins[buttonId] < 100) {
@@ -484,6 +528,8 @@ void processButtonDigital( int buttonId ) {
     }
   }
 }
+#endif
+
 void check_pir(byte pirid) {
   // ...read out the PIR sensors...
   bool readPir;
@@ -521,6 +567,7 @@ void check_pir(byte pirid) {
     PreviousDetects[pirid] = false;
   }
 }
+
 #if defined(MQ7_present)
 float raw_value_to_CO_ppm(float value) {
   float reference_resistor_kOhm = 10.0;
@@ -550,6 +597,7 @@ float raw_value_to_CO_ppm(float value) {
   return CO_ppm;
 }
 #endif
+
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
@@ -557,16 +605,16 @@ void reconnect() {
     set_rgb_led(64, 0, 0);  // RED
     status = WiFi.begin(ssid, pass);
     while ( status != WL_CONNECTED) {
-    ShowDebug("Attempting to connect to WPA SSID: ");
+    ShowDebug(F("Attempting to connect to WPA SSID: "));
     ShowDebug(ssid);
     // Connect to WPA/WPA2 network:
     status = WiFi.begin(ssid, pass);
     }
 #endif
-    ShowDebug("Attempting MQTT connection...");
+    ShowDebug(F("Attempting MQTT connection..."));
     // Attempt to connect
     if (mqttClient.connect(CLIENT_ID, MQTT_USER, MQTT_PASS, status_topic, willQoS, willRetain, last_will)) {
-      ShowDebug("connected");
+      ShowDebug(F("Connected to MQTT broker."));
 #if defined(UNO_WIFI)
       set_rgb_led(0, 0, 64);  // BLUE
 #endif
@@ -586,6 +634,7 @@ void sendMessage(String m, char* topic) {
   m.toCharArray(messageBuffer, m.length() + 1);
   mqttClient.publish(topic, messageBuffer);
 }
+
 float CheckIsNan(float value, float defaultvalue) {
   if (isnan(value)) value = defaultvalue;
   return value;
@@ -595,12 +644,18 @@ float fmap(float value, float min, float max, float tmin, float tmax) {
 }
 
 void sendData() {
+  StaticJsonDocument<300> doc;
   float t, h, hic;
-  doc.clear();
   for (int i = 0; i < NumberOfSensors; i++) {
+    ShowDebug(String(i)+":"+SensorTypes[i]);
     if (SensorTypes[i] == "TIME") {
       doc["sensor" + String(i + 1)] = millis() / 1000;
     }
+#if defined(MEMORY)
+    else if (SensorTypes[i] == "MEM") {
+      doc["sensor" + String(i + 1)] = freeMemory();
+    }
+#endif
 #if defined(DHT_present)
     else if (SensorTypes[i] == "DHT-T") {
       t = CheckIsNan(dht.readTemperature(), 0);
@@ -664,20 +719,24 @@ void sendData() {
 #if defined(P1_meter)
     else if (SensorTypes[i] == "P1_en_t1") {
       if (last_p1_data.energy_delivered_tariff1.val() > 0) {
+        ShowDebug("processing sensor "+ String(SensorTypes[i]));
         doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff1.val();
       }
     }
     else if (SensorTypes[i] == "P1_en_t2") {
       if (last_p1_data.energy_delivered_tariff2.val() > 0) {
+        ShowDebug("processing sensor "+ String(SensorTypes[i]));
         doc["sensor" + String(i + 1)] = last_p1_data.energy_delivered_tariff2.val();
       }
     }
     else if (SensorTypes[i] == "P1_rt_t1") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       if (last_p1_data.energy_returned_tariff1.val() > 0) {
         doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff1.val();
       }
     }
     else if (SensorTypes[i] == "P1_rt_t2") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       if (last_p1_data.energy_returned_tariff2.val() > 0) {
         doc["sensor" + String(i + 1)] = last_p1_data.energy_returned_tariff2.val();
       }
@@ -691,37 +750,45 @@ void sendData() {
       }
     }
     else if (SensorTypes[i] == "P1_pd") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.power_delivered.int_val();
     }
     else if (SensorTypes[i] == "P1_pr") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.power_returned.int_val();
     }
     else if (SensorTypes[i] == "P1_v1") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.voltage_l1.val();
     }
     else if (SensorTypes[i] == "P1_c1") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.current_l1;
     }
     else if (SensorTypes[i] == "P1_pd1") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.power_delivered_l1.int_val();
     }
     else if (SensorTypes[i] == "P1_pr1") {
+      ShowDebug("processing sensor "+ String(SensorTypes[i]));
       doc["sensor" + String(i + 1)] = last_p1_data.power_returned_l1.int_val();
     }
     else if (SensorTypes[i] == "P1_gas") {
       if (last_p1_data.gas_delivered.val() > 0) {
+        ShowDebug("processing sensor "+ String(SensorTypes[i]));
         doc["sensor" + String(i + 1)] = last_p1_data.gas_delivered.val();
       }
     }
 #endif
   }
   serializeJson(doc, messageBuffer);
-  ShowDebug("Sending MQTT state for sensors...");
-  ShowDebug(messageBuffer);
+  ShowDebug(F("Sending MQTT state for sensors..."));
+//   serializeJsonPretty(doc, Serial);
+//   ShowDebug(messageBuffer);
   mqttClient.publish(state_topic_sensors, messageBuffer);
-  doc.clear();
 }
 
+#if defined(COVERS)
 void OpenCover(int Cover) {
   int PulseRelayPort = CoverPulse[Cover];
   ShowDebug("Pulse relay index = " + String(PulseRelayPort));
@@ -829,7 +896,7 @@ void StopCover(int Cover) {
 void SetCoverPosition(int cover, int position) {
   CoverSetPos[cover] = position;
   if (CoverPos[cover] < position) {
-    ShowDebug("Cover needs to open");
+    ShowDebug(F("Cover needs to open"));
     if (position == 100) {
       CoverSetPos[cover] = 120;
     }
@@ -837,7 +904,7 @@ void SetCoverPosition(int cover, int position) {
     OpenCover(cover);
   }
   else {
-    ShowDebug("Cover needs to close");
+    ShowDebug(F("Cover needs to close"));
     if (position == 0) {
       CoverSetPos[cover] = -20;
     }
@@ -848,25 +915,27 @@ void SetCoverPosition(int cover, int position) {
 
 void ProcessCovers(int cover) {
   if (CoverPos[cover] == CoverSetPos[cover]) {
-    ShowDebug("ProcessCovers");
+    ShowDebug(F("ProcessCovers"));
     StopCover(cover);
     SaveCoverPos(cover);
   }
 }
+#endif
 
 void onMessage(char* topic, byte * payload, byte length) {
-  char msgBuffer[BUFFERSIZE];
+  StaticJsonDocument<20> doc;
+//   char msgBuffer[BUFFERSIZE];
   payload[length] = '\0'; // terminate string with 0
   String strPayload = String((char*)payload);  // convert to string
-  ShowDebug("Message arrived");
+  ShowDebug(F("Message arrived"));
   ShowDebug(topic);
   ShowDebug(strPayload);
 
   byte RelayPort;
   byte RelayValue;
-
+  
+#if defined(LIGHTS)
   if (String(topic).indexOf(cmd_topic_lights) >= 0) {
-    doc.clear();
     deserializeJson(doc, strPayload);
     int index = (topic[strlen(topic) - 1]) - '0';
     if (LightBrightness[index - 1] && doc.containsKey("brightness")) {
@@ -880,9 +949,12 @@ void onMessage(char* topic, byte * payload, byte length) {
       SetLightState(index - 1, doc["state"]);
     }
   }
-  else if (strPayload[0] == '{') {
+#endif  
+
+  if (strPayload[0] == '{') {
     // json message
     deserializeJson(doc, strPayload);
+#if defined(COVERS)
     for (int i = 0; i < NumberOfCovers; i++) {
       String keyword = "POSITION" + String(i + 1);
       ShowDebug("Keyword: " + String(keyword));
@@ -892,12 +964,12 @@ void onMessage(char* topic, byte * payload, byte length) {
         SetCoverPosition(i, doc[keyword]);
       }
     }
-    doc.clear();
+#endif
   }
   else if (strPayload[0] == 'R') {
 
     // Relais commando
-    ShowDebug("Relay command:");
+    ShowDebug(F("Relay command:"));
     
     ShowDebug("Length=" + String(strPayload.length()));
 
@@ -919,11 +991,11 @@ void onMessage(char* topic, byte * payload, byte length) {
       
           if (digitalRead(RelayPins[RelayPort]) == LOW) {
             digitalWrite(RelayPins[RelayPort], HIGH);
-            ShowDebug("...to HIGH");
+            ShowDebug(F("...to HIGH"));
           }
           else {
             digitalWrite(RelayPins[RelayPort], LOW);
-            ShowDebug("...to LOW");
+            ShowDebug(F("...to LOW"));
           }
       }
 #if defined(MCP_present)
@@ -931,11 +1003,11 @@ void onMessage(char* topic, byte * payload, byte length) {
           ShowDebug("Relay " + String (RelayPins[RelayPort] - 100));     
           if (mcp.digitalRead(RelayPins[RelayPort] - 100) == LOW) {
             mcp.digitalWrite(RelayPins[RelayPort] - 100, HIGH);
-            ShowDebug("...to HIGH");
+            ShowDebug(F("...to HIGH"));
           }
           else {
             mcp.digitalWrite(RelayPins[RelayPort] - 100, LOW);
-            ShowDebug("...to LOW");
+            ShowDebug(F("...to LOW"));
           }
       }
 #endif
@@ -985,31 +1057,33 @@ void onMessage(char* topic, byte * payload, byte length) {
   }
   else if (strPayload == "SAVE") {
 
+#if defined(COVERS)
     // Save current parameters
     for (int id = 0; id < NumberOfCovers; id++) {
         configuration.cover_pos[id] = CoverPos[id];
         configuration.saved = true;
     }
     EEPROM_writeAnything(0, configuration);
+#endif
   }
   else if (strPayload == "#RESET") {
-    ShowDebug("Reset command received, resetting in one second...");
+    ShowDebug(F("Reset command received, resetting in one second..."));
     delay(1000);
     resetFunc();
   }
   else if (strPayload == "#DEBUGON") {
-    ShowDebug("Debug on");
+    ShowDebug(F("Debug on"));
     debug = true;
     Serial.begin(115200);
     ShowDebug("Client ID: "+String(CLIENT_ID));
     ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
-    Serial.print("Using Domus library version ");
-    Serial.println(DOMUS_LIBRARY_VERSION);
-    Serial.print("Using ArduinoJson version ");
-    Serial.println(ARDUINOJSON_VERSION);
+    Serial.print(F("Using Domus library version "));
+    Serial.println(F(DOMUS_LIBRARY_VERSION));
+    Serial.print(F("Using ArduinoJson version "));
+    Serial.println(F(ARDUINOJSON_VERSION));
   }
   else if (strPayload == "#DEBUGOFF") {
-    ShowDebug("Debug off");
+    ShowDebug(F("Debug off"));
     debug = false;
   }
   else if (strPayload[0] == 'P') {  // PULSE RELAY
@@ -1041,7 +1115,7 @@ void onMessage(char* topic, byte * payload, byte length) {
       }
     }
     else {
-      ShowDebug("No such pulserelay defined!");
+      ShowDebug(F("No such pulserelay defined!"));
     }
   }
   // *** Control for screen covers ****
@@ -1050,10 +1124,10 @@ void onMessage(char* topic, byte * payload, byte length) {
   //    - sets direction relay: open = inverse state
   //    - pulse duration taken from command, if not given, use parameter COVERDELAYTIME
   //    - opens motor relay for duration of pulse
-
+#if defined(COVERS)
   else if (strPayload[0] == 'O') {
     // Cover commando: open
-    ShowDebug("Cover command : Open");
+    ShowDebug(F("Cover command : Open"));
     byte CoverPort = strPayload[1] - 48;
     // 2nd char is # of cover
     ShowDebug("Cover number " + String(CoverPort));
@@ -1073,7 +1147,7 @@ void onMessage(char* topic, byte * payload, byte length) {
   //
   else if (strPayload[0] == 'C') {
     // Cover commando: close
-    ShowDebug("Cover command : Close");
+    ShowDebug(F("Cover command : Close"));
     byte CoverPort = strPayload[1] - 48;
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
@@ -1090,7 +1164,7 @@ void onMessage(char* topic, byte * payload, byte length) {
   //
   else if (strPayload[0] == 'S') {
     // Cover commando: stop
-    ShowDebug("Cover command : Stop");
+    ShowDebug(F("Cover command : Stop"));
     byte CoverPort = strPayload[1] - 48;
     ShowDebug("Cover number " + String(CoverPort));
     if (CoverPort <= NumberOfCovers) {
@@ -1100,10 +1174,12 @@ void onMessage(char* topic, byte * payload, byte length) {
       ShowDebug("No such cover defined: " + String(CoverPort));
     }
   }
+#endif
+#if defined(LOCKS)
   // MQTT Discovery Lock commands
   else if (strPayload[0] == 'L') {
     // Lock commando: lock
-    ShowDebug("Lock command : lock");
+    ShowDebug(F("Lock command : lock"));
     byte LockPort = strPayload[1] - 48;
     ShowDebug("Lock number " + String(LockPort));
     int PulseRelayPort = LockPulse[LockPort - 1];
@@ -1126,7 +1202,7 @@ void onMessage(char* topic, byte * payload, byte length) {
   }
   else if (strPayload[0] == 'U') {
     // Lock commando: unlock
-    ShowDebug("Lock command : unlock");
+    ShowDebug(F("Lock command : unlock"));
     byte LockPort = strPayload[1] - 48;
     ShowDebug("Lock number " + String(LockPort));
     int PulseRelayPort = LockPulse[LockPort - 1];
@@ -1148,19 +1224,22 @@ void onMessage(char* topic, byte * payload, byte length) {
       ShowDebug("No such lock defined: " + String(LockPort));
     }
   }
+#endif
   else {
     // Onbekend commando
-    ShowDebug("Unknown value");
+    ShowDebug(F("Unknown value"));
     mqttClient.publish(topic_out, "Unknown command");
   }
 }
-void setDeviceInfo(char* configtopic) {
+void setDeviceInfo(char* configtopic, StaticJsonDocument<512> doc) {
   JsonObject device = doc.createNestedObject("dev");
   JsonArray identifiers = device.createNestedArray("ids");
   identifiers.add(CLIENT_ID);
   JsonArray connections = device.createNestedArray("cns");
+  ShowDebug(String(ip));
   connections.add(serialized("[\"ip\",\"" + String(ip) + "\"]"));
 #if !defined(UNO_WIFI)
+  ShowDebug(mac2String(mac));
   connections.add(serialized("[\"mac\",\"" + mac2String(mac) + "\"]"));
 #endif
   device["name"] = DISCOVERY_ID;
@@ -1168,22 +1247,22 @@ void setDeviceInfo(char* configtopic) {
   device["mf"] = MANUFACTURER_ID;
   device["sw"] = version;
   size_t n = serializeJson(doc, messageBuffer);
-  ShowDebug("Sending MQTT config on topic:");
+  ShowDebug(F("Sending MQTT config on topic:"));
   ShowDebug(configtopic);
-  ShowDebug("Config json:");
+  ShowDebug(F("Config json:"));
   ShowDebug(messageBuffer);
   if (mqttClient.publish(configtopic, messageBuffer, n)) {
-    ShowDebug("...MQTT config sent.");
+    ShowDebug(F("...MQTT config sent."));
   }
   else {
-    ShowDebug("...publish failed, either connection lost, or message too large.");
+    ShowDebug(F("...publish failed, either connection lost, or message too large."));
   }
 }
 
 void reportMQTTdisco() {
+  StaticJsonDocument<512> doc;
   // discovery data for relays
   for (int i = 0; i < NumberOfRelays ; i++) {
-    doc.clear();
     doc["name"] = SwitchNames[i];
     doc["uniq_id"] = item_prefix + "_switch" + String(i + 1);
     doc["stat_t"] = state_topic_relays;
@@ -1199,7 +1278,7 @@ void reportMQTTdisco() {
     doc["stat_on"] = "on";
     doc["stat_off"] = "off";
     doc["val_tpl"] = "{{value_json.POWER" + String(i) + "}}";
-    setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_switch" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_switch" + String(i + 1) + "/config").c_str(), doc);
   }
   // discovery data for pulse relays
   for (int i = 0; i < NumberOfPulseRelays ; i++) {
@@ -1212,8 +1291,9 @@ void reportMQTTdisco() {
     doc["stat_on"] = "on";
     doc["stat_off"] = "off";
     doc["val_tpl"] = "{{value_json.PULSE" + String(i) + "}}";
-    setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_pulseswitch" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/switch/" + item_prefix + "_pulseswitch" + String(i + 1) + "/config").c_str(), doc);
   }  
+#if defined(LIGHTS)
   // discovery data for lights
   for (int i = 0; i < NumberOfLights ; i++) {
     doc.clear();
@@ -1224,8 +1304,10 @@ void reportMQTTdisco() {
     doc["schema"] = "json";
     doc["brightness"] = LightBrightness[i];
     mqttClient.subscribe((cmd_topic_lights + String(i + 1)).c_str());
-    setDeviceInfo((config_topic_base + "/light/" + item_prefix + "_light" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/light/" + item_prefix + "_light" + String(i + 1) + "/config").c_str(), doc);
   }
+#endif
+#if defined(COVERS)
   // discovery data for covers
   for (int i = 0; i < NumberOfCovers ; i++ ) {
     doc.clear();
@@ -1242,8 +1324,10 @@ void reportMQTTdisco() {
     doc["set_pos_t"] = topic_in;
     doc["set_pos_tpl"] = "{ \"POSITION" + String(i + 1) +  "\": {{ position }} }";
     doc["pos_tpl"] = "{{value_json.POSITION" + String(i + 1) + "}}";
-    setDeviceInfo((config_topic_base + "/cover/" + item_prefix + "_cover" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/cover/" + item_prefix + "_cover" + String(i + 1) + "/config").c_str(), doc);
   }
+#endif
+#if defined(LOCKS)
   // discovery data for locks
   for (int i = 0; i < NumberOfLocks ; i++ ) {
     doc.clear();
@@ -1256,8 +1340,9 @@ void reportMQTTdisco() {
     doc["state_locked"] = "LOCKED";
     doc["state_unlocked"] = "UNLOCKED";
     doc["val_tpl"] = "{{value_json.LOCK" + String(i + 1) + "}}";
-    setDeviceInfo((config_topic_base + "/lock/" + item_prefix + "_lock" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/lock/" + item_prefix + "_lock" + String(i + 1) + "/config").c_str(), doc);
   }
+#endif
   // discovery data for status message (binary_sensor)
   doc.clear();
   doc["name"] = "Status";
@@ -1266,7 +1351,7 @@ void reportMQTTdisco() {
   doc["dev_cla"] = "problem";
   doc["pl_on"] = "error";
   doc["pl_off"] = "ok";
-  setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_status" + "/config").c_str());
+  setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_status" + "/config").c_str(), doc);
   
   // discover data for pirs (binary_sensors)
   for (int i = 0; i < NumberOfPirs ; i++ ) {
@@ -1278,8 +1363,9 @@ void reportMQTTdisco() {
     doc["pl_on"] = "ON";
     doc["pl_off"] = "OFF";
     doc["val_tpl"] = " {{value_json.PIR" + String(i + 1) + "}}";
-    setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_pir" + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/binary_sensor/" + item_prefix + "_pir" + String(i + 1) + "/config").c_str(), doc);
   }
+#if defined(TRIGGERS)
   // discover data for buttons (triggers)
    for (int i = 0; i < NumberOfButtons ; i++ ) {
      doc.clear();
@@ -1288,15 +1374,16 @@ void reportMQTTdisco() {
      doc["type"] = "button_short_release";
      doc["subtype"] = "button_" + String(i+1);
      doc["payload"] = "Button" + String(i);
-     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "/config").c_str());
+     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "/config").c_str(), doc);
      doc.clear();
      doc["automation_type"] = "trigger";
      doc["topic"] = state_topic_buttons;
      doc["type"] = "button_long_press";
      doc["subtype"] = "button_" + String(i+1);
      doc["payload"] = "Button" + String(i) + "_long";
-     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "_long" + "/config").c_str());
+     setDeviceInfo((config_topic_base + "/device_automation/" + item_prefix + "_button" + String(i + 1) + "_long" + "/config").c_str(), doc);
    }
+#endif
   // discover data for sensors (sensors)
   for (int i = 0; i < NumberOfSensors ; i++ ) {
     doc.clear();
@@ -1318,10 +1405,9 @@ void reportMQTTdisco() {
     else {
       doc["val_tpl"] = " {{value_json.sensor" + String(i + 1) + " | round (1) }}";
     }
-    setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str());
+    setDeviceInfo((config_topic_base + "/sensor/" + item_prefix + "_sensor"  + String(i + 1) + "/config").c_str(), doc);
   }
   //  end send config data for MQTT discovery
-  doc.clear();
 }
 void setup() {
   
@@ -1333,30 +1419,30 @@ void setup() {
     Serial.begin(115200);
     ShowDebug("Client ID: "+String(CLIENT_ID));
     ShowDebug("MQTT Packet Size: "+String(MQTT_MAX_PACKET_SIZE));
-    Serial.print("Using Domus library version ");
-    Serial.println(DOMUS_LIBRARY_VERSION);
-    Serial.print("Using ArduinoJson version ");
-    Serial.println(ARDUINOJSON_VERSION);
+    Serial.print(F("Using Domus library version "));
+    Serial.println(F(DOMUS_LIBRARY_VERSION));
+    Serial.print(F("Using ArduinoJson version "));
+    Serial.println(F(ARDUINOJSON_VERSION));
   }
-
+#if defined(COVERS)
   EEPROM_readAnything(0, configuration);
-  ShowDebug("Reading stored configuration");
+  ShowDebug(F("Reading stored configuration"));
   if (configuration.saved) {
       for (int id = 0; id < NumberOfCovers; id++) {
         CoverPos[id] = configuration.cover_pos[id];
         ShowDebug("Cover position: "+String(configuration.cover_pos[id]));
       }
   }
-  
+#endif
 #if defined(MCP_present)
   Wire.setClock(400000);
   mcp.begin();                      // use default address 0 for i2c expander (MCP23017/MCP23008)
   Wire.beginTransmission(32);
   if (Wire.endTransmission () == 0) {
-      ShowDebug("MCP23017 found at address 20h");
+      ShowDebug(F("MCP23017 found at address 20h"));
   }
   else {
-      ShowDebug("MCP23017 not found at address 20h !!");
+      ShowDebug(F("MCP23017 not found at address 20h !!"));
   }
 #endif
 
@@ -1374,6 +1460,7 @@ void setup() {
 #endif
   }
 
+#if defined(LIGHTS)
   for (byte thisPin = 0; thisPin < NumberOfLights; thisPin++) {
     ShowDebug("Light: " + String(LightPins[thisPin])+ " (" + String(LightNames[thisPin]) + ")");
     if (LightPins[thisPin] < 100) { // pins > 100 are MCP ports
@@ -1387,6 +1474,7 @@ void setup() {
     }
 #endif
   }
+#endif
 
   for (int thisPin = 0; thisPin < NumberOfPulseRelays; thisPin++) {
     ShowDebug("Pulse relay: " + String(PulseRelayPins[thisPin]));
@@ -1402,6 +1490,7 @@ void setup() {
 #endif
   }
 
+#if defined(TRIGGERS)
   for (int thisButton = 0; thisButton < NumberOfButtons; thisButton++) {
     ShowDebug("Button: " + String(ButtonPins[thisButton]));
     if (ButtonPins[thisButton] < 100) { // pins > 100 are MCP ports 
@@ -1414,6 +1503,7 @@ void setup() {
     } 
 #endif 
   }
+#endif
 
   for (byte pirid = 0; pirid < NumberOfPirs; pirid++) {
     ShowDebug("Pir: " + String(PirSensors[pirid])+ " (" + String(PirNames[pirid]) + ")");
@@ -1431,12 +1521,12 @@ void setup() {
 
 #if defined(DHT_present)
   dht.begin(110); // 55 us is default
-  ShowDebug("DHT-22 sensor: 3");
+  ShowDebug(F("DHT-22 sensor: 3"));
 #endif
 
 #if defined(LDR_present)
   pinMode(LightSensor, INPUT);
-  ShowDebug("LDR sensor: A10");
+  ShowDebug(F("LDR sensor: A10"));
 #endif
 
 #if defined(UNO_WIFI)
@@ -1450,15 +1540,15 @@ void setup() {
 #endif
 
 #if defined(DS18B20_present)
-  ShowDebug("DS18B20 sensor: 16");
+  ShowDebug(F("DS18B20 sensor: 16"));
 #endif
 
 #if defined(BMP_present)
   if (!bmp.begin()) {
-    ShowDebug("Could not find a valid BMP280 sensor, check wiring!");
+    ShowDebug(F("Could not find a valid BMP280 sensor, check wiring!"));
   }
   else {
-    ShowDebug("BMP280 sensor (i2c): 20 (SDA), 21 (SCL)");
+    ShowDebug(F("BMP280 sensor (i2c): 20 (SDA), 21 (SCL)"));
   }
 #endif
 
@@ -1476,7 +1566,7 @@ void setup() {
   Serial1.begin(115200);                // P1 meter connected to pin 19 (RX1) of Arduino Mega
   reader.enable(true);
   last_p1_read = millis();
-  ShowDebug("Slimme meter via P1 geactiveerd via RX1 (pin19) ");
+  ShowDebug(F("Slimme meter via P1 geactiveerd via RX1 (pin19) "));
 #endif
 
 #if defined(UNO_WIFI)
@@ -1485,7 +1575,7 @@ void setup() {
     WiFiDrv::pinMode(27, OUTPUT);       //BLUE
     set_rgb_led(64, 64, 64);            // Set Wifi Status LED to WHITE
     while ( status != WL_CONNECTED) {
-        ShowDebug("Attempting to connect to WPA SSID: ");
+        ShowDebug(F("Attempting to connect to WPA SSID: "));
         ShowDebug(ssid);
         // Connect to WPA/WPA2 network:
         status = WiFi.begin(ssid, pass);
@@ -1503,7 +1593,7 @@ void setup() {
         ShowDebug("");   
     }
 #else
-    ShowDebug("Network...");
+    ShowDebug(F("Network..."));
     // attempt to connect to network:
     // setup ethernet communication using DHCP
     if (Ethernet.begin(mac) == 0) {
@@ -1512,7 +1602,7 @@ void setup() {
         resetFunc();
     }
     ShowDebug(F("Ethernet via DHCP"));
-    ShowDebug("IP address: ");
+    ShowDebug(F("IP address: "));
     ip = String (Ethernet.localIP()[0]);
     ip = ip + ".";
     ip = ip + String (Ethernet.localIP()[1]);
@@ -1525,76 +1615,76 @@ void setup() {
 #endif
 
   // setup mqtt client
-  mqttClient.setBufferSize(512);
+  mqttClient.setBufferSize(BUFFERSIZE);
   mqttClient.setClient(NetClient);
   mqttClient.setServer(MQTTSERVER, 1883); // or local broker
-  ShowDebug("MQTT set up");
+  ShowDebug(F("MQTT set up"));
   mqttClient.setCallback(onMessage);
-  ShowDebug("Ready to send data");
+  ShowDebug(F("Ready to send data"));
   lastPublishTime = millis();
 }
 
 #if defined(P1_meter)
 void PrintValues(MyData data) {
-  Serial.print("Id: ");
+  Serial.print(F("Id: "));
   Serial.println(data.identification);
-  Serial.print("Versie: ");
+  Serial.print(F("Versie: "));
   Serial.println(data.p1_version);
-  Serial.print("Tijd: ");
+  Serial.print(F("Tijd: "));
   Serial.println(data.timestamp);
-  Serial.print("Equipment ID: ");
+  Serial.print(F("Equipment ID: "));
   Serial.println(data.equipment_id);
-  Serial.print("Tarief (1=nacht, 2=dag): ");
+  Serial.print(F("Tarief (1=nacht, 2=dag): "));
   Serial.println(data.electricity_tariff);
-  Serial.print("Verbruik: ");
+  Serial.print(F("Verbruik: "));
   Serial.print(data.power_delivered.int_val());
-  Serial.println(" W.");
-  Serial.print("Teruglevering: ");
+  Serial.println(F(" W."));
+  Serial.print(F("Teruglevering: "));
   Serial.print(data.power_returned.int_val());
-  Serial.println(" W.");
-  Serial.print("Voltage: ");
+  Serial.println(F(" W."));
+  Serial.print(F("Voltage: "));
   Serial.print(data.voltage_l1.val(), 0);
-  Serial.println(" V.");
-  Serial.print("Stroomsterkte: ");
+  Serial.println(F(" V."));
+  Serial.print(F("Stroomsterkte: "));
   Serial.print(data.current_l1);
-  Serial.println(" A.");
-  Serial.print("Verbruik nacht: ");
+  Serial.println(F(" A."));
+  Serial.print(F("Verbruik nacht: "));
   Serial.print(data.energy_delivered_tariff1.val(), 0);
-  Serial.println(" kWh.");
-  Serial.print("Verbruik dag: ");
+  Serial.println(F(" kWh."));
+  Serial.print(F("Verbruik dag: "));
   Serial.print(data.energy_delivered_tariff2.val(), 0);
-  Serial.println(" kWh.");
-  Serial.print("Teruglevering nacht: ");
+  Serial.println(F(" kWh."));
+  Serial.print(F("Teruglevering nacht: "));
   Serial.print(data.energy_returned_tariff1.val(), 0);
-  Serial.println(" kWh.");
-  Serial.print("Teruglevering dag: ");
+  Serial.println(F(" kWh."));
+  Serial.print(F("Teruglevering dag: "));
   Serial.print(data.energy_returned_tariff2.val(), 0);
-  Serial.println(" kWh.");
-  Serial.print("Elektra Storingen: ");
+  Serial.println(F(" kWh."));
+  Serial.print(F("Elektra Storingen: "));
   Serial.println(data.electricity_failures);
-  Serial.print("Elektra Lange Storingen: ");
+  Serial.print(F("Elektra Lange Storingen: "));
   Serial.println(data.electricity_long_failures);
-  Serial.print("Elektra Brownouts: ");
+  Serial.print(F("Elektra Brownouts: "));
   Serial.println(data.electricity_sags_l1);
-  Serial.print("Elektra Pieken: ");
+  Serial.print(F("Elektra Pieken: "));
   Serial.println(data.electricity_swells_l1);
-  Serial.print("Message Long: ");
+  Serial.print(F("Message Long: "));
   Serial.println(data.message_long);
-  Serial.print("Gas type: ");
+  Serial.print(F("Gas type: "));
   Serial.println(data.gas_device_type);
-  Serial.print("Gas id: ");
+  Serial.print(F("Gas id: "));
   Serial.println(data.gas_equipment_id);
-  Serial.print("Gasverbruik: ");
+  Serial.print(F("Gasverbruik: "));
   Serial.print(data.gas_delivered.val(), 0);
-  Serial.println(" m3.");
-  Serial.println("==============================");
+  Serial.println(F(" m3."));
+  Serial.println(F("=============================="));
 }
 #endif
 
 void loop() {
   // Main loop, where we check if we're connected to MQTT...
   if (!mqttClient.connected()) {
-    ShowDebug("Not Connected!");
+    ShowDebug(F("Not Connected!"));
 //     resetFunc();
     reconnect();
     startsend = true;
@@ -1613,12 +1703,12 @@ void loop() {
   for (int id = 0; id < NumberOfPulseRelays; id++) {
     ProcessPulseRelays(id);
   }
-
+#if defined(COVERS)
   // handle the cover position
   for (int id = 0; id < NumberOfCovers; id++) {
     ProcessCovers(id);
   }
-
+#endif
   // ...read out the PIR sensors...
   for (int id = 0; id < NumberOfPirs; id++) {
     check_pir(id);
@@ -1629,7 +1719,7 @@ void loop() {
   if (mq_state == 0) {
     digitalWrite(mq_state_pin, HIGH);
     if ( mq_millis < millis() ) {
-      ShowDebug("MQ-7 measure...");
+      ShowDebug(F("MQ-7 measure..."));
       mq_state = 1;
       mq_millis = millis() + mq_measure_interval;
     }
@@ -1644,7 +1734,7 @@ void loop() {
       co_value += 0.001 * mq_value;
     }
     if ( mq_millis < millis() ) {
-      ShowDebug("MQ-7 heatup...");
+      ShowDebug(F("MQ-7 heatup..."));
       mq_state = 0;
       mq_millis = millis() + mq_heat_interval;
     }
@@ -1661,7 +1751,7 @@ void loop() {
       }
       else {
         if ( ms_millis < millis() ) {
-           ShowDebug("MS measure...");
+           ShowDebug(F("MS measure..."));
            float f;
            ms_value = 0;
            for (int i = 0; i < SAMPLESIZE; i++) {
@@ -1707,6 +1797,7 @@ void loop() {
     lastPublishTime = millis();
     sendData();
     heartbeat();
+    ShowDebug("Free memory: "+String(freeMemory()));
   }
   else if (millis() - lastReportTime > REPORT_DELAY) {
     lastReportTime = millis();
@@ -1714,13 +1805,20 @@ void loop() {
     // send a heartbeat pulse
     heartbeat();
   }
+#if defined(TRIGGERS)  
   else {
     for (int id = 0; id < NumberOfButtons; id++) {
       processButtonDigital(id);
     }
   }
+#endif
 
   // and loop.
 //   mqttClient.loop();
+
+#if defined(RECYCLE)
+  if (millis() > MaxUptime) resetFunc();
+#endif
+  
   if(!mqttClient.loop()) resetFunc();
 }
