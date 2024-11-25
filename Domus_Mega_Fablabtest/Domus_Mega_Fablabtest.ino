@@ -1,6 +1,6 @@
 /*
           <========Arduino Sketch for Arduino Mega =========>
-          Locatie: Schuur
+          Locatie: test
           Macadres: A8:61:0A:03:04:09
           prefix voor Arduino AG (bestaat niet meer): A8:61:0A
 
@@ -93,22 +93,22 @@
           52: <in gebruik voor W5100>
           53: <in gebruik voor W5100>
 
-          incoming topic: domus/schuur/in
+          incoming topic: domus/test/in
 
           Arduino Mega with W5100 ethernet shield used as MQTT client
           It will connect over Ethernet to the MQTT broker and controls digital outputs (LED, relays)
           The topics have the format "domus/hobby/uit" for outgoing messages and
-          "domus/schuur/in" for incoming messages.
+          "domus/test/in" for incoming messages.
 
           The outgoing topics are
 
-          domus/schuur/uit        // Relaisuitgangen: R<relaisnummer><status>
+          domus/test/uit        // Relaisuitgangen: R<relaisnummer><status>
 
           Here, each relay state is reported using the same syntax as the switch command:
           R<relay number><state>
 
           There is only one incoming topic:
-          domus/schuur/in
+          domus/test/in
           The payload here determines the action:
           STAT - Report the status of all relays (0-9)
           AON - turn all the leds on
@@ -206,22 +206,22 @@ byte heartbeatPin = 16;
 #endif
 
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij MQTT, tevens het unique_id bij Home Assistant
-#define CLIENT_ID "domus_schuur"
+#define CLIENT_ID "domus_test"
 // Vul hier de naam in waarmee de Arduino zich aanmeldt bij Home Assistant
-#define DISCOVERY_ID "Domus Schuur"
+#define DISCOVERY_ID "Domus test"
 #define MODEL_ID "Mega 2560"
 #define MANUFACTURER_ID "Arduino"
 String hostname = CLIENT_ID;
 // base for Home Assistant MQTT discovery (must be configured in configuration.yaml)
 const String config_topic_base = "homeassistant";
 // prefix for inidvidual items
-const String item_prefix = "schuur";
+const String item_prefix = "test";
 
 // Vul hier het macadres in A8:61:0A
 uint8_t mac[6] = { 0xA8, 0x61, 0x0A, 0x03, 0x04, 0x09 };
 
 // Vul hier de MQTT topic in waar deze arduino naar luistert
-//const char* topic_in = "domus/schuur/in";
+//const char* topic_in = "domus/test/in";
 
 #if defined(MQ7_present)
 byte mq_state = 1;  // present state of MQ sensor: 0=preheat, 1=measure
@@ -241,18 +241,18 @@ const byte NumberOfRelays = 1;
 const byte RelayPins[] = { 28 };
 bool RelayInitialState[] = { LOW };
 String SwitchNames[] = { "Stopcontact" };
-char* state_topic_relays = "domus/schuur/stat/relay";
+char* state_topic_relays = "domus/test/stat/relay";
 
 // MQTT Discovery lights
 // Vul hier het aantal gebruikte relais in en de pinnen waaraan ze verbonden zijn
-const byte NumberOfLights = 3;
+const byte NumberOfLights = 1;
 const byte LightPins[] = { 22, 24, 26 };
 bool LightInitialState[] = { LOW, LOW, LOW };
 bool LightBrightness[] = { false, false, false };
 byte LightValue[] = { 0, 0, 0 };
-String LightNames[] = { "Schuur", "Garage", "Buitenlamp" };
-const char* state_topic_lights = "domus/schuur/stat/light";
-const char* cmd_topic_lights = "domus/schuur/cmd/light";
+String LightNames[] = { "test", "Garage", "Buitenlamp" };
+const char* state_topic_lights = "domus/test/stat/light";
+const char* cmd_topic_lights = "domus/test/cmd/light";
 
 // MQTT Discovery covers
 // Vul hier de gegevens in van de motorsturing voor de screens:
@@ -269,7 +269,7 @@ int CoverSetPos[] = { 255, 255 };  // set position (255 = not set)
 String CoverNames[] = { "*Screen Keuken", "*Screen Huiskamer" };
 String CoverClasses[] = {};                                  // https://www.home-assistant.io/integrations/cover/
 long CoverDelay[] = { 28000, 27000 };                        // time to wait for full open or close
-const char* state_topic_covers = "domus/schuur/uit/screen";  // Screens (zonwering)
+const char* state_topic_covers = "domus/test/uit/screen";  // Screens (zonwering)
 
 // MQTT Discovery locks
 const byte NumberOfLocks = 0;
@@ -277,7 +277,7 @@ byte LockPulse[] = { 0, 1 };  // relay numbers for lock pulses (index on PulseRe
 byte LockState[] = { 1, 1 };  // status of locks: 0 = unlocked, 1 = locked
 String LockNames[] = { "*Haldeurslot", "*VoordeurSlot" };
 long LockDelay[] = { 2000, 250 };                          // pulse time for locks
-const char* state_topic_locks = "domus/schuur/stat/lock";  // Locks (sloten)
+const char* state_topic_locks = "domus/test/stat/lock";  // Locks (sloten)
 
 // MQTT Discovery pirs (binary_sensors)
 const byte NumberOfPirs = 1;
@@ -288,9 +288,9 @@ static byte lastPirStates[] = { 0 };
 bool PirInitialState[] = { LOW };
 int PreviousDetects[] = { false };  // Statusvariabele PIR sensor
 byte PirState[] = { 0 };
-String PirNames[] = { "Schuur" };
+String PirNames[] = { "test" };
 String PirClasses[] = { "motion" };
-const char* state_topic_pirs = "domus/schuur/uit/pir";
+const char* state_topic_pirs = "domus/test/uit/pir";
 
 // MQTT Discovery buttons (device triggers)
 const int NumberOfButtons = 0;
@@ -299,16 +299,16 @@ static byte lastButtonStates[] = { 0, 0 };
 long lastActivityTimes[] = { 0, 0 };
 long LongPressActive[] = { 0, 0 };
 String ButtonNames[] = {};
-const char* state_topic_buttons = "domus/schuur/uit/button";
+const char* state_topic_buttons = "domus/test/uit/button";
 
 // MQTT Discovery sensors (sensors)
 const int NumberOfSensors = 1;
-const char* const SensorNames[] = { "Runtime schuur" };
+const char* const SensorNames[] = { "Runtime test" };
 const char* const SensorTypes[] = { "TIME" };
 const char* const SensorClasses[] = { "" };
 const char* const StateClasses[] = { "total_increasing" };
 const char* const SensorUnits[] = { "s" };
-const char* state_topic_sensors = "domus/schuur/uit/sensor";
+const char* state_topic_sensors = "domus/test/uit/sensor";
 
 // Vul hier het aantal pulsrelais in
 const int NumberOfPulseRelays = 0;  //
@@ -321,10 +321,10 @@ bool PulseRelayInitialStates[] = { HIGH, HIGH, HIGH, HIGH };
 String PulseSwitchNames[] = {};
 // Vul hier de pulsetijden in voor de pulserelais
 long int PulseRelayTimes[] = { LockDelay[0], LockDelay[1], CoverDelay[0], CoverDelay[1] };
-// const char* topic_out_pulse = "domus/schuur/uit/pulse";  // Pulserelais t.b.v. deuropener
-const char* state_topic_pulserelays = "domus/schuur/stat/pulserelay";
+// const char* topic_out_pulse = "domus/test/uit/pulse";  // Pulserelais t.b.v. deuropener
+const char* state_topic_pulserelays = "domus/test/stat/pulserelay";
 
 // Vul hier de uitgaande MQTT topics in
-const char* topic_out = "domus/schuur/uit";
+const char* topic_out = "domus/test/uit";
 
 #include <domus.h>  // this file holds all functions, including setup and loop

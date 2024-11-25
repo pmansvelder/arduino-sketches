@@ -18,6 +18,7 @@
 #include "secrets.h"
 #include "PubSubClient.h"
 
+#define MINRANGE 100 // min pwm value
 #define MAXRANGE 1023 // max pwm value
 #define STEP1 40
 #define STEP2 80
@@ -65,7 +66,7 @@ unsigned char encoder_A;
 unsigned char encoder_B;
 unsigned char last_encoder_A;
 unsigned char last_encoder_B;
-int led_power = 0;
+int led_power = MINRANGE;
 int last_led_power = MAXRANGE;
 int power_step = 1;
 long loop_time;
@@ -106,7 +107,7 @@ void report_state()
 {
   String messageString;
   ShowDebug("LED Power: " + String(led_power));
-  if (led_power == 0) {
+  if (led_power == MINRANGE) {
     messageString = "OFF";
     messageString.toCharArray(messageBuffer, messageString.length() + 1);
     mqttClient.publish(topic_out, messageBuffer);
@@ -135,7 +136,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
 
   if (strPayload[0] == 'OFF') {
     last_led_power = led_power;
-    led_power = 0;
+    led_power = MINRANGE;
     analogWrite(LED_PWM_PIN, led_power);
     report_state();
   }
@@ -183,12 +184,12 @@ void processButtonDigital( int buttonId )  // routine to check for short or long
     {
       LongPressActive[buttonId] = true;
       ShowDebug( "Button" + String(buttonId) + " long pressed" );
-      if ( led_power == 0 ) {                            // If light is off, set brightness to max
+      if ( led_power == MINRANGE ) {                            // If light is off, set brightness to max
         led_power = MAXRANGE;
         Serial.println( "L: " + String(led_power) );
       } else {                                           // if light is on, save brightness and turn light off
         last_led_power = led_power;
-        led_power = 0;
+        led_power = MINRANGE;
         Serial.println( "L: " + String(led_power) );
       }
       analogWrite(LED_PWM_PIN, led_power);
@@ -204,7 +205,7 @@ void processButtonDigital( int buttonId )  // routine to check for short or long
         if ((millis() - lastActivityTimes[buttonId]) > DEBOUNCE_DELAY) // Button short press action
         {
           ShowDebug( "Button" + String(buttonId) + " pressed" );
-          if ( led_power == 0 ) {                         // If light is off, set brightness to last saved value
+          if ( led_power <= MINRANGE ) {                         // If light is off, set brightness to last saved value
             led_power = last_led_power;
             Serial.println( "L: " + String(led_power) );
           } else {                                        // if light is on, turn it off (and don't save brightness)
@@ -270,9 +271,9 @@ void setup() {
   ip = ip + String (WiFi.localIP()[3]);
 
   ShowDebug("WiFi connected");
-  ShowDebug("IP address: " + String(WiFi.localIP()));
-  ShowDebug("Netmask: " + String(WiFi.subnetMask()));
-  ShowDebug("Gateway: " + String(WiFi.gatewayIP()));
+  // ShowDebug("IP address: " + String(WiFi.localIP()));
+  // ShowDebug("Netmask: " + String(WiFi.subnetMask()));
+  // ShowDebug("Gateway: " + String(WiFi.gatewayIP()));
 
   // setup mqtt client
   
@@ -304,9 +305,9 @@ void loop() {
         Serial.println( "R: " + String(led_power) );
         led_power = led_power + power_step;
       }
-      if ( led_power < 0 ) led_power = 0; // keep led power within range
+      if ( led_power < MINRANGE ) led_power = MINRANGE; // keep led power within range
       if ( led_power >= MAXRANGE ) led_power = MAXRANGE;
-      if ( led_power >= 0 && led_power <= STEP1 ) {             // use different steps for different values
+      if ( led_power >= MINRANGE && led_power <= STEP1 ) {             // use different steps for different values
         power_step = 1;
       } else if ( led_power > STEP1 && led_power <= STEP2 ) {
         power_step = 2;
